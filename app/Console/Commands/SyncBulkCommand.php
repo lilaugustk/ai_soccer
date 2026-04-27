@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use App\Services\FootballApiService;
+
+class SyncBulkCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'soccer:sync-bulk {--season=2024 : Mùa giải muốn nạp} {--leagues=39,140,135,78,61,2 : Danh sách ID giải đấu cách nhau bởi dấu phẩy}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Nạp dữ liệu toàn diện (Trận đấu, BXH, Vua phá lưới) cho các giải đấu ưu tiên với tối ưu Request';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle(FootballApiService $apiService)
+    {
+        $season = $this->option('season');
+        $leaguesInput = $this->option('leagues');
+        $leagueIds = explode(',', $leaguesInput);
+
+        $this->info("=== BẮT ĐẦU ĐỒNG BỘ DỮ LIỆU TỔNG THỂ [Mùa giải: $season] ===");
+        $this->warn("Danh sách giải đấu: " . $leaguesInput);
+        $this->warn("Cơ chế an toàn: Nghỉ 7 giây giữa mỗi giải đấu để không vượt quá 10 requests/phút (Free Plan).");
+        
+        $startTime = microtime(true);
+
+        foreach ($leagueIds as $index => $id) {
+            $id = trim($id);
+            if (empty($id)) continue;
+
+            $this->info("\n[" . ($index + 1) . "/" . count($leagueIds) . "] Đang xử lý Giải đấu ID: $id");
+
+            // 1. Lấy toàn bộ trận đấu (1 Request)
+            $this->comment("   + Đang nạp toàn bộ lịch thi đấu & kết quả...");
+            $fixtures = $apiService->getFixturesByLeagueSeason($id, $season);
+            if (empty($fixtures)) {
+                $this->error("     X Không lấy được trận đấu. Có thể ID sai hoặc mùa giải không được hỗ trợ.");
+            } else {
+                $this->line("     V Đã nạp/cập nhật " . count($fixtures) . " trận đấu.");
+            }
+
+            // 2. Lấy BXH (1 Request)
+            $this->comment("   + Đang cập nhật bảng xếp hạng...");
+            $standings = $apiService->getStandings($id, $season);
+            if (empty($standings)) {
+                $this->error("     X Không lấy được bảng xếp hạng.");
+            } else {
+                $this->line("     V Đã cập nhật BXH cho " . count($standings) . " đội.");
+            }
+
+            // 3. Lấy Vua phá lưới (1 Request)
+            $this->comment("   + Đang cập nhật danh sách vua phá lưới...");
+            $scorers = $apiService->getTopScorers($id, $season);
+            if (empty($scorers)) {
+                $this->error("     X Không lấy được danh sách ghi bàn.");
+            } else {
+                $this->line("     V Đã cập nhật " . count($scorers) . " cầu thủ.");
+            }
+
+            // Nghỉ để tránh Rate Limit (Tổng cộng 3 requests cho 1 giải đấu)
+            if ($index < count($leagueIds) - 1) {
+                $this->info("   --- Đang chờ 7 giây để bảo vệ Rate Limit ---");
+                sleep(7);
+            }
+        }
+
+        $endTime = microtime(true);
+        $duration = round($endTime - $startTime, 2);
+
+        $this->info("\n=== HOÀN TẤT QUÁ TRÌNH NẠP DỮ LIỆU ===");
+        $this->info("Tổng thời gian: $duration giây.");
+        $this->warn("Dữ liệu đã sẵn sàng trên giao diện website!");
+        
+        return 0;
+    }
+}
