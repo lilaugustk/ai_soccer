@@ -1,45 +1,57 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div v-for="(scorer, index) in scorers" :key="scorer.player_id" 
-         class="group relative overflow-hidden rounded-[2.5rem] border border-gray-100 dark:border-gray-700/50 bg-white dark:bg-gray-800/40 backdrop-blur-xl p-6 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500">
-      <div class="flex items-center gap-6">
-        <!-- Rank Badge -->
-        <div class="absolute -top-2 -right-2 w-12 h-12 rounded-bl-3xl bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center text-xs font-black text-gray-300 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 border-l border-b border-gray-100 dark:border-gray-700 shadow-sm">
-          #{{ index + 1 }}
-        </div>
-
-        <!-- Player Photo -->
-        <div class="relative w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group-hover:scale-105 group-hover:rotate-2 transition-all duration-500 shadow-inner">
-          <img v-if="scorer.photo" :src="scorer.photo" class="w-full h-full object-cover" />
-          <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
-            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
-          </div>
-        </div>
-
-        <!-- Player Info -->
-        <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight truncate pr-10 group-hover:text-emerald-500 transition-colors">{{ scorer.player_name }}</h3>
-          <div class="flex items-center gap-2 mt-1.5">
-            <div class="w-4 h-4 rounded-md bg-white dark:bg-gray-900 p-0.5 border border-gray-100 dark:border-gray-800 flex items-center justify-center overflow-hidden">
-                <img v-if="scorer.team?.logo_url" :src="scorer.team.logo_url" class="w-full h-full object-contain" />
-            </div>
-            <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider truncate">{{ scorer.team?.name }}</span>
-          </div>
-          
-          <!-- Stats -->
-          <div class="flex gap-6 mt-4">
-            <div class="flex flex-col">
-              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 opacity-60">Bàn thắng</span>
-              <span class="text-xl font-black text-emerald-600 dark:text-emerald-400 leading-tight">{{ scorer.goals }}</span>
-            </div>
-            <div class="w-px h-6 bg-gray-100 dark:bg-gray-700 self-end"></div>
-            <div class="flex flex-col">
-              <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 opacity-60">Kiến tạo</span>
-              <span class="text-xl font-black text-amber-500 leading-tight">{{ scorer.assists || 0 }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm relative">
+    <div class="no-scrollbar">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-gray-50/50 dark:bg-gray-800/50 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+            <th class="px-4 py-3 w-12 text-center">#</th>
+            <th class="px-4 py-3">Cầu thủ</th>
+            <th class="px-4 py-3">Đội bóng</th>
+            <th class="px-4 py-3 text-center cursor-pointer group relative">
+                Bàn thắng
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Số pha lập công
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+            </th>
+            <th class="px-4 py-3 text-center cursor-pointer group relative">
+                Kiến tạo
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Số đường chuyền thành bàn
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
+          <tr v-for="(scorer, idx) in scorers" :key="scorer.player_id" 
+              class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+            <td class="px-4 py-4 text-[11px] font-bold text-center text-gray-400">
+              {{ idx + 1 }}
+            </td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                    <img :src="scorer.photo" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700" />
+                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-white dark:bg-gray-800 rounded-full border border-gray-100 dark:border-gray-700 p-0.5">
+                         <img :src="`https://media.api-sports.io/football/teams/${scorer.team_id}.png`" class="w-full h-full object-contain" />
+                    </div>
+                </div>
+                <span class="text-[12px] font-bold text-gray-900 dark:text-gray-100 truncate">{{ scorer.player_name }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-4">
+               <span class="text-[11px] text-gray-500 uppercase font-bold">{{ scorer.team?.name || 'Club' }}</span>
+            </td>
+            <td class="px-4 py-4 text-[12px] text-center font-bold text-emerald-600 dark:text-emerald-400">
+              {{ scorer.goals }}
+            </td>
+            <td class="px-4 py-4 text-[12px] text-center font-bold text-gray-400">
+              {{ scorer.assists || 0 }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>

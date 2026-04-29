@@ -38,16 +38,26 @@ class SyncLeaguesCommand extends Command
                 return 1;
             }
 
-            $topCountries = [
-                'England', 'Spain', 'Germany', 'Italy', 'France', 
-                'Vietnam', 'Brazil', 'Argentina', 'Portugal', 'Netherlands', 'World'
-            ];
-            
             $groupedLeagues = collect($leaguesData)
-                ->filter(fn($l) => isset($l['country']['name']) && in_array($l['country']['name'], $topCountries))
+                ->filter(fn($l) => isset($l['country']['name']) && $l['country']['name'] !== '')
                 ->groupBy('country.name')
                 ->map(function ($leagues, $country) {
                     $firstLeague = $leagues->first();
+                    
+                    // Đồng bộ từng giải đấu vào Database để tránh lỗi 404 khi click xem chi tiết
+                    foreach ($leagues as $l) {
+                        \App\Models\FootballLeague::updateOrCreate(
+                            ['id' => $l['league']['id']],
+                            [
+                                'name' => $l['league']['name'],
+                                'type' => $l['league']['type'] ?? null,
+                                'logo' => $l['league']['logo'] ?? null,
+                                'country_name' => $l['country']['name'] ?? null,
+                                'country_code' => $l['country']['flag'] ?? null,
+                            ]
+                        );
+                    }
+
                     return [
                         'country_name' => $country,
                         'country_code' => $firstLeague['country']['code'] ?? null,
@@ -55,7 +65,7 @@ class SyncLeaguesCommand extends Command
                             'id' => $l['league']['id'] ?? null,
                             'name' => $l['league']['name'] ?? 'Unknown',
                             'logo_url' => $l['league']['logo'] ?? null,
-                        ])->filter(fn($l) => $l['id'] !== null)->take(10) // Tăng lên 10 giải mỗi nước
+                        ])->filter(fn($l) => $l['id'] !== null)->take(10)
                     ];
                 })
                 ->values()

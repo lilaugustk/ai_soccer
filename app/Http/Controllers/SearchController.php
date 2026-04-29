@@ -21,6 +21,7 @@ class SearchController extends Controller
             ]);
         }
 
+        \Log::info("Search query: " . $query);
         $teams = Team::where('name', 'LIKE', "%{$query}%")
             ->orWhere('short_name', 'LIKE', "%{$query}%")
             ->limit(5)
@@ -29,6 +30,7 @@ class SearchController extends Controller
         $players = Player::where('name', 'LIKE', "%{$query}%")
             ->limit(5)
             ->get();
+        \Log::info("Players found: " . $players->count());
 
         $leagues = League::where('name', 'LIKE', "%{$query}%")
             ->limit(5)

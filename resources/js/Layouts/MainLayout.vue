@@ -2,7 +2,7 @@
   <div class="min-h-screen transition-colors duration-300 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <!-- Navbar -->
     <nav class="sticky top-0 z-50 transition-colors duration-300 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <div class="max-w-6xl mx-auto px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6">
         <div class="flex justify-between h-14">
           <div class="flex items-center">
             <!-- Logo -->
@@ -18,14 +18,6 @@
               <Link href="/" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
                 :class="$page.url === '/' || $page.url.startsWith('/matches') ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'">
                 Trang Chủ & Lịch Thi Đấu
-              </Link>
-              <Link href="/leagues" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
-                :class="$page.url.startsWith('/leagues') ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'">
-                Giải Đấu
-              </Link>
-              <Link href="/teams" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
-                :class="$page.url.startsWith('/teams') ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'">
-                Câu Lạc Bộ
               </Link>
               <Link href="/predictions" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
                 :class="$page.url.startsWith('/predictions') ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'">
@@ -50,7 +42,7 @@
               
               <!-- Search Results Dropdown -->
               <div v-if="showResults && (isLoading || searchResults.teams.length || searchResults.players.length || searchResults.leagues.length || (searchQuery.length >= 2 && !isLoading))" 
-                   class="absolute mt-2 w-80 rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-[100] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl">
+                   class="absolute mt-2 w-80 right-0 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-[100] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl">
                 
                 <div class="max-h-[450px] overflow-y-auto p-2 space-y-1">
                   <!-- Loading State -->
@@ -69,12 +61,12 @@
                   <template v-else>
                     <!-- Leagues -->
                     <div v-if="searchResults.leagues.length">
-                      <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block">Giải đấu</span>
+                      <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block">Giải đấu</span>
                       <Link v-for="league in searchResults.leagues" :key="league.id" :href="`/leagues/${league.id}`" @click="showResults = false"
                             class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group">
                         <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center p-1 border border-gray-100 dark:border-gray-600 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors overflow-hidden">
                           <img v-if="league.logo_url" :src="league.logo_url" class="w-full h-full object-contain" />
-                          <span v-else class="text-[10px] font-black uppercase text-gray-300">{{ league.name.substring(0,2) }}</span>
+                          <span v-else class="text-[10px] font-bold uppercase text-gray-300">{{ league.name.substring(0,2) }}</span>
                         </div>
                         <span class="text-sm font-bold">{{ league.name }}</span>
                       </Link>
@@ -82,10 +74,10 @@
 
                     <!-- Teams -->
                     <div v-if="searchResults.teams.length">
-                      <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">Đội bóng</span>
+                      <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">Đội bóng</span>
                       <Link v-for="team in searchResults.teams" :key="team.id" :href="`/teams/${team.id}`" @click="showResults = false"
                             class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group">
-                        <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-[10px] font-black group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
                           {{ team.short_name || team.name.substring(0,1) }}
                         </div>
                         <span class="text-sm font-bold">{{ team.name }}</span>
@@ -94,7 +86,7 @@
 
                     <!-- Players -->
                     <div v-if="searchResults.players.length">
-                      <span class="text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">Cầu thủ</span>
+                      <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">Cầu thủ</span>
                       <Link v-for="player in searchResults.players" :key="player.id" :href="`/players/${player.id}`" @click="showResults = false"
                             class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group">
                         <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-emerald-500/50 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
@@ -130,11 +122,10 @@
     </nav>
 
     <!-- Main Content Area -->
-    <main class="max-w-6xl mx-auto pt-10 pb-5 px-4 sm:px-6">
+    <main class="max-w-7xl mx-auto pt-6 pb-5 px-4 sm:px-6">
       <!-- Slot for Views -->
       <slot />
     </main>
-    
     <!-- Simple Footer -->
     <footer class="border-t mt-12 py-8 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 text-center">
@@ -143,6 +134,23 @@
         </p>
       </div>
     </footer>
+
+    <!-- Back to Top Button -->
+    <transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="translate-y-10"
+      enter-to-class="translate-y-0"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="translate-y-0"
+      leave-to-class="translate-y-10"
+    >
+      <button v-show="showBackToTop" @click="scrollToTop"
+              class="fixed bottom-8 right-8 z-[60] p-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-2xl shadow-emerald-500/20 transition-all hover:scale-110 active:scale-95 group">
+        <svg class="w-6 h-6 transition-transform group-hover:-translate-y-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+        </svg>
+      </button>
+    </transition>
   </div>
 </template>
 
@@ -158,6 +166,15 @@ const showResults = ref(false);
 const isLoading = ref(false);
 const searchResults = ref({ teams: [], players: [], leagues: [] });
 const debounceTimeout = ref(null);
+const showBackToTop = ref(false);
+
+const handleScroll = () => {
+  showBackToTop.value = window.scrollY > 300;
+};
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
@@ -203,6 +220,7 @@ const closeSearch = (e) => {
 };
 
 onMounted(() => {
+  window.addEventListener('scroll', handleScroll);
   window.addEventListener('click', closeSearch);
   // Check localstorage
   if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -215,6 +233,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('click', closeSearch);
   if (debounceTimeout.value) clearTimeout(debounceTimeout.value);
 });

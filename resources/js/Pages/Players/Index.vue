@@ -94,7 +94,7 @@ const activeFilters = () => [search.value, nationality.value, position.value].fi
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M7 10h10M11 16h2"/>
                     </svg>
                     Lọc
-                    <span v-if="activeFilters()" class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-black">{{ activeFilters() }}</span>
+                    <span v-if="activeFilters()" class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-bold">{{ activeFilters() }}</span>
                 </button>
             </div>
         </div>
@@ -154,7 +154,7 @@ const activeFilters = () => [search.value, nationality.value, position.value].fi
                         <!-- Club logo as avatar background -->
                         <div class="relative w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 border border-gray-200 dark:border-gray-600 overflow-hidden">
                             <img v-if="player.team?.logo_url" :src="player.team.logo_url" class="w-8 h-8 object-contain opacity-30" />
-                            <span class="absolute text-base font-black text-gray-500 dark:text-gray-300">{{ player.name.charAt(0) }}</span>
+                            <span class="absolute text-base font-bold text-gray-500 dark:text-gray-300">{{ player.name.charAt(0) }}</span>
                         </div>
                         <div class="min-w-0">
                             <div class="font-bold text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{{ player.name }}</div>
@@ -163,7 +163,7 @@ const activeFilters = () => [search.value, nationality.value, position.value].fi
                                 <span class="text-xs text-gray-400 dark:text-gray-500 truncate" :title="getFullDisplay(player.nationality)">{{ player.nationality ? getCountryNames(player.nationality).vi : 'N/A' }}</span>
                             </div>
                         </div>
-                        <span class="ml-auto text-[10px] font-black uppercase px-2 py-0.5 rounded-lg shrink-0" :class="posColor(player.position)">
+                        <span class="ml-auto text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg shrink-0" :class="posColor(player.position)">
                             {{ player.position || '—' }}
                         </span>
                     </div>
@@ -177,23 +177,23 @@ const activeFilters = () => [search.value, nationality.value, position.value].fi
                     <!-- Stats row from latest season -->
                     <div class="flex items-center justify-around border border-gray-100 dark:border-gray-700 rounded-xl py-2.5">
                         <div class="text-center">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-wider">G</div>
-                            <div class="text-sm font-black text-gray-900 dark:text-white">{{ player.latest_season_stat?.goals ?? '—' }}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">G</div>
+                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ player.latest_season_stat?.goals ?? '—' }}</div>
                         </div>
                         <div class="w-px h-6 bg-gray-100 dark:bg-gray-700"></div>
                         <div class="text-center">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-wider">A</div>
-                            <div class="text-sm font-black text-gray-900 dark:text-white">{{ player.latest_season_stat?.assists ?? '—' }}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">A</div>
+                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ player.latest_season_stat?.assists ?? '—' }}</div>
                         </div>
                         <div class="w-px h-6 bg-gray-100 dark:bg-gray-700"></div>
                         <div class="text-center">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Trận</div>
-                            <div class="text-sm font-black text-gray-900 dark:text-white">{{ player.latest_season_stat?.games ?? '—' }}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Trận</div>
+                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ player.latest_season_stat?.games ?? '—' }}</div>
                         </div>
                         <div class="w-px h-6 bg-gray-100 dark:bg-gray-700"></div>
                         <div class="text-center">
-                            <div class="text-[10px] font-black text-gray-400 uppercase tracking-wider">Phút</div>
-                            <div class="text-sm font-black text-gray-900 dark:text-white">{{ player.latest_season_stat?.minutes ?? '—' }}</div>
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Phút</div>
+                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ player.latest_season_stat?.minutes ?? '—' }}</div>
                         </div>
                     </div>
                 </div>

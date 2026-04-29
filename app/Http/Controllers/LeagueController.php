@@ -10,57 +10,40 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 
+use App\Services\FootballApiService;
+
 class LeagueController extends Controller
 {
-    public function index()
+    protected $apiService;
+
+    public function __construct(FootballApiService $apiService)
     {
-        // 1. Xác định danh sách ID các giải đấu hàng đầu (Featured)
-        $topLeagueIds = [39, 140, 135, 78, 61, 2, 3, 1, 4]; // EPL, La Liga, Serie A, Bundesliga, Ligue 1, UCL, UEL, World Cup, Euro
-
-        // 2. Lấy số lượng trận đấu hôm nay cho mỗi giải đấu
-        $todayMatchCounts = FootballMatch::whereDate('match_at', \Carbon\Carbon::today())
-            ->select('league_id', DB::raw('count(*) as count'))
-            ->groupBy('league_id')
-            ->pluck('count', 'league_id')
-            ->toArray();
-
-        // 3. Lấy tất cả các giải đấu, ưu tiên những giải có trong danh sách Top hoặc có dữ liệu
-        $leagues = FootballLeague::all()->map(function($league) use ($todayMatchCounts, $topLeagueIds) {
-            $league->today_matches_count = $todayMatchCounts[$league->id] ?? 0;
-            $league->is_featured = in_array($league->id, $topLeagueIds);
-            
-            // Xử lý logo URL nếu cần (đảm bảo luôn có URL)
-            $league->logo_url = $league->logo ?: 'https://via.placeholder.com/150?text=' . urlencode($league->name);
-            
-            return $league;
-        });
-
-        // 4. Nhóm theo quốc gia (trừ các giải Featured)
-        $featuredLeagues = $leagues->where('is_featured', true)->values();
-        
-        $groupedByCountry = $leagues->filter(fn($l) => !$l->is_featured)
-            ->groupBy(function($item) {
-                return $item->country_name ?: 'Quốc tế';
-            })
-            ->map(function($items, $country) {
-                return [
-                    'country' => $country,
-                    'leagues' => $items->sortBy('name')->values()
-                ];
-            })
-            ->values()
-            ->sortBy('country');
-
-        return Inertia::render('Leagues/Index', [
-            'featuredLeagues' => $featuredLeagues,
-            'groupedLeagues' => $groupedByCountry->values(),
-            'allLeagues' => $leagues // Để phục vụ Search client-side
-        ]);
+        $this->apiService = $apiService;
     }
+
 
     public function show(Request $request, $id)
     {
-        $league = \App\Models\FootballLeague::findOrFail($id);
+        $league = \App\Models\FootballLeague::find($id);
+
+        if (!$league) {
+            // Nếu không có trong DB, thử lấy từ API
+            $leagues = $this->apiService->getLeagues();
+            $apiLeague = collect($leagues)->firstWhere('league.id', (int)$id);
+            
+            if ($apiLeague) {
+                $league = \App\Models\FootballLeague::create([
+                    'id' => $apiLeague['league']['id'],
+                    'name' => $apiLeague['league']['name'],
+                    'type' => $apiLeague['league']['type'] ?? null,
+                    'logo' => $apiLeague['league']['logo'] ?? null,
+                    'country_name' => $apiLeague['country']['name'] ?? null,
+                    'country_code' => $apiLeague['country']['flag'] ?? null,
+                ]);
+            } else {
+                return redirect()->route('dashboard')->with('error', 'Không tìm thấy giải đấu này.');
+            }
+        }
         $season = $request->input('season', 2024); 
 
         // 1. Bảng xếp hạng với logo_url
@@ -68,13 +51,54 @@ class LeagueController extends Controller
             ->where('league_id', $id)
             ->where('season', $season)
             ->orderBy('rank', 'asc')
-            ->get()
-            ->map(function($s) {
-                if ($s->team) {
-                    $s->team->logo_url = $s->team->logo ?: 'https://via.placeholder.com/150?text=' . urlencode($s->team->name);
+            ->get();
+
+        // 1.1 Lấy 5 trận gần nhất của giải đấu này cho mỗi đội để hiển thị chi tiết trong tooltip
+        $teamIds = $standings->pluck('team_id');
+        $allMatches = \App\Models\FootballMatch::where('league_id', $id)
+            ->where('season', $season)
+            ->where(function($q) use ($teamIds) {
+                $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
+            })
+            ->where('status', 'FT')
+            ->orderBy('match_at', 'desc')
+            ->with(['homeTeam', 'awayTeam'])
+            ->get();
+
+        $matchesByTeam = [];
+        foreach ($allMatches as $m) {
+            foreach ([$m->home_team_id, $m->away_team_id] as $tId) {
+                if ($teamIds->contains($tId)) {
+                    if (!isset($matchesByTeam[$tId])) $matchesByTeam[$tId] = [];
+                    if (count($matchesByTeam[$tId]) < 5) {
+                        // Tính toán kết quả cho đội này (W/L/D)
+                        $res = 'D';
+                        if ($m->home_score > $m->away_score) {
+                            $res = ($tId == $m->home_team_id) ? 'W' : 'L';
+                        } elseif ($m->home_score < $m->away_score) {
+                            $res = ($tId == $m->away_team_id) ? 'W' : 'L';
+                        }
+
+                        $matchesByTeam[$tId][] = [
+                            'date' => \Illuminate\Support\Carbon::parse($m->match_at)->format('d/m'),
+                            'home' => $m->homeTeam->name,
+                            'away' => $m->awayTeam->name,
+                            'score' => "{$m->home_score} - {$m->away_score}",
+                            'res' => $res
+                        ];
+                    }
                 }
-                return $s;
-            });
+            }
+        }
+
+        $standings->map(function($s) use ($matchesByTeam) {
+            if ($s->team) {
+                $s->team->logo_url = $s->team->logo ?: 'https://via.placeholder.com/150?text=' . urlencode($s->team->name);
+            }
+            // Gán 5 trận gần nhất, đảo ngược để khớp với thứ tự form từ cũ đến mới (trái sang phải)
+            $s->recent_matches = array_reverse($matchesByTeam[$s->team_id] ?? []);
+            return $s;
+        });
 
         // 2. Vua phá lưới
         $topScorers = \App\Models\FootballScorer::with('team')

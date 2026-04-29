@@ -17,18 +17,18 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <div v-for="stat in performanceStats" :key="stat.label" 
              class="bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center text-center">
-          <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{{ stat.label }}</span>
-          <span class="text-3xl font-black text-gray-900 dark:text-white">{{ stat.value }}</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{{ stat.label }}</span>
+          <span class="text-3xl font-bold text-gray-900 dark:text-white">{{ stat.value }}</span>
           <div class="mt-2 w-12 h-1 bg-emerald-500 rounded-full"></div>
         </div>
       </div>
 
       <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div class="flex flex-col lg:flex-row gap-10">
         <!-- Hot Predictions List -->
-        <div class="lg:col-span-2 space-y-8">
+        <div class="flex-1 space-y-8 min-w-0">
           <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4">
-            <h2 class="text-sm font-black uppercase text-gray-400 dark:text-gray-500 tracking-widest flex items-center gap-2">
+            <h2 class="text-sm font-bold uppercase text-gray-400 dark:text-gray-500 tracking-widest flex items-center gap-2">
               <div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
               Kèo HOT nhất hôm nay
             </h2>
@@ -41,18 +41,18 @@
               <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                 <!-- Match Info -->
                 <div class="flex items-center gap-8 flex-1">
-                  <div class="flex-1 text-right font-black text-gray-900 dark:text-gray-100">Home Team {{ i }}</div>
+                  <div class="flex-1 text-right font-bold text-gray-900 dark:text-gray-100">Home Team {{ i }}</div>
                   <div class="text-gray-200 dark:text-gray-700 font-light text-xl">VS</div>
-                  <div class="flex-1 text-left font-black text-gray-900 dark:text-gray-100">Away Team {{ i }}</div>
+                  <div class="flex-1 text-left font-bold text-gray-900 dark:text-gray-100">Away Team {{ i }}</div>
                 </div>
 
                 <!-- AI Probability -->
                 <div class="flex items-center gap-6 md:border-l md:pl-8 border-gray-100 dark:border-gray-700">
                   <div class="text-center">
-                    <span class="block text-[10px] font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-tighter mb-1">Xác suất thắng</span>
-                    <span class="text-3xl font-black text-gray-900 dark:text-white">72%</span>
+                    <span class="block text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-tighter mb-1">Xác suất thắng</span>
+                    <span class="text-3xl font-bold text-gray-900 dark:text-white">72%</span>
                   </div>
-                  <button class="px-6 py-3 bg-emerald-600 text-white text-xs font-black rounded-xl hover:bg-emerald-500 transition-colors uppercase tracking-widest shadow-md shadow-emerald-100 dark:shadow-none">
+                  <button class="px-6 py-3 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-500 transition-colors uppercase tracking-widest shadow-md shadow-emerald-100 dark:shadow-none">
                     Phân tích
                   </button>
                 </div>
@@ -67,7 +67,7 @@
              <!-- Abstract Decoration -->
              <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500 opacity-20 rounded-full -mr-16 -mt-16 blur-2xl"></div>
              
-             <h3 class="text-lg font-black mb-6 uppercase tracking-tight">AI Neural Engine v2.0</h3>
+             <h3 class="text-lg font-bold mb-6 uppercase tracking-tight">AI Neural Engine v2.0</h3>
              <ul class="space-y-4">
                 <li v-for="item in modelFeatures" :key="item" class="flex gap-3 text-sm">
                    <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>

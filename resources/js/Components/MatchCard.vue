@@ -10,29 +10,29 @@
           <!-- Home Team -->
           <div class="flex items-center gap-3 flex-1 justify-end min-w-0">
             <span class="font-bold text-xs sm:text-sm text-right truncate text-gray-700 dark:text-gray-100">{{ game.home_team?.name }}</span>
-            <div class="w-6 h-6 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
+            <div class="w-8 h-8 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
               <img v-if="game.home_team?.logo_url" :src="game.home_team.logo_url" class="w-full h-full object-contain" />
-              <span v-else class="text-[8px] font-black text-gray-400">{{ game.home_team?.short_name?.substring(0,2) || 'H' }}</span>
+              <span v-else class="text-[10px] font-bold text-gray-400">{{ game.home_team?.short_name?.substring(0,2) || 'H' }}</span>
             </div>
           </div>
 
           <!-- Score / Info -->
           <div class="flex flex-col items-center min-w-[50px] sm:min-w-[80px]">
-            <div class="flex items-center gap-1 text-sm sm:text-base font-black text-gray-900 dark:text-white tabular-nums">
+            <div class="flex items-center gap-1 text-sm sm:text-base font-bold text-gray-900 dark:text-white tabular-nums">
               <span>{{ game.home_score ?? '-' }}</span>
               <span class="opacity-20">:</span>
               <span>{{ game.away_score ?? '-' }}</span>
             </div>
-            <span class="text-[8px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full mt-1 border border-emerald-100/50">
+            <span class="text-[8px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-full mt-1 border border-emerald-100/50 flex items-center justify-center leading-none">
               {{ getMatchStatus(game) }}
             </span>
           </div>
           
           <!-- Away Team -->
           <div class="flex items-center gap-3 flex-1 min-w-0">
-            <div class="w-6 h-6 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
+            <div class="w-8 h-8 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
               <img v-if="game.away_team?.logo_url" :src="game.away_team.logo_url" class="w-full h-full object-contain" />
-              <span v-else class="text-[8px] font-black text-gray-400">{{ game.away_team?.short_name?.substring(0,2) || 'A' }}</span>
+              <span v-else class="text-[10px] font-bold text-gray-400">{{ game.away_team?.short_name?.substring(0,2) || 'A' }}</span>
             </div>
             <span class="font-bold text-xs sm:text-sm truncate text-gray-700 dark:text-gray-100">{{ game.away_team?.name }}</span>
           </div>

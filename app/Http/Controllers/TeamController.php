@@ -2,117 +2,129 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Team;
-use App\Models\Game;
+use App\Models\FootballMatch;
+use App\Models\FootballStanding;
 use App\Models\Player;
+use App\Models\PlayerSeasonStat;
+use App\Models\Team;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Carbon\Carbon;
 
 class TeamController extends Controller
 {
-    public function index(Request $request)
-    {
-        $query = Team::query();
-
-        // Lọc theo giải đấu
-        if ($request->has('league_id') && $request->league_id != 'all') {
-            $lid = $request->league_id;
-            $query->where(function($q) use ($lid) {
-                $q->whereHas('homeGames', fn($g) => $g->where('league_id', $lid))
-                  ->orWhereHas('awayGames', fn($g) => $g->where('league_id', $lid));
-            });
-        }
-
-        // Lọc theo quốc gia
-        if ($request->has('country') && $request->country != 'all') {
-            $query->where('country', $request->country);
-        }
-
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->input('search') . '%');
-        }
-
-        $teams = $query->paginate(24)->through(function($team) {
-            $team->logo_url = $team->logo ?: 'https://via.placeholder.com/150?text=' . urlencode($team->name);
-            return $team;
-        })->withQueryString();
-
-        // Lấy danh sách giải đấu phổ biến
-        $topLeagues = \App\Models\League::whereHas('games')
-            ->withCount('games')
-            ->orderBy('games_count', 'desc')
-            ->limit(20)
-            ->get()
-            ->map(function($l) {
-                return [
-                    'id' => $l->id,
-                    'name' => $l->name,
-                    'logo_url' => $l->logo
-                ];
-            });
-
-        // Lấy danh sách quốc gia dạng Key-Value (Label đẹp, Value gốc để lọc)
-        $countries = \App\Models\League::whereNotNull('country_name')
-            ->where('country_name', '!=', '')
-            ->distinct()
-            ->pluck('country_name')
-            ->map(function($c) {
-                $label = $c;
-                if ($c === 'International') {
-                    $label = 'INTL';
-                } else {
-                    $parts = explode(' ', $c);
-                    $label = strtoupper(end($parts));
-                }
-                return [
-                    'label' => $label,
-                    'value' => $c
-                ];
-            })
-            ->sortBy('label')
-            ->values();
-
-        // Lấy danh sách giới tính (Tạm thời để trống vì schema mới không có)
-        $genders = collect([]);
-
-        return Inertia::render('Teams/Index', [
-            'teams' => $teams,
-            'leagues' => $topLeagues,
-            'countries' => $countries,
-            'genders' => $genders,
-            'filters' => $request->only(['search', 'league_id', 'country', 'gender'])
-        ]);
-    }
-
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $team = Team::findOrFail($id);
+        $season = $request->input('season', 2024);
+        $now = Carbon::now();
 
-        // Lấy 20 trận gần nhất (cả nhà và khách)
-        $latestGames = Game::where(function($query) use ($id) {
+        // 1. Lấy trận đấu gần đây (đã đá)
+        $recentGames = FootballMatch::where(function($query) use ($id) {
             $query->where('home_team_id', $id)
                   ->orWhere('away_team_id', $id);
         })
+        ->where('match_at', '<', $now)
+        ->where('season', $season)
         ->with(['homeTeam', 'awayTeam', 'league'])
         ->orderBy('match_at', 'desc')
-        ->limit(20)
+        ->limit(10)
         ->get();
 
-        // Lấy danh sách cầu thủ nổi bật (từ stats)
-        $players = Player::whereHas('matchStats', function($query) use ($id) {
-            $query->where('team_id', $id);
+        // 1.1 Lấy đội hình trận gần nhất có dữ liệu
+        $lastMatchWithLineup = FootballMatch::where(function($query) use ($id) {
+            $query->where('home_team_id', $id)
+                  ->orWhere('away_team_id', $id);
         })
-        ->withCount(['matchStats' => function($query) use ($id) {
-            $query->where('team_id', $id);
-        }])
-        ->orderBy('match_stats_count', 'desc')
-        ->limit(15)
+        ->whereNotNull('players')
+        ->orderBy('match_at', 'desc')
+        ->first();
+
+        $lineup = null;
+        if ($lastMatchWithLineup && is_array($lastMatchWithLineup->players)) {
+            $ps = $lastMatchWithLineup->players;
+            if (isset($ps['home']['team']['id']) && $ps['home']['team']['id'] == $id) {
+                $lineup = $ps['home'];
+            } elseif (isset($ps['away']['team']['id']) && $ps['away']['team']['id'] == $id) {
+                $lineup = $ps['away'];
+            }
+        }
+
+        // 2. Lấy trận đấu sắp tới
+        $upcomingGames = FootballMatch::where(function($query) use ($id) {
+            $query->where('home_team_id', $id)
+                  ->orWhere('away_team_id', $id);
+        })
+        ->where('match_at', '>=', $now)
+        ->where('season', $season)
+        ->with(['homeTeam', 'awayTeam', 'league'])
+        ->orderBy('match_at', 'asc')
+        ->limit(5)
         ->get();
+
+        // 3. Lấy danh sách cầu thủ (Squad)
+        $players = Player::where('current_team_id', $id)
+            ->with('latestSeasonStat')
+            ->get();
+        
+        // Nếu đội hình quá ít (ví dụ dưới 15 người), tự động đồng bộ từ API
+        if ($players->count() < 15) {
+            $apiService = new \App\Services\FootballApiService();
+            $apiService->getSquad($id);
+            
+            // Lấy lại danh sách sau khi đồng bộ
+            $players = Player::where('current_team_id', $id)
+                ->with('latestSeasonStat')
+                ->get();
+        }
+        
+        $squad = $players->map(function($p) {
+            $pos = strtoupper($p->position);
+            if (in_array($pos, ['ATTACKER', 'FORWARD', 'TIỀN ĐẠO'])) $p->position = 'Attacker';
+            elseif (in_array($pos, ['MIDFIELDER', 'TIỀN VỆ'])) $p->position = 'Midfielder';
+            elseif (in_array($pos, ['DEFENDER', 'HẬU VỆ'])) $p->position = 'Defender';
+            elseif (in_array($pos, ['GOALKEEPER', 'THỦ MÔN'])) $p->position = 'Goalkeeper';
+            return $p;
+        })->values()->toArray();
+
+        // 4. Lấy BXH giải đấu hiện tại
+        $standings = [];
+        $leagueId = optional($recentGames->first())->league_id ?? optional($upcomingGames->first())->league_id;
+        
+        if ($leagueId) {
+            $standings = FootballStanding::where('league_id', $leagueId)
+                ->where('season', $season)
+                ->with('team')
+                ->orderBy('rank', 'asc')
+                ->get()
+                ->map(function($s) {
+                    if ($s->team) {
+                        $s->team->logo_url = $s->team->logo;
+                    }
+                    return $s;
+                });
+        }
+
+        // 5. Thống kê cầu thủ mùa giải
+        $seasonStats = PlayerSeasonStat::where('team_id', $id)
+            ->where('season', $season)
+            ->with('player')
+            ->get();
+
+        $stats = [
+            'topScorers' => $seasonStats->sortByDesc('goals')->take(5)->values(),
+            'topAssists' => $seasonStats->sortByDesc('assists')->take(5)->values(),
+            'topRated' => $seasonStats->sortByDesc(fn($s) => (float)($s->detailed_stats[0]['games']['rating'] ?? 0))->take(5)->values(),
+        ];
 
         return Inertia::render('Teams/Show', [
             'team' => $team,
-            'latestGames' => $latestGames,
-            'players' => $players
+            'recentGames' => $recentGames,
+            'upcomingGames' => $upcomingGames,
+            'squad' => $squad,
+            'standings' => $standings,
+            'stats' => $stats,
+            'lastLineup' => $lineup,
         ]);
     }
 }

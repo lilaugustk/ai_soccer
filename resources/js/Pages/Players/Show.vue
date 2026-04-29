@@ -101,28 +101,91 @@ const advancedStats = computed(() => {
 });
 
 // ── Radar Chart Logic (SVG) ────────────────
+const isGoalkeeper = computed(() => props.player.position?.toLowerCase().includes('goalkeeper'));
+
 const radarPoints = computed(() => {
     if (!props.latestStat?.detailed_stats) return '';
     const s = props.latestStat.detailed_stats;
-    const points = [
-        Math.min(100, (s.goals?.total || 0) * 10),
-        Math.min(100, (s.passes?.accuracy || 0)),
-        Math.min(100, (s.dribbles?.success || 0) * 5),
-        Math.min(100, (s.tackles?.total || 0) * 4),
-        Math.min(100, (s.duels?.won || 0) / 2),
-        Math.min(100, (s.games?.rating || 6) * 10 - 50),
-    ];
-    const size = 150;
-    const center = size / 2;
+    
+    let points = [];
+    
+    if (isGoalkeeper.value) {
+        // Goalkeeper specific logic
+        points = [
+            Math.min(100, (s.passes?.accuracy || 0)), // Chuyền dài/Chính xác
+            Math.min(100, (s.tackles?.interceptions || 0) * 20), // Thủ môn quét (dựa trên đánh chặn)
+            Math.max(0, 100 - (s.goals?.conceded || 0) * 20), // Bàn thua (càng ít càng cao)
+            Math.min(100, (s.goals?.saves || 0) * 15), // Cứu thua
+            Math.min(100, (s.duels?.total || 0) * 10), // Bắt bóng bổng/Tranh chấp
+            Math.min(100, (props.careerTotals?.clean_sheets || 0) * 10), // Giữ sạch lưới (nếu có dữ liệu tổng)
+        ];
+    } else {
+        // Outfield player logic
+        points = [
+            Math.min(100, (s.goals?.total || 0) * 10), // Bàn thắng
+            Math.min(100, (s.shots?.total || 0) * 5), // Dứt điểm
+            Math.min(100, (s.passes?.accuracy || 0)), // Lượt chạm
+            Math.min(100, (s.passes?.key || 0) * 20), // Cơ hội tạo ra
+            Math.min(100, (s.duels?.won || 0) / 2), // Không chiến
+            Math.min(100, ((s.tackles?.total || 0) + (s.tackles?.interceptions || 0)) * 5), // Phòng ngự
+        ];
+    }
+    
     const radius = 60;
+    const center = 90;
     return points.map((val, i) => {
+        // Back to vertices (starting from -90deg / Top)
         const angle = (Math.PI * 2 * i) / points.length - Math.PI / 2;
         const r = (val / 100) * radius;
-        return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
-    }).join(' ');
+        return {
+            x: center + r * Math.cos(angle),
+            y: center + r * Math.sin(angle)
+        };
+    });
 });
 
-const radarLabels = ['Tấn công', 'Chuyền', 'Rê bóng', 'Phòng ngự', 'Tranh chấp', 'Ổn định'];
+const getLabelPosition = (i) => {
+    const angle = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+    const r = 88; 
+    const center = 90;
+    return {
+        left: `${center + r * Math.cos(angle)}px`,
+        top: `${center + r * Math.sin(angle)}px`,
+        transform: 'translate(-50%, -50%)'
+    };
+};
+
+const getHexPath = (r) => {
+    const size = 180;
+    const center = size / 2;
+    let p = [];
+    for(let i=0; i<6; i++) {
+        const a = (Math.PI * 2 * i) / 6 - Math.PI / 2;
+        p.push(`${center + r * Math.cos(a)},${center + r * Math.sin(a)}`);
+    }
+    return p.join(' ');
+};
+
+const radarLabels = computed(() => {
+    if (isGoalkeeper.value) {
+        return [
+            { name: 'Chuyền dài', val: (props.latestStat?.detailed_stats?.passes?.accuracy || 0) + '%' },
+            { name: 'Quét', val: (props.latestStat?.detailed_stats?.tackles?.interceptions || 0) },
+            { name: 'Bàn thua', val: (props.latestStat?.detailed_stats?.goals?.conceded || 0) },
+            { name: 'Cứu thua %', val: (props.latestStat?.detailed_stats?.goals?.saves || 0) },
+            { name: 'Bắt bổng', val: (props.latestStat?.detailed_stats?.duels?.total || 0) },
+            { name: 'Sạch lưới', val: (props.careerTotals?.clean_sheets || 0) }
+        ];
+    }
+    return [
+        { name: 'Bàn thắng', val: (props.latestStat?.detailed_stats?.goals?.total || 0) },
+        { name: 'Dứt điểm', val: (props.latestStat?.detailed_stats?.shots?.total || 0) },
+        { name: 'Lượt chạm', val: (props.latestStat?.detailed_stats?.passes?.accuracy || 0) + '%' },
+        { name: 'Cơ hội tạo ra', val: (props.latestStat?.detailed_stats?.passes?.key || 0) },
+        { name: 'Không chiến', val: (props.latestStat?.detailed_stats?.duels?.won || 0) },
+        { name: 'Phòng ngự', val: (props.latestStat?.detailed_stats?.tackles?.total || 0) }
+    ];
+});
 
 // ── Mini Pitch Logic ───────────────────────
 const positionCoords = computed(() => {
@@ -174,7 +237,7 @@ const positionCoords = computed(() => {
                                 <img v-if="player.team?.logo" :src="player.team?.logo" class="w-5 h-5 object-contain" />
                                 <span class="text-emerald-500 uppercase text-[9px] font-bold tracking-widest">{{ player.team?.name }}</span>
                             </div>
-                            <h1 class="text-3xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white mb-4">
+                            <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
                                 {{ player.name }}
                             </h1>
                             <div class="flex gap-10 justify-center md:justify-start">
@@ -212,16 +275,17 @@ const positionCoords = computed(() => {
                                     >
                                         <div class="w-1 h-1 bg-white rounded-full animate-ping"></div>
                                     </div>
-                                    <div class="absolute inset-x-0 bottom-1 text-center text-[7px] font-bold text-emerald-500 uppercase tracking-tighter">
-                                        {{ player.position }}
-                                    </div>
+                                </div>
+                                <!-- Tên vị trí đã được đưa xuống dưới -->
+                                <div class="mt-2 text-center text-[8px] font-bold text-emerald-500 uppercase tracking-widest">
+                                    {{ player.position }}
                                 </div>
                             </div>
 
                             <!-- Market Info -->
                             <div class="flex flex-col items-center lg:items-end justify-center">
                                 <div class="text-gray-400 uppercase text-[9px] font-bold tracking-widest mb-3">Giá trị ước tính</div>
-                                <div class="text-4xl md:text-5xl font-black tracking-tighter text-gray-900 dark:text-white mb-1">€33.7M</div>
+                                <div class="text-4xl md:text-5xl font-bold tracking-tighter text-gray-900 dark:text-white mb-1">€33.7M</div>
                                 <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hết hạn: 30.06.2028</div>
                             </div>
                         </div>
@@ -242,40 +306,6 @@ const positionCoords = computed(() => {
 
                         <!-- TAB: SUMMARY -->
                         <div v-if="activeTab === 'summary'" class="space-y-8">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <!-- Radar Chart -->
-                                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-sm flex flex-col items-center">
-                                    <h3 class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-4">Phong cách thi đấu</h3>
-                                    <svg width="140" height="140" class="transform -rotate-90">
-                                        <circle v-for="i in 4" :key="i" cx="70" cy="70" :r="i * 14" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="1" />
-                                        <line v-for="i in 6" :key="i" x1="70" y1="70" :x2="70 + 56 * Math.cos(Math.PI*2*i/6)" :y2="70 + 56 * Math.sin(Math.PI*2*i/6)" class="stroke-gray-100 dark:stroke-gray-700" />
-                                        <polygon :points="radarPoints" fill="rgba(16, 185, 129, 0.4)" stroke="#10b981" stroke-width="2.5" stroke-linejoin="round" />
-                                    </svg>
-                                    <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-5 w-full">
-                                        <div v-for="(label, i) in radarLabels" :key="i" class="flex items-center gap-1.5">
-                                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                                            <span class="text-[8px] font-bold text-gray-500 uppercase">{{ label }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Detailed Stats -->
-                                <div class="md:col-span-2 grid grid-cols-1 gap-6">
-                                    <div v-for="(group, key) in { attack: advancedStats?.attack, passes: advancedStats?.passes }" :key="key" 
-                                        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-sm">
-                                        <h3 class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2.5">
-                                            <div class="w-1 h-3.5 bg-emerald-500 rounded-full"></div>
-                                            {{ key === 'attack' ? 'Tấn công' : 'Chuyền bóng' }}
-                                        </h3>
-                                        <div class="grid grid-cols-3 gap-6">
-                                            <div v-for="item in group" :key="item.label" class="text-center">
-                                                <div class="text-xl font-bold text-gray-900 dark:text-white mb-0.5">{{ item.val }}</div>
-                                                <div class="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{{ item.label }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- Match History Table (SofaScore Style - Fixed Alignment) -->
                             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden shadow-sm">
@@ -286,35 +316,31 @@ const positionCoords = computed(() => {
                                     <table class="w-full text-left table-fixed min-w-[600px]">
                                         <thead>
                                             <tr class="border-b border-gray-50 dark:border-gray-700">
-                                                <th class="w-24 px-6 py-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest">Ngày</th>
+                                                <th class="w-24 px-6 py-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center">Ngày</th>
                                                 <th class="px-2 py-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest">Trận đấu</th>
                                                 <th class="w-28 px-2 py-3 text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center">Rating</th>
-                                                <th class="w-12 px-2 py-3 text-center">
+                                                <th class="w-12 px-2 py-3 text-center" title="Phút thi đấu">
                                                     <svg class="w-3.5 h-3.5 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                 </th>
-                                                <th class="w-10 px-2 py-3 text-center">
+                                                <th class="w-10 px-2 py-3 text-center" title="Bàn thắng">
                                                     <svg class="w-3.5 h-3.5 text-gray-400 mx-auto" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10,0,1,0,22,12,10.011,10.011,0,0,0,12,2Zm0,18a8,8,0,1,1,8-8A8.009,8.009,0,0,1,12,20Z"/><path d="M12,6a6,6,0,1,0,6,6A6.007,6.007,0,0,0,12,6Zm0,10a4,4,0,1,1,4-4A4,4,0,0,1,12,16Z"/></svg>
                                                 </th>
-                                                <th class="w-10 px-2 py-3 text-[10px] font-bold text-gray-400 text-center uppercase">A</th>
-                                                <th class="w-10 px-2 py-3 text-center">
+                                                <th class="w-10 px-2 py-3 text-[10px] font-bold text-gray-400 text-center uppercase" title="Kiến tạo">A</th>
+                                                <th class="w-10 px-2 py-3 text-center" title="Thẻ vàng">
                                                     <div class="w-2.5 h-3.5 bg-yellow-400 rounded-sm mx-auto shadow-sm"></div>
                                                 </th>
-                                                <th class="w-10 px-2 py-3 text-center">
+                                                <th class="w-10 px-2 py-3 text-center" title="Thẻ đỏ">
                                                     <div class="w-2.5 h-3.5 bg-red-500 rounded-sm mx-auto shadow-sm"></div>
                                                 </th>
-                                                <th class="w-14 px-4 py-3 text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest pr-6">KQ</th>
+                                                <th class="w-14 px-4 py-3 text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest pr-6" title="Kết quả">KQ</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
                                             <tr v-for="stat in matchHistory.slice(0, 10)" :key="stat.id" class="group hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5 cursor-pointer transition-colors" @click="router.visit(`/matches/${stat.match_id}`)">
                                                 <!-- Date -->
-                                                <td class="px-6 py-4">
-                                                    <div class="flex flex-col">
+                                                <td class="px-6 py-4 text-center align-middle">
+                                                    <div class="flex flex-col items-center justify-center h-full">
                                                         <span class="text-[10px] font-bold text-gray-400 tabular-nums">{{ dayjs(stat.match?.match_at).format('DD.MM.YY') }}</span>
-                                                        <div class="flex items-center gap-1 mt-0.5">
-                                                            <img :src="stat.league?.logo" class="w-3 h-3 grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
-                                                            <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{{ stat.league?.name?.substring(0, 2) }}</span>
-                                                        </div>
                                                     </div>
                                                 </td>
                                                 <!-- Teams -->
@@ -367,7 +393,7 @@ const positionCoords = computed(() => {
                                                 </td>
                                                 <!-- Result -->
                                                 <td class="px-4 py-4 pr-6">
-                                                    <div :class="[matchResult(stat).cls, 'w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shadow-sm mx-auto']">
+                                                    <div :class="[matchResult(stat).cls, 'w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm mx-auto']">
                                                         {{ matchResult(stat).label }}
                                                     </div>
                                                 </td>
@@ -380,59 +406,6 @@ const positionCoords = computed(() => {
                                         Xem thêm trận đấu
                                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
-                                </div>
-                            </div>
-
-                            <!-- Career Timeline & Trophies (Expanded) -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <!-- Career -->
-                                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-8 shadow-sm">
-                                    <h2 class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-8">Lịch sử sự nghiệp</h2>
-                                    <div class="relative pl-8 border-l-2 border-gray-100 dark:border-gray-700 space-y-10">
-                                        <div v-for="stat in seasonStats.slice(0, 5)" :key="stat.id" class="relative">
-                                            <div class="absolute -left-[41px] top-1 w-4 h-4 rounded-full bg-white dark:bg-gray-800 border-4 border-emerald-500"></div>
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-4">
-                                                    <img :src="stat.team?.logo" class="w-10 h-10 object-contain p-1.5 bg-gray-50 dark:bg-gray-900 rounded-xl" />
-                                                    <div class="flex flex-col">
-                                                        <span class="text-sm font-bold">{{ stat.team?.name }}</span>
-                                                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{{ stat.season }} • {{ stat.league?.name }}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="flex gap-6">
-                                                    <div class="flex flex-col items-center">
-                                                        <span class="text-sm font-bold tabular-nums">{{ stat.games }}</span>
-                                                        <span class="text-[9px] text-gray-400 uppercase font-bold">Trận</span>
-                                                    </div>
-                                                    <div class="flex flex-col items-center">
-                                                        <span class="text-sm font-bold text-emerald-500 tabular-nums">{{ stat.goals }}</span>
-                                                        <span class="text-[9px] text-gray-400 uppercase font-bold">Bàn</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Trophies -->
-                                <div class="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-3xl p-8 shadow-sm overflow-hidden relative">
-                                    <div class="absolute -right-12 -top-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
-                                    <h2 class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-8">Danh hiệu & Giải thưởng</h2>
-                                    
-                                    <div v-if="player.trophies?.length" class="grid grid-cols-1 gap-4 relative z-10">
-                                        <div v-for="(trophy, i) in player.trophies" :key="i" 
-                                            class="flex items-center gap-5 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm">
-                                            <div class="text-3xl">🏆</div>
-                                            <div class="flex flex-col">
-                                                <span class="text-sm font-bold leading-tight">{{ trophy.league }}</span>
-                                                <span class="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{{ trophy.season }} • {{ trophy.place }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div v-else class="flex flex-col items-center justify-center py-12 text-center relative z-10">
-                                        <div class="text-5xl opacity-20 mb-4">🏅</div>
-                                        <p class="text-xs font-bold text-emerald-600/50 uppercase tracking-widest">Đang cập nhật dữ liệu danh hiệu</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>

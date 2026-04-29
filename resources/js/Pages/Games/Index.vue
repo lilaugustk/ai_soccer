@@ -2,14 +2,14 @@
     <Head title="Lịch Thi Đấu | AI Soccer" />
 
     <MainLayout>
-        <div class="py-8">
+        <div class="pt-2 pb-8">
             <!-- Header Section -->
             <div
-                class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12"
+                class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative z-30"
             >
                 <div>
                     <h1
-                        class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight"
+                        class="text-xl font-bold text-gray-900 dark:text-white uppercase tracking-tight"
                     >
                         Lịch Thi Đấu & Kết Quả
                     </h1>
@@ -56,11 +56,11 @@
                                     class="flex items-center justify-between mb-4"
                                 >
                                     <span
-                                        class="text-[10px] font-black uppercase text-gray-400 tracking-widest"
-                                        >{{
+                                        class="text-[10px] font-bold uppercase text-gray-400 tracking-widest"
+                                        >Tháng {{
                                             dayjs(
-                                                props.filters.date || today,
-                                            ).format("MMMM YYYY")
+                                                props.filters?.date || today,
+                                            ).format("M, [Năm] YYYY")
                                         }}</span
                                     >
                                     <div class="flex gap-1">
@@ -96,16 +96,16 @@
                                 <div class="grid grid-cols-7 gap-1 mb-4">
                                     <span
                                         v-for="d in [
-                                            'S',
-                                            'M',
-                                            'T',
-                                            'W',
-                                            'T',
-                                            'F',
-                                            'S',
+                                            'CN',
+                                            'T2',
+                                            'T3',
+                                            'T4',
+                                            'T5',
+                                            'T6',
+                                            'T7',
                                         ]"
                                         :key="d"
-                                        class="text-center text-[8px] font-black text-gray-300"
+                                        class="text-center text-[8px] font-bold text-gray-300"
                                         >{{ d }}</span
                                     >
                                     <button
@@ -120,7 +120,7 @@
                                             day.isCurrentMonth
                                                 ? ''
                                                 : 'opacity-20',
-                                            filters.date === day.date
+                                            (filters?.date || today) === day.date
                                                 ? 'bg-emerald-500 text-white shadow-lg'
                                                 : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300',
                                         ]"
@@ -133,7 +133,7 @@
                                         changeDate(today);
                                         showDatePicker = false;
                                     "
-                                    class="w-full py-2 bg-gray-50 dark:bg-gray-700 rounded-xl text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400"
+                                    class="w-full py-2 bg-gray-50 dark:bg-gray-700 rounded-xl text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400"
                                 >
                                     Hôm nay
                                 </button>
@@ -151,12 +151,12 @@
                                 @click="changeDate(btn.date)"
                                 class="px-4 py-2 rounded-xl text-[10px] font-bold transition-all whitespace-nowrap min-w-[70px] text-center"
                                 :class="
-                                    filters.date === btn.date
+                                    (filters?.date || today) === btn.date
                                         ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 dark:shadow-none'
                                         : 'text-gray-400 dark:text-gray-500 hover:text-emerald-500'
                                 "
                             >
-                                {{ btn.dayNum }}/{{ btn.month }}
+                                {{ btn.dayNum }}/{{ dayjs(btn.date).format('MM') }}
                             </button>
                         </div>
                     </div>
@@ -168,7 +168,7 @@
                     >
                         <button
                             @click="changeLeague(null)"
-                            class="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border whitespace-nowrap"
+                            class="px-4 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border whitespace-nowrap"
                             :class="
                                 !filters.league_id
                                     ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-950 border-gray-950 dark:border-white shadow-lg'
@@ -181,7 +181,7 @@
                             v-for="league in availableLeagues"
                             :key="league.id"
                             @click="changeLeague(league.id)"
-                            class="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap"
+                            class="px-4 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap"
                             :class="
                                 filters.league_id == league.id
                                     ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20'
@@ -209,11 +209,11 @@
                     <div class="flex items-center gap-2 mb-4">
                         <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
                         <h2
-                            class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2"
+                            class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-2"
                         >
                             {{ leagueName }}
                             <span
-                                class="text-[9px] font-black px-1.5 py-0.5 bg-gray-100 dark:bg-gray-900 text-gray-400 rounded-md"
+                                class="text-[9px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-900 text-gray-400 rounded-md"
                                 >{{ games.length }}</span
                             >
                         </h2>
@@ -248,7 +248,7 @@
                                         />
                                         <span
                                             v-else
-                                            class="font-black text-gray-400 dark:text-gray-500 text-[10px]"
+                                            class="font-bold text-gray-400 dark:text-gray-500 text-[10px]"
                                             >{{
                                                 game.home_team?.short_name ||
                                                 "H"
@@ -262,7 +262,7 @@
                                     class="px-4 md:px-8 flex flex-col items-center min-w-[100px] md:min-w-[140px]"
                                 >
                                     <div
-                                        class="flex items-baseline gap-2 text-2xl md:text-3xl font-black text-gray-950 dark:text-white tabular-nums"
+                                        class="flex items-baseline gap-2 text-2xl md:text-3xl font-bold text-gray-950 dark:text-white tabular-nums"
                                     >
                                         <span>{{
                                             game.home_score ?? "-"
@@ -276,7 +276,7 @@
                                         }}</span>
                                     </div>
                                     <div
-                                        class="mt-1 px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] bg-gray-50/50 dark:bg-gray-900/50 text-gray-400 border border-gray-100 dark:border-gray-700"
+                                        class="mt-1 px-2.5 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-[0.2em] bg-gray-50/50 dark:bg-gray-900/50 text-gray-400 border border-gray-100 dark:border-gray-700"
                                     >
                                         {{ getMatchStatus(game) }}
                                     </div>
@@ -296,7 +296,7 @@
                                         />
                                         <span
                                             v-else
-                                            class="font-black text-gray-400 dark:text-gray-500 text-[10px]"
+                                            class="font-bold text-gray-400 dark:text-gray-500 text-[10px]"
                                             >{{
                                                 game.away_team?.short_name ||
                                                 "A"
@@ -321,7 +321,7 @@
                                     {{ game.round || "N/A" }}
                                 </span>
                                 <span
-                                    class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest"
+                                    class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest"
                                 >
                                     Chi tiết trận đấu & Phân tích AI →
                                 </span>
@@ -362,7 +362,7 @@
                     </div>
                 </div>
                 <h3
-                    class="text-2xl font-black mb-2 uppercase tracking-tight text-gray-900 dark:text-white"
+                    class="text-2xl font-bold mb-2 uppercase tracking-tight text-gray-900 dark:text-white"
                 >
                     Không có dữ liệu
                 </h3>
@@ -370,11 +370,11 @@
                     class="text-gray-500 dark:text-gray-400 font-medium max-w-xs mx-auto"
                 >
                     Chưa có trận đấu nào được nạp cho ngày
-                    {{ formatDate(filters.date) }}.
+                    {{ formatDate(props.filters?.date || today) }}.
                 </p>
                 <button
                     @click="changeDate(today)"
-                    class="mt-8 px-8 py-3 bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-200 dark:shadow-none hover:translate-y-[-2px] transition-all"
+                    class="mt-8 px-8 py-3 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-200 dark:shadow-none hover:translate-y-[-2px] transition-all"
                 >
                     VỀ HÔM NAY
                 </button>
@@ -479,7 +479,7 @@ const changeLeague = (leagueId) => {
     );
 };
 
-const formatDate = (dateStr) => dayjs(dateStr).format("DD/MM");
+const formatDate = (dateStr) => dayjs(dateStr).locale('vi').format("DD/MM");
 const formatTime = (dateTime) => dayjs(dateTime).format("HH:mm");
 
 const getMatchStatus = (game) => {

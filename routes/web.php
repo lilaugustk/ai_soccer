@@ -17,10 +17,14 @@ Route::get('/matches', function () {
 Route::get('/matches/{id}', [GameController::class, 'show'])->name('games.show');
 Route::get('/predictions', [GameController::class, 'predictions'])->name('predictions.index');
 
-Route::get('/leagues', [LeagueController::class, 'index'])->name('leagues.index');
+Route::get('/leagues', function () {
+    return redirect()->route('dashboard');
+});
 Route::get('/leagues/{id}', [LeagueController::class, 'show'])->name('leagues.show');
 
-Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
+Route::get('/teams', function () {
+    return redirect()->route('dashboard');
+});
 Route::get('/teams/{id}', [TeamController::class, 'show'])->name('teams.show');
 Route::get('/players', [PlayerController::class, 'index'])->name('players.index');
 Route::get('/players/{id}', [PlayerController::class, 'show'])->name('players.show');

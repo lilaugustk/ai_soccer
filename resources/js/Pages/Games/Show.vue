@@ -5,7 +5,7 @@
             <!-- Back Button -->
             <Link
                 href="/matches"
-                class="inline-flex items-center gap-2 text-[11px] font-black text-gray-400 hover:text-emerald-500 transition-colors mb-4 group uppercase tracking-widest"
+                class="inline-flex items-center gap-2 text-[11px] font-bold text-gray-400 hover:text-emerald-500 transition-colors mb-4 group uppercase tracking-widest"
             >
                 <svg
                     class="w-4 h-4 transition-transform group-hover:-translate-x-1"
@@ -44,18 +44,18 @@
                             />
                             <div
                                 v-else
-                                class="text-2xl font-black text-gray-200"
+                                class="text-2xl font-bold text-gray-200"
                             >
                                 H
                             </div>
                         </div>
                         <h2
-                            class="text-base md:text-lg font-black text-gray-950 dark:text-white mb-1 leading-tight"
+                            class="text-base md:text-lg font-bold text-gray-950 dark:text-white mb-1 leading-tight"
                         >
                             {{ game.home_team?.name }}
                         </h2>
                         <span
-                            class="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-500 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full"
+                            class="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-500 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full"
                             >Chủ nhà</span
                         >
                     </div>
@@ -63,16 +63,16 @@
                     <!-- Score & Info -->
                     <div class="flex flex-col items-center">
                         <div
-                            class="px-2.5 py-0.5 bg-gray-950 dark:bg-white rounded-lg mb-2"
+                            class="px-2.5 py-1 bg-gray-950 dark:bg-white rounded-lg mb-2 flex items-center justify-center min-h-[20px]"
                         >
                             <span
-                                class="text-[8px] font-black uppercase tracking-widest text-white dark:text-gray-950"
+                                class="text-[8px] font-bold uppercase tracking-widest text-white dark:text-gray-950 leading-none"
                             >
                                 {{ getMatchStatus(game) }}
                             </span>
                         </div>
                         <div
-                            class="flex items-center gap-4 text-3xl md:text-4xl font-black text-gray-950 dark:text-white tabular-nums"
+                            class="flex items-center gap-4 text-3xl md:text-4xl font-bold text-gray-950 dark:text-white tabular-nums"
                         >
                             <span>{{ game.home_score ?? "-" }}</span>
                             <span
@@ -83,7 +83,7 @@
                         </div>
                         <div class="mt-2 flex flex-col items-center">
                             <span
-                                class="text-[8px] font-black text-gray-400 uppercase tracking-widest"
+                                class="text-[8px] font-bold text-gray-400 uppercase tracking-widest"
                                 >{{ formatDateTime(game.match_datetime) }}</span
                             >
                             <div
@@ -95,7 +95,7 @@
                                     class="w-3.5 h-3.5 object-contain"
                                 />
                                 <span
-                                    class="text-[8px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tighter"
+                                    class="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter"
                                     >{{ game.league?.name }}</span
                                 >
                             </div>
@@ -116,18 +116,18 @@
                             />
                             <div
                                 v-else
-                                class="text-2xl font-black text-gray-200"
+                                class="text-2xl font-bold text-gray-200"
                             >
                                 A
                             </div>
                         </div>
                         <h2
-                            class="text-base md:text-lg font-black text-gray-950 dark:text-white mb-1 leading-tight"
+                            class="text-base md:text-lg font-bold text-gray-950 dark:text-white mb-1 leading-tight"
                         >
                             {{ game.away_team?.name }}
                         </h2>
                         <span
-                            class="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full"
+                            class="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full"
                             >Đội khách</span
                         >
                     </div>
@@ -158,7 +158,7 @@
                     </div>
                     <div>
                         <span
-                            class="block text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none mb-0.5"
+                            class="block text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5"
                             >Sân vận động</span
                         >
                         <span
@@ -192,7 +192,7 @@
                     </div>
                     <div>
                         <span
-                            class="block text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none mb-0.5"
+                            class="block text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5"
                             >Trọng tài</span
                         >
                         <span
@@ -223,7 +223,7 @@
                     </div>
                     <div>
                         <span
-                            class="block text-[7px] font-black text-gray-400 uppercase tracking-widest leading-none mb-0.5"
+                            class="block text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5"
                             >Khán giả</span
                         >
                         <span
@@ -244,7 +244,7 @@
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click="setActiveTab(tab.id)"
-                    class="px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all relative overflow-hidden group shadow-md"
+                    class="px-6 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-[0.2em] transition-all relative overflow-hidden group shadow-md"
                     :class="
                         activeTab === tab.id
                             ? 'bg-emerald-500 text-white shadow-emerald-500/25 scale-105'
@@ -322,23 +322,25 @@
                                     class="px-2.5 py-1.5 rounded-lg bg-[#2c4238]/95 border border-white/10 flex items-center gap-2 shadow-xl backdrop-blur-md"
                                 >
                                     <div
-                                        class="w-5 h-5 rounded-md bg-yellow-500 flex items-center justify-center shadow-inner"
+                                        class="w-5 h-5 rounded-md flex items-center justify-center shadow-inner"
+                                        :class="getRatingClass(homeAverageRating)"
                                     >
                                         <span
-                                            class="text-[10px] font-black text-slate-900"
+                                            class="text-[10px] font-bold"
                                             >Ø</span
                                         >
                                     </div>
                                     <span
-                                        class="text-sm font-black text-white tabular-nums tracking-tight"
+                                        class="text-sm font-bold text-white tabular-nums tracking-tight"
                                         >{{ homeAverageRating }}</span
                                     >
                                 </div>
                                 <div
+                                    v-if="game.home_formation"
                                     class="px-2 py-1 bg-black/30 rounded border border-white/5 backdrop-blur-sm"
                                 >
                                     <span
-                                        class="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]"
+                                        class="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]"
                                         >{{ game.home_formation }}</span
                                     >
                                 </div>
@@ -351,38 +353,31 @@
                                     class="px-2.5 py-1.5 rounded-lg bg-[#2c4238]/95 border border-white/10 flex items-center gap-2 flex-row-reverse shadow-xl backdrop-blur-md"
                                 >
                                     <div
-                                        class="w-5 h-5 rounded-md bg-emerald-500 flex items-center justify-center shadow-inner"
+                                        class="w-5 h-5 rounded-md flex items-center justify-center shadow-inner"
+                                        :class="getRatingClass(awayAverageRating)"
                                     >
                                         <span
-                                            class="text-[10px] font-black text-slate-900"
+                                            class="text-[10px] font-bold"
                                             >Ø</span
                                         >
                                     </div>
                                     <span
-                                        class="text-sm font-black text-white tabular-nums tracking-tight"
+                                        class="text-sm font-bold text-white tabular-nums tracking-tight"
                                         >{{ awayAverageRating }}</span
                                     >
                                 </div>
                                 <div
+                                    v-if="game.away_formation"
                                     class="px-2 py-1 bg-black/30 rounded border border-white/5 backdrop-blur-sm"
                                 >
                                     <span
-                                        class="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] text-right"
+                                        class="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] text-right"
                                         >{{ game.away_formation }}</span
                                     >
                                 </div>
                             </div>
 
-                            <!-- Watermark -->
-                            <div
-                                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.04] pointer-events-none"
-                            >
-                                <h2
-                                    class="text-[12rem] font-black text-white tracking-tighter uppercase italic"
-                                >
-                                    AI SOCCER
-                                </h2>
-                            </div>
+
 
                             <!-- Players Layer -->
                             <div class="absolute inset-0 z-30">
@@ -411,27 +406,55 @@
                                                 />
                                             </div>
                                             <!-- Event Icons (Top Left) -->
-                                            <div
-                                                class="absolute top-0 -left-2 flex flex-col gap-1 z-40"
-                                            >
+                                            <div class="absolute -top-1.5 -left-3.5 flex flex-col gap-1.5 z-40 items-center">
                                                 <div
-                                                    v-for="(
-                                                        ev, idx
-                                                    ) in p.events"
+                                                    v-for="(ev, idx) in p.events"
                                                     :key="idx"
-                                                    v-html="
-                                                        getSofaIcon(ev.type)
-                                                    "
-                                                    class="scale-90 shadow-2xl"
-                                                ></div>
+                                                    class="w-6 h-6 rounded-lg bg-gray-950 border border-white/20 shadow-2xl flex items-center justify-center group/ev relative transition-transform hover:scale-110"
+                                                >
+                                                    <!-- Goal / Assist -->
+                                                    <div v-if="ev.type?.toLowerCase().includes('goal')" class="w-full h-full flex items-center justify-center">
+                                                        <svg v-if="ev.detail?.toLowerCase().includes('own goal')" class="w-3.5 h-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <path d="M12 2v20M2 12h20"></path>
+                                                        </svg>
+                                                        <svg v-else :class="ev.player?.id === p.id ? 'text-white' : 'text-emerald-400'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07"></path>
+                                                        </svg>
+                                                    </div>
+                                                    <!-- Card -->
+                                                    <div v-else-if="ev.type?.toLowerCase().includes('card')" 
+                                                         :class="ev.detail?.toLowerCase().includes('yellow') ? 'bg-yellow-400' : 'bg-red-500'"
+                                                         class="w-2.5 h-3.5 rounded-[1px] border border-white/10">
+                                                    </div>
+                                                    <!-- Substitution -->
+                                                    <div v-else-if="ev.type?.toLowerCase() === 'subst'" class="flex flex-col items-center justify-center gap-0">
+                                                        <span v-if="ev.player?.id === p.id" class="text-[9px] text-emerald-400 font-black leading-tight">▲</span>
+                                                        <span v-else class="text-[9px] text-rose-400 font-black leading-tight">▼</span>
+                                                    </div>
+
+                                                    <!-- Tooltip -->
+                                                    <div class="absolute bottom-full left-0 mb-2 hidden group-hover/ev:block w-max px-2.5 py-1.5 bg-gray-950 text-white text-[10px] font-bold rounded-lg shadow-2xl z-[200] border border-white/10 pointer-events-none whitespace-nowrap">
+                                                        <template v-if="ev.type?.toLowerCase() === 'subst'">
+                                                            {{ ev.player?.id === p.id ? 'Vào thay: ' + (ev.assist?.name || '...') : 'Ra sân, vào: ' + (ev.player?.name || '...') }}
+                                                        </template>
+                                                        <template v-else-if="ev.type?.toLowerCase().includes('goal')">
+                                                            <span v-if="ev.detail?.toLowerCase().includes('own goal')" class="text-rose-400">Phản lưới nhà ({{ ev.time?.elapsed }}')</span>
+                                                            <span v-else-if="ev.player?.id === p.id">Ghi bàn ({{ ev.time?.elapsed }}')</span>
+                                                            <span v-else class="text-emerald-400">Kiến tạo ({{ ev.time?.elapsed }}')</span>
+                                                        </template>
+                                                        <template v-else-if="ev.type?.toLowerCase().includes('card')">{{ ev.detail }} ({{ ev.time?.elapsed }}')</template>
+                                                        <template v-else>{{ ev.detail || ev.type }}</template>
+                                                        <div class="absolute top-full left-4 -translate-x-1/2 border-[5px] border-transparent border-t-gray-950"></div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <!-- Rating (Top Right) -->
                                             <div
                                                 v-if="p.rating"
-                                                class="absolute -top-1 -right-2 px-1.5 min-w-[24px] h-5 rounded-md text-[10px] font-black flex items-center justify-center shadow-2xl border border-white/20 z-40 transition-transform group-hover:scale-110"
-                                                :class="
-                                                    getRatingClass(p.rating)
-                                                "
+                                                class="absolute -top-1.5 -right-3.5 px-1.5 min-w-[30px] h-6 rounded-lg text-[11px] font-black flex items-center justify-center shadow-2xl border-2 border-white/30 z-30 transition-transform group-hover:scale-110"
+                                                :class="getRatingClass(p.rating)"
                                             >
                                                 {{ p.rating }}
                                             </div>
@@ -448,7 +471,7 @@
                                                 >
                                             </div>
                                             <span
-                                                class="text-[8px] font-black text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
+                                                class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
                                                 >{{ p.number }}</span
                                             >
                                         </div>
@@ -496,7 +519,7 @@
                                             <!-- Rating (Top Left for Away) -->
                                             <div
                                                 v-if="p.rating"
-                                                class="absolute -top-1 -left-2 px-1.5 min-w-[24px] h-5 rounded-md text-[10px] font-black flex items-center justify-center shadow-2xl border border-white/20 z-40 transition-transform group-hover:scale-110"
+                                                class="absolute -top-1.5 -left-2.5 px-2 min-w-[28px] h-6 rounded-lg text-[11px] font-black flex items-center justify-center shadow-2xl border-2 border-white/30 z-40 transition-transform group-hover:scale-125"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -516,7 +539,7 @@
                                                 >
                                             </div>
                                             <span
-                                                class="text-[8px] font-black text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
+                                                class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
                                                 >{{ p.number }}</span
                                             >
                                         </div>
@@ -531,7 +554,7 @@
                         <!-- Home Detailed -->
                         <div class="space-y-6">
                             <h4
-                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border border-gray-100 dark:border-gray-700"
+                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border border-gray-100 dark:border-gray-700"
                             >
                                 Đội hình: {{ game.home_team.name }}
                             </h4>
@@ -549,7 +572,7 @@
                                     >
                                         <div class="flex items-center gap-4">
                                             <span
-                                                class="w-6 text-xs font-black text-gray-300 group-hover:text-emerald-500 transition-colors"
+                                                class="w-6 text-xs font-bold text-gray-300 group-hover:text-emerald-500 transition-colors"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -561,22 +584,25 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <Link
-                                                :href="`/players/${p.id}`"
-                                                class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
-                                                >{{ p.name }}</Link
-                                            >
+                                            <div class="flex flex-col">
+                                                <Link
+                                                    :href="`/players/${p.id}`"
+                                                    class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
+                                                    >{{ p.name }}</Link
+                                                >
+                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ p.pos }}</span>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.is_captain"
-                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-black text-gray-400"
+                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-bold text-gray-400"
                                             >
                                                 C
                                             </div>
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-black border border-white dark:border-gray-800 shadow-sm"
+                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -591,7 +617,7 @@
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700"
                                 >
                                     <span
-                                        class="text-[9px] font-black uppercase tracking-widest text-gray-400"
+                                        class="text-[9px] font-bold uppercase tracking-widest text-gray-400"
                                         >Dự bị</span
                                     >
                                 </div>
@@ -607,7 +633,7 @@
                                             class="flex items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                         >
                                             <span
-                                                class="w-6 text-xs font-black text-gray-300"
+                                                class="w-6 text-xs font-bold text-gray-300"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -619,16 +645,19 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <Link
-                                                :href="`/players/${p.id}`"
-                                                class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
-                                                >{{ p.name }}</Link
-                                            >
+                                            <div class="flex flex-col">
+                                                <Link
+                                                    :href="`/players/${p.id}`"
+                                                    class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
+                                                    >{{ p.name }}</Link
+                                                >
+                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ p.pos }}</span>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-black border border-white dark:border-gray-800 shadow-sm"
+                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -643,20 +672,9 @@
                                     v-if="homeLineupData?.coach"
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between"
                                 >
-                                    <div class="flex items-center gap-4">
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden"
-                                        >
-                                            <img
-                                                :src="
-                                                    homeLineupData.coach.photo
-                                                "
-                                                class="w-full h-full object-cover"
-                                            />
-                                        </div>
                                         <div>
                                             <span
-                                                class="block text-[8px] font-black uppercase text-gray-400"
+                                                class="block text-[8px] font-bold uppercase text-gray-400"
                                                 >Huấn luyện viên</span
                                             >
                                             <span
@@ -666,7 +684,6 @@
                                                 }}</span
                                             >
                                         </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -674,7 +691,7 @@
                         <!-- Away Detailed -->
                         <div class="space-y-6">
                             <h4
-                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 border border-gray-100 dark:border-gray-700 text-right"
+                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border border-gray-100 dark:border-gray-700 text-right"
                             >
                                 Đội hình: {{ game.away_team.name }}
                             </h4>
@@ -694,7 +711,7 @@
                                             class="flex flex-row-reverse items-center gap-4"
                                         >
                                             <span
-                                                class="w-6 text-xs font-black text-gray-300 group-hover:text-blue-500 transition-colors text-right"
+                                                class="w-6 text-xs font-bold text-gray-300 group-hover:text-blue-500 transition-colors text-right"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -706,16 +723,19 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <Link
-                                                :href="`/players/${p.id}`"
-                                                class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
-                                                >{{ p.name }}</Link
-                                            >
+                                            <div class="flex flex-col items-end">
+                                                <Link
+                                                    :href="`/players/${p.id}`"
+                                                    class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
+                                                    >{{ p.name }}</Link
+                                                >
+                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider text-right">{{ p.pos }}</span>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-black border border-white dark:border-gray-800 shadow-sm"
+                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -724,7 +744,7 @@
                                             </div>
                                             <div
                                                 v-if="p.is_captain"
-                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-black text-gray-400"
+                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-bold text-gray-400"
                                             >
                                                 C
                                             </div>
@@ -736,7 +756,7 @@
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700 text-right"
                                 >
                                     <span
-                                        class="text-[9px] font-black uppercase tracking-widest text-gray-400"
+                                        class="text-[9px] font-bold uppercase tracking-widest text-gray-400"
                                         >Dự bị</span
                                     >
                                 </div>
@@ -752,7 +772,7 @@
                                             class="flex flex-row-reverse items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                         >
                                             <span
-                                                class="w-6 text-xs font-black text-gray-300 text-right"
+                                                class="w-6 text-xs font-bold text-gray-300 text-right"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -764,16 +784,19 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <Link
-                                                :href="`/players/${p.id}`"
-                                                class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
-                                                >{{ p.name }}</Link
-                                            >
+                                            <div class="flex flex-col items-end">
+                                                <Link
+                                                    :href="`/players/${p.id}`"
+                                                    class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
+                                                    >{{ p.name }}</Link
+                                                >
+                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider text-right">{{ p.pos }}</span>
+                                            </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-black border border-white dark:border-gray-800 shadow-sm"
+                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -788,22 +811,9 @@
                                     v-if="awayLineupData?.coach"
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex flex-row-reverse items-center justify-between"
                                 >
-                                    <div
-                                        class="flex flex-row-reverse items-center gap-4"
-                                    >
-                                        <div
-                                            class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden"
-                                        >
-                                            <img
-                                                :src="
-                                                    awayLineupData.coach.photo
-                                                "
-                                                class="w-full h-full object-cover"
-                                            />
-                                        </div>
                                         <div class="text-right">
                                             <span
-                                                class="block text-[8px] font-black uppercase text-gray-400"
+                                                class="block text-[8px] font-bold uppercase text-gray-400"
                                                 >Huấn luyện viên</span
                                             >
                                             <span
@@ -813,7 +823,6 @@
                                                 }}</span
                                             >
                                         </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -823,7 +832,7 @@
                     <div class="grid lg:grid-cols-2 gap-8 pt-4">
                         <div class="space-y-4">
                             <h5
-                                class="px-6 text-[9px] font-black uppercase tracking-widest text-red-500 flex items-center gap-2"
+                                class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2"
                             >
                                 <svg
                                     class="w-3 h-3"
@@ -851,7 +860,7 @@
                         </div>
                         <div class="space-y-4">
                             <h5
-                                class="px-6 text-[9px] font-black uppercase tracking-widest text-red-500 flex items-center gap-2 justify-end"
+                                class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2 justify-end"
                             >
                                 Chấn thương & Vắng mặt
                                 <svg
@@ -885,17 +894,23 @@
                     <!-- Sub Tabs (Flashscore style) -->
                     <div class="flex justify-center gap-1 mb-8">
                         <button
-                            class="px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-red-600 text-white shadow-lg shadow-red-900/20"
+                            @click="statsPeriod = 'all'"
+                            :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
+                                     statsPeriod === 'all' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
                         >
                             Cả trận
                         </button>
                         <button
-                            class="px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            @click="statsPeriod = '1h'"
+                            :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
+                                     statsPeriod === '1h' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
                         >
                             Hiệp 1
                         </button>
                         <button
-                            class="px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            @click="statsPeriod = '2h'"
+                            :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
+                                     statsPeriod === '2h' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
                         >
                             Hiệp 2
                         </button>
@@ -912,7 +927,7 @@
                                     class="h-px flex-1 bg-gray-200 dark:bg-white/10"
                                 ></div>
                                 <h4
-                                    class="text-[12px] font-black uppercase tracking-[0.25em] text-slate-900 dark:text-emerald-400 px-4"
+                                    class="text-[12px] font-bold uppercase tracking-[0.25em] text-slate-900 dark:text-emerald-400 px-4"
                                 >
                                     {{ group.group }}
                                 </h4>
@@ -932,7 +947,7 @@
                                             class="flex flex-col items-start w-20"
                                         >
                                             <span
-                                                class="text-xl font-black text-slate-900 dark:text-white leading-none"
+                                                class="text-xl font-bold text-slate-900 dark:text-white leading-none"
                                                 >{{ stat.home }}</span
                                             >
                                             <span
@@ -943,7 +958,7 @@
                                         </div>
 
                                         <span
-                                            class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 text-center flex-1 pb-1"
+                                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 text-center flex-1 pb-1"
                                         >
                                             {{ stat.label }}
                                         </span>
@@ -952,7 +967,7 @@
                                             class="flex flex-col items-end w-20"
                                         >
                                             <span
-                                                class="text-xl font-black text-slate-900 dark:text-white leading-none"
+                                                class="text-xl font-bold text-slate-900 dark:text-white leading-none"
                                                 >{{ stat.away }}</span
                                             >
                                             <span
@@ -999,7 +1014,7 @@
                         class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
                     >
                         <p
-                            class="text-sm font-black text-gray-400 uppercase tracking-widest"
+                            class="text-sm font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Dữ liệu thống kê đang được xử lý...
                         </p>
@@ -1018,7 +1033,7 @@
                         >
                             <div class="flex items-center justify-between mb-8">
                                 <h3
-                                    class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500"
+                                    class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"
                                 >
                                     Thống kê đối đầu
                                 </h3>
@@ -1047,12 +1062,12 @@
                                         }"
                                     >
                                         <span
-                                            class="text-white font-black text-lg"
+                                            class="text-white font-bold text-lg"
                                             >{{ h2hStats.homeWins }}</span
                                         >
                                     </div>
                                     <span
-                                        class="absolute -bottom-6 left-0 text-[9px] font-black uppercase text-emerald-600 tracking-tighter"
+                                        class="absolute -bottom-6 left-0 text-[9px] font-bold uppercase text-emerald-600 tracking-tighter"
                                         >{{ game.home_team?.name }} thắng</span
                                     >
                                 </div>
@@ -1064,7 +1079,7 @@
                                     >
                                         <div class="flex flex-col items-center">
                                             <span
-                                                class="text-gray-500 font-black text-lg leading-none"
+                                                class="text-gray-500 font-bold text-lg leading-none"
                                                 >{{ h2hStats.draws }}</span
                                             >
                                             <span
@@ -1095,12 +1110,12 @@
                                         }"
                                     >
                                         <span
-                                            class="text-white font-black text-lg"
+                                            class="text-white font-bold text-lg"
                                             >{{ h2hStats.awayWins }}</span
                                         >
                                     </div>
                                     <span
-                                        class="absolute -bottom-6 right-0 text-[9px] font-black uppercase text-blue-600 tracking-tighter text-right"
+                                        class="absolute -bottom-6 right-0 text-[9px] font-bold uppercase text-blue-600 tracking-tighter text-right"
                                         >{{ game.away_team?.name }} thắng</span
                                     >
                                 </div>
@@ -1116,7 +1131,7 @@
                             >
                                 <div class="flex flex-col w-24">
                                     <span
-                                        class="text-[10px] font-black text-slate-400 tabular-nums"
+                                        class="text-[10px] font-bold text-slate-400 tabular-nums"
                                     >
                                         {{
                                             m.fixture?.date
@@ -1140,7 +1155,7 @@
                                         class="flex items-center gap-3 flex-1 justify-end"
                                     >
                                         <span
-                                            class="text-sm font-black text-slate-900 dark:text-white truncate"
+                                            class="text-sm font-bold text-slate-900 dark:text-white truncate"
                                             :class="{
                                                 'text-emerald-600':
                                                     m.goals?.home >
@@ -1157,7 +1172,7 @@
                                     </div>
 
                                     <div
-                                        class="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-xl font-black text-sm tabular-nums shadow-lg"
+                                        class="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-xl font-bold text-sm tabular-nums shadow-lg"
                                     >
                                         <span>{{ m.goals?.home }}</span>
                                         <span class="text-white/30">-</span>
@@ -1173,7 +1188,7 @@
                                             class="w-6 h-6 object-contain"
                                         />
                                         <span
-                                            class="text-sm font-black text-slate-900 dark:text-white truncate"
+                                            class="text-sm font-bold text-slate-900 dark:text-white truncate"
                                             :class="{
                                                 'text-emerald-600':
                                                     m.goals?.away >
@@ -1209,7 +1224,7 @@
                             </svg>
                         </div>
                         <p
-                            class="text-sm font-black text-gray-400 uppercase tracking-widest"
+                            class="text-sm font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Chưa có dữ liệu lịch sử đối đầu giữa hai đội
                         </p>
@@ -1229,12 +1244,12 @@
                                 class="bg-gray-50/50 dark:bg-gray-900/30 px-5 py-2 border-y border-gray-50 dark:border-gray-700 flex justify-between items-center group/header first:border-t-0"
                             >
                                 <span
-                                    class="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 opacity-80"
+                                    class="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 opacity-80"
                                     >{{ event.label }}</span
                                 >
                                 <span
                                     v-if="event.score"
-                                    class="text-[10px] font-black text-gray-400 tracking-widest tabular-nums"
+                                    class="text-[10px] font-bold text-gray-400 tracking-widest tabular-nums"
                                     >{{ event.score }}</span
                                 >
                             </div>
@@ -1261,7 +1276,7 @@
                                                 >
                                                 <div
                                                     v-if="event.eventScore"
-                                                    class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 opacity-90 leading-none mt-0.5"
+                                                    class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-90 leading-none mt-0.5"
                                                 >
                                                     {{ event.eventScore }}
                                                 </div>
@@ -1319,7 +1334,6 @@
                                                         "
                                                         class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize hover:underline"
                                                     >
-                                                        ▲
                                                         {{
                                                             event.player.toLowerCase()
                                                         }}
@@ -1327,8 +1341,7 @@
                                                     <span
                                                         v-else
                                                         class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize"
-                                                        >▲
-                                                        {{
+                                                        >{{
                                                             event.player.toLowerCase()
                                                         }}</span
                                                     >
@@ -1341,7 +1354,6 @@
                                                         "
                                                         class="text-[11px] font-medium text-red-500 line-clamp-1 capitalize opacity-80 hover:underline"
                                                     >
-                                                        ▼
                                                         {{
                                                             (
                                                                 event.playerOut ||
@@ -1352,8 +1364,7 @@
                                                     <span
                                                         v-else
                                                         class="text-[11px] font-medium text-red-500 line-clamp-1 capitalize opacity-80"
-                                                        >▼
-                                                        {{
+                                                        >{{
                                                             (
                                                                 event.playerOut ||
                                                                 ""
@@ -1422,15 +1433,13 @@
                                                         {{
                                                             event.player.toLowerCase()
                                                         }}
-                                                        ▲
                                                     </Link>
                                                     <span
                                                         v-else
                                                         class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize"
                                                         >{{
                                                             event.player.toLowerCase()
-                                                        }}
-                                                        ▲</span
+                                                        }}</span
                                                     >
 
                                                     <Link
@@ -1447,7 +1456,6 @@
                                                                 ""
                                                             ).toLowerCase()
                                                         }}
-                                                        ▼
                                                     </Link>
                                                     <span
                                                         v-else
@@ -1457,8 +1465,7 @@
                                                                 event.playerOut ||
                                                                 ""
                                                             ).toLowerCase()
-                                                        }}
-                                                        ▼</span
+                                                        }}</span
                                                     >
                                                 </div>
                                             </div>
@@ -1479,7 +1486,7 @@
                                                 >
                                                 <div
                                                     v-if="event.eventScore"
-                                                    class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 opacity-90 leading-none mt-0.5"
+                                                    class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-90 leading-none mt-0.5"
                                                 >
                                                     {{ event.eventScore }}
                                                 </div>
@@ -1495,27 +1502,44 @@
                             class="bg-gray-950 dark:bg-gray-900 px-6 py-5 flex items-center justify-between"
                         >
                             <span
-                                class="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400"
+                                class="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400"
                                 >Kết thúc trận đấu</span
                             >
                             <div class="flex items-center gap-4">
                                 <span
-                                    class="text-lg font-black text-white px-3 py-1 bg-gray-800 rounded-lg tabular-nums"
+                                    class="text-lg font-bold text-white px-3 py-1 bg-gray-800 rounded-lg tabular-nums"
                                     >{{ game.home_score }} :
                                     {{ game.away_score }}</span
                                 >
                             </div>
                         </div>
                     </div>
-
                     <div
                         v-else
                         class="text-center py-20 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
                     >
                         <p
-                            class="text-sm font-black text-gray-400 uppercase tracking-widest"
+                            class="text-sm font-bold text-gray-400 uppercase tracking-widest"
                         >
                             Diễn biến trận đấu đang được tải...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Standings Tab -->
+                <div v-else-if="activeTab === 'standings'" class="py-4">
+                    <div v-if="standings && standings.length" class="space-y-6">
+                        <div class="flex items-center justify-between px-4">
+                            <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                                Bảng xếp hạng {{ game.league?.name }}
+                            </h3>
+                            <span class="text-[10px] font-bold text-gray-400">Mùa giải {{ game.season }}</span>
+                        </div>
+                        <StandingTable :standings="standings" :league-id="game.league?.id" />
+                    </div>
+                    <div v-else class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+                        <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                            Dữ liệu bảng xếp hạng đang được cập nhật...
                         </p>
                     </div>
                 </div>
@@ -1546,12 +1570,12 @@
                                     </svg>
                                 </div>
                                 <h3
-                                    class="text-xs font-black uppercase tracking-[0.2em]"
+                                    class="text-xs font-bold uppercase tracking-[0.2em]"
                                 >
                                     Lời khuyên chuyên gia
                                 </h3>
                             </div>
-                            <p class="text-xl md:text-2xl font-black mb-2">
+                            <p class="text-xl md:text-2xl font-bold mb-2">
                                 {{ prediction.predictions.advice }}
                             </p>
                             <div
@@ -1573,7 +1597,7 @@
                             class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm"
                         >
                             <h4
-                                class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-6 text-center"
+                                class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 text-center"
                             >
                                 Xác suất kết quả (Win Probability)
                             </h4>
@@ -1626,40 +1650,40 @@
                                 <div class="grid grid-cols-3 text-center">
                                     <div class="flex flex-col">
                                         <span
-                                            class="text-2xl font-black text-emerald-500"
+                                            class="text-2xl font-bold text-emerald-500"
                                             >{{
                                                 prediction.predictions.percent
                                                     .home
                                             }}</span
                                         >
                                         <span
-                                            class="text-[8px] font-black uppercase text-gray-400 tracking-tighter"
+                                            class="text-[8px] font-bold uppercase text-gray-400 tracking-tighter"
                                             >{{ game.home_team.name }}</span
                                         >
                                     </div>
                                     <div class="flex flex-col">
                                         <span
-                                            class="text-2xl font-black text-gray-400"
+                                            class="text-2xl font-bold text-gray-400"
                                             >{{
                                                 prediction.predictions.percent
                                                     .draw
                                             }}</span
                                         >
                                         <span
-                                            class="text-[8px] font-black uppercase text-gray-400 tracking-tighter"
+                                            class="text-[8px] font-bold uppercase text-gray-400 tracking-tighter"
                                             >Hòa</span
                                         >
                                     </div>
                                     <div class="flex flex-col">
                                         <span
-                                            class="text-2xl font-black text-blue-500"
+                                            class="text-2xl font-bold text-blue-500"
                                             >{{
                                                 prediction.predictions.percent
                                                     .away
                                             }}</span
                                         >
                                         <span
-                                            class="text-[8px] font-black uppercase text-gray-400 tracking-tighter"
+                                            class="text-[8px] font-bold uppercase text-gray-400 tracking-tighter"
                                             >{{ game.away_team.name }}</span
                                         >
                                     </div>
@@ -1673,11 +1697,11 @@
                                 class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center"
                             >
                                 <span
-                                    class="text-[8px] font-black uppercase text-gray-400 mb-2"
+                                    class="text-[8px] font-bold uppercase text-gray-400 mb-2"
                                     >Tài / Xỉu (Over/Under)</span
                                 >
                                 <span
-                                    class="text-lg font-black text-gray-900 dark:text-white"
+                                    class="text-lg font-bold text-gray-900 dark:text-white"
                                     >{{
                                         prediction.predictions.under_over ||
                                         "N/A"
@@ -1688,11 +1712,11 @@
                                 class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center"
                             >
                                 <span
-                                    class="text-[8px] font-black uppercase text-gray-400 mb-2"
+                                    class="text-[8px] font-bold uppercase text-gray-400 mb-2"
                                     >Bàn thắng kỳ vọng</span
                                 >
                                 <span
-                                    class="text-lg font-black text-emerald-500"
+                                    class="text-lg font-bold text-emerald-500"
                                     >{{
                                         prediction.predictions.goals.home || 0
                                     }}
@@ -1744,6 +1768,7 @@ import { Head, Link, router } from "@inertiajs/vue3";
 import MainLayout from "../../Layouts/MainLayout.vue";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
+import StandingTable from "../../Components/StandingTable.vue";
 
 dayjs.extend(utc);
 
@@ -1755,13 +1780,16 @@ const formatDateTime = (val) => {
 const props = defineProps({
     game: { type: Object, required: true },
     h2hMatches: { type: Array, default: () => [] },
+    standings: { type: Array, default: () => [] },
 });
 
 const activeTab = ref("lineups");
+const statsPeriod = ref("all");
 const tabs = [
     { id: "lineups", label: "Đội hình" },
     { id: "stats", label: "Thống kê" },
     { id: "h2h", label: "Đối đầu" },
+    { id: "standings", label: "Bảng xếp hạng" },
     { id: "timeline", label: "Diễn biến" },
     { id: "analysis", label: "Phân tích AI" },
 ];
@@ -1796,12 +1824,10 @@ const getPlayerRating = (playerId) => {
 const getRatingClass = (rating) => {
     const val = parseFloat(rating);
     if (isNaN(val)) return "bg-gray-100 text-gray-400";
-    if (val >= 8.0) return "bg-emerald-500 text-white";
-    if (val >= 7.0)
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400";
-    if (val >= 6.0)
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400";
-    return "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400";
+    if (val >= 8.0) return "bg-emerald-600 text-white";
+    if (val >= 7.0) return "bg-emerald-500 text-white";
+    if (val >= 6.0) return "bg-amber-400 text-gray-950";
+    return "bg-rose-500 text-white";
 };
 
 // Helper lấy các sự kiện của một cầu thủ
@@ -1834,7 +1860,7 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
     // Nhóm cầu thủ theo hàng (row)
     const rows = {};
     lineupXI.forEach((p) => {
-        if (!p.player.grid) return;
+        if (!p.player?.grid) return;
         const [row, col] = p.player.grid.split(":").map(Number);
         if (!rows[row]) rows[row] = [];
         rows[row].push(p);
@@ -1889,14 +1915,14 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
 // Mapping Đội hình (API Football trả về mảng 2 đội)
 const homeLineupData = computed(() => {
     const lineup = props.game.lineups?.find(
-        (l) => l.team.id === props.game.home_team.id,
+        (l) => l.team?.id === props.game.home_team?.id,
     );
     return lineup || null;
 });
 
 const awayLineupData = computed(() => {
     const lineup = props.game.lineups?.find(
-        (l) => l.team.id === props.game.away_team.id,
+        (l) => l.team?.id === props.game.away_team?.id,
     );
     return lineup || null;
 });
@@ -1925,7 +1951,15 @@ const awaySubstitutes = computed(() => {
 
 // Mapping Thống kê
 const matchStatsGroups = computed(() => {
-    const stats = props.game.statistics || [];
+    let stats = [];
+    if (statsPeriod.value === "1h") {
+        stats = props.game.stats_1h || [];
+    } else if (statsPeriod.value === "2h") {
+        stats = props.game.stats_2h || [];
+    } else {
+        stats = props.game.statistics || [];
+    }
+
     if (stats.length < 2) return [];
 
     const homeStats = stats[0].statistics;
@@ -2010,6 +2044,9 @@ const matchStatsGroups = computed(() => {
     ].filter((g) => g.items.length > 0);
 });
 
+// Phân tích AI
+const prediction = computed(() => props.game.prediction);
+
 // Sắp xếp H2H theo thời gian mới nhất
 const sortedH2H = computed(() => {
     const matches = [...(props.h2hMatches || [])];
@@ -2042,13 +2079,21 @@ const h2hStats = computed(() => {
 
 const getSofaIcon = (type) => {
     if (type === "goal")
-        return `<div class="w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-lg border border-slate-900"><svg class="w-3.5 h-3.5 text-slate-900" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4Z" /></svg></div>`;
+        return `<div class="w-5 h-5 flex items-center justify-center">
+            <svg class="w-4 h-4 text-slate-900 dark:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07"></path>
+            </svg>
+        </div>`;
     if (type === "card" || type === "yellow card")
-        return `<div class="w-3.5 h-4.5 bg-yellow-400 rounded-sm shadow-md border border-white/20"></div>`;
+        return `<div class="w-3 h-4 bg-yellow-400 rounded-[2px] shadow-sm border border-white/10"></div>`;
     if (type === "red card")
-        return `<div class="w-3.5 h-4.5 bg-red-500 rounded-sm shadow-md border border-white/20"></div>`;
+        return `<div class="w-3 h-4 bg-red-500 rounded-[2px] shadow-sm border border-white/10"></div>`;
     if (type === "subst")
-        return `<div class="w-5 h-5 bg-slate-900/80 rounded-full flex items-center justify-center border border-white/10 shadow-lg"><svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M7 10l5-5 5 5M17 14l-5 5-5-5" /></svg></div>`;
+        return `<div class="flex flex-col items-center space-y-0.5 opacity-80">
+            <span class="text-[10px] text-emerald-500 leading-none">▲</span>
+            <span class="text-[10px] text-red-500 leading-none">▼</span>
+        </div>`;
     return "";
 };
 

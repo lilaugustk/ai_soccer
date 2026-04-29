@@ -1,95 +1,226 @@
 <template>
-  <div class="overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm shadow-sm">
-    <div class="overflow-x-auto no-scrollbar">
-      <table class="w-full text-left border-collapse">
+  <div class="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm relative">
+    <div class="no-scrollbar">
+      <table class="w-full text-left border-collapse table-auto">
         <thead>
-          <tr class="bg-gray-50/50 dark:bg-gray-800/50 text-[11px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
-            <th class="px-4 py-3 w-12 text-center">#</th>
-            <th class="px-4 py-3">Đội bóng</th>
-            <th class="px-3 py-3 text-center">ST</th>
-            <th class="px-3 py-3 text-center hidden sm:table-cell">T</th>
-            <th class="px-3 py-3 text-center hidden sm:table-cell">H</th>
-            <th class="px-3 py-3 text-center hidden sm:table-cell">B</th>
-            <th class="px-3 py-3 text-center hidden md:table-cell">BT/BB</th>
-            <th class="px-3 py-3 text-center">HS</th>
-            <th class="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400">Điểm</th>
-            <th class="px-4 py-3 text-center min-w-[120px]">Phong độ</th>
+          <tr class="bg-gray-50/50 dark:bg-gray-800/50 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-800">
+            <th class="pl-4 pr-2 py-3 w-10 text-center">#</th>
+            <th class="px-2 py-3 min-w-[150px]">Đội bóng</th>
+            <th class="px-2 py-3 text-center w-10 cursor-pointer group relative">
+                ST
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Số trận đã đấu
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-10 cursor-pointer group relative">
+                T
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Thắng
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-10 cursor-pointer group relative">
+                H
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Hòa
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-10 cursor-pointer group relative">
+                B
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Bại
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-16 hidden md:table-cell cursor-pointer group relative">
+                BT/BB
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Bàn thắng / Bàn bại
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-10 cursor-pointer group relative">
+                HS
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Hiệu số bàn thắng bại
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-12 text-emerald-600 dark:text-emerald-400 cursor-pointer group relative">
+                Đ
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Tổng điểm hiện tại
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-4 py-3 text-center min-w-[110px]">5 Trận</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
           <tr v-for="team in standings" :key="team.team_id" 
-              class="hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-all duration-300 group border-b border-gray-50/50 dark:border-gray-800/50 last:border-0">
-            <td class="px-4 py-5 text-sm font-black text-center">
-              <span :class="getRankClass(team.rank)">{{ team.rank }}</span>
-            </td>
-            <td class="px-4 py-5">
-              <div class="flex items-center gap-4">
-                <div class="w-9 h-9 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center p-1.5 border border-gray-100 dark:border-gray-700 shadow-sm group-hover:scale-110 group-hover:rotate-2 transition-all duration-500">
-                  <img v-if="team.team?.logo_url" :src="team.team.logo_url" class="w-full h-full object-contain" />
-                  <span v-else class="text-[10px] font-black text-gray-300">{{ team.team?.name?.charAt(0) }}</span>
+              class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+            <td class="pl-4 pr-2 py-3 text-[11px] font-bold text-center relative">
+              <!-- Sidebar Color with English Tooltip -->
+              <div v-if="team.description" 
+                   :class="getZoneColorClass(team.description)"
+                   class="absolute left-0 top-1 bottom-1 w-1 rounded-r-full group/zone cursor-pointer">
+                <!-- Mini Tooltip for Sidebar -->
+                <div class="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover/zone:block bg-gray-900 text-white text-[9px] px-2 py-1 rounded shadow-xl whitespace-nowrap z-[120] font-medium border border-white/10">
+                  {{ team.description }}
                 </div>
-                <span class="text-sm font-black text-gray-900 dark:text-gray-100 group-hover:text-emerald-500 transition-colors truncate max-w-[120px] sm:max-w-none">{{ team.team?.name }}</span>
               </div>
+              {{ team.rank }}
             </td>
-            <td class="px-3 py-4 text-sm text-center font-medium">{{ team.played }}</td>
-            <td class="px-3 py-4 text-sm text-center hidden sm:table-cell">{{ team.win }}</td>
-            <td class="px-3 py-4 text-sm text-center hidden sm:table-cell">{{ team.draw }}</td>
-            <td class="px-3 py-4 text-sm text-center hidden sm:table-cell">{{ team.lose }}</td>
-            <td class="px-3 py-4 text-xs text-center text-gray-400 hidden md:table-cell italic">
-              {{ team.goals_for }}-{{ team.goals_against }}
+            <td class="px-2 py-3">
+              <Link :href="`/teams/${team.team_id}?season=${season}`" class="flex items-center gap-2 hover:text-emerald-500 transition-colors cursor-pointer group/team">
+                <img v-if="team.team?.logo_url" :src="team.team.logo_url" class="w-5 h-5 object-contain" />
+                <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[120px] lg:max-w-none">{{ team.team?.name }}</span>
+              </Link>
             </td>
-            <td class="px-3 py-4 text-sm text-center font-bold" :class="team.goals_for - team.goals_against >= 0 ? 'text-emerald-500' : 'text-rose-500'">
-              {{ (team.goals_for - team.goals_against) > 0 ? '+' : '' }}{{ team.goals_for - team.goals_against }}
+            <td class="px-2 py-3 text-[11px] text-center font-medium">{{ team.played }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.win }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.draw }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.lose }}</td>
+            <td class="px-2 py-3 text-[10px] text-center text-gray-400 hidden md:table-cell">
+              {{ team.goals_for }}:{{ team.goals_against }}
             </td>
-            <td class="px-4 py-4 text-sm text-center font-black text-emerald-600 dark:text-emerald-400">{{ team.points }}</td>
-            <td class="px-4 py-4">
-              <div class="flex justify-center gap-1">
-                <span v-for="(res, idx) in parseForm(team.form)" :key="idx"
-                      :class="getFormClass(res)"
-                      class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black text-white shadow-sm">
-                  {{ res }}
-                </span>
+            <td class="px-2 py-3 text-[11px] text-center font-bold" :class="(team.goals_for - team.goals_against) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+              {{ team.goals_for - team.goals_against }}
+            </td>
+            <td class="px-2 py-3 text-[11px] text-center font-bold text-emerald-600 dark:text-emerald-400">{{ team.points }}</td>
+            <td class="px-4 py-3">
+              <div class="flex justify-center gap-0.5">
+                <div v-for="(item, idx) in getDisplayForm(team)" :key="idx"
+                      :class="getFormClass(item.res)"
+                      class="group/form relative w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold text-white shadow-sm shrink-0 cursor-pointer">
+                  {{ item.res }}
+                  <!-- Tooltip phong độ -->
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/form:block w-max px-3 py-2 bg-gray-950 text-white rounded-lg shadow-2xl z-[110] pointer-events-none min-w-[140px] border border-white/5">
+                    <div class="flex flex-col gap-1.5">
+                      <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-1.5 mb-0.5">
+                        <span class="text-[9px] font-bold uppercase tracking-widest" :class="item.res === 'W' ? 'text-emerald-500' : (item.res === 'L' ? 'text-rose-500' : 'text-amber-500')">
+                          {{ item.res === 'W' ? 'Thắng' : (item.res === 'D' ? 'Hòa' : 'Thua') }}
+                        </span>
+                        <span v-if="item.date" class="text-[8px] text-gray-500 font-bold tabular-nums">{{ item.date }}</span>
+                      </div>
+                      <div v-if="item.home" class="flex flex-col gap-1">
+                        <div class="flex items-center justify-between gap-4">
+                          <span class="text-[9px] font-bold text-gray-300 truncate max-w-[90px]">{{ item.home }}</span>
+                          <span class="text-[10px] font-bold text-white tabular-nums">{{ item.score.split(' - ')[0] }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                          <span class="text-[9px] font-bold text-gray-300 truncate max-w-[90px]">{{ item.away }}</span>
+                          <span class="text-[10px] font-bold text-white tabular-nums">{{ item.score.split(' - ')[1] }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-950"></div>
+                  </div>
+                </div>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <!-- Dynamic Legend with Tooltip -->
+    <div v-if="dynamicLegend.length > 0" class="p-3 border-t border-gray-50 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-900/30">
+        <div class="flex flex-wrap gap-x-6 gap-y-2">
+            <div v-for="item in dynamicLegend" :key="item.original" 
+                 class="flex items-center gap-2 group/legend relative cursor-pointer">
+                <div class="w-2.5 h-2.5 rounded-[2px]" :class="item.color"></div>
+                <span class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{{ item.translated }}</span>
+                
+                <!-- English Tooltip -->
+                <div class="absolute bottom-full left-0 mb-2 hidden group-hover/legend:block bg-gray-900 text-white text-[9px] px-2 py-1 rounded shadow-xl whitespace-nowrap z-[100] font-medium border border-white/10 uppercase tracking-wider">
+                  {{ item.original }}
+                  <div class="absolute top-full left-2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+            </div>
+        </div>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { Link } from "@inertiajs/vue3";
+
 const props = defineProps({
-  standings: { type: Array, required: true }
+  standings: { type: Array, required: true },
+  leagueId: { type: [Number, String], default: null },
+  season: { type: [Number, String], default: 2024 }
 });
 
-const parseForm = (formStr) => {
-  if (!formStr) return [];
-  // API Football form format is like "WWDLL"
-  return formStr.split('').slice(-5); // Lấy 5 trận gần nhất
+const translateDesc = (desc) => {
+  if (!desc) return '';
+  let translated = desc;
+  if (desc.includes('Champions League')) translated = 'Cúp C1 / Champions League';
+  else if (desc.includes('Europa League')) translated = 'Cúp C2 / Europa League';
+  else if (desc.includes('Conference League')) translated = 'Cúp C3 / Conference League';
+  else if (desc.includes('Relegation') || desc.includes('Xuống hạng')) translated = 'Xuống hạng';
+  else if (desc.includes('Promotion')) translated = 'Thăng hạng';
+  return translated;
 };
 
-const getFormClass = (res) => {
-  if (res === 'W') return 'bg-emerald-500 shadow-emerald-500/20';
-  if (res === 'D') return 'bg-amber-500 shadow-amber-500/20';
-  if (res === 'L') return 'bg-rose-500 shadow-rose-500/20';
+const getZoneColorClass = (desc) => {
+  if (!desc) return null;
+  const d = desc.toLowerCase();
+  if (d.includes('champions league')) return 'bg-blue-500';
+  if (d.includes('europa league')) return 'bg-amber-500';
+  if (d.includes('conference league')) return 'bg-emerald-500';
+  if (d.includes('relegation') || d.includes('xuống hạng')) return 'bg-rose-500';
+  if (d.includes('play-off') || d.includes('promotion')) return 'bg-indigo-500';
   return 'bg-gray-300';
 };
 
-const getRankClass = (rank) => {
-  const base = "inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] ";
-  if (rank <= 4) return base + "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm";
-  if (rank >= 18) return base + "bg-rose-500/10 text-rose-600 border border-rose-500/20";
-  return base + "text-gray-500";
+const dynamicLegend = computed(() => {
+  const legends = [];
+  const seen = new Set();
+  props.standings.forEach(team => {
+    if (team.description && !seen.has(team.description)) {
+      seen.add(team.description);
+      legends.push({
+        original: team.description,
+        translated: translateDesc(team.description),
+        color: getZoneColorClass(team.description)
+      });
+    }
+  });
+  const priority = (text) => {
+    const t = text.toLowerCase();
+    if (t.includes('champions league')) return 1;
+    if (t.includes('europa league')) return 2;
+    if (t.includes('conference league')) return 3;
+    if (t.includes('relegation') || t.includes('xuống hạng')) return 5;
+    return 4;
+  };
+  return legends.sort((a, b) => priority(a.original) - priority(b.original));
+});
+
+const getDisplayForm = (team) => {
+  if (team.recent_matches && team.recent_matches.length > 0) {
+    return team.recent_matches;
+  }
+  if (!team.form) return [];
+  return team.form.split('').slice(-5).map(res => ({
+    res: res,
+    date: null, home: null, away: null, score: null
+  }));
+};
+
+const getFormClass = (res) => {
+  if (res === 'W') return 'bg-emerald-500';
+  if (res === 'D') return 'bg-amber-500';
+  if (res === 'L') return 'bg-rose-500';
+  return 'bg-gray-300';
 };
 </script>
 
 <style scoped>
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>

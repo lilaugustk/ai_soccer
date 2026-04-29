@@ -74,6 +74,7 @@ class FootballApiService
                     'attendance' => $fixtureData['attendance'] ?? null,
                     'home_score' => $goalsData['home'] ?? null,
                     'away_score' => $goalsData['away'] ?? null,
+                    'season' => $leagueData['season'] ?? ((\Illuminate\Support\Carbon::parse($fixtureData['date'])->month >= 7) ? \Illuminate\Support\Carbon::parse($fixtureData['date'])->year : \Illuminate\Support\Carbon::parse($fixtureData['date'])->year - 1),
                     'events' => $item['events'] ?? null,
                     'lineups' => $item['lineups'] ?? null,
                     'statistics' => $item['statistics'] ?? null,
@@ -170,7 +171,7 @@ class FootballApiService
                 return $response->json()['response'];
             }
 
-            Log::error('API Error (Leagues): ' . $response->body());
+            Log::error('API Error (Leagues): ' . $response->status() . ' - ' . $response->body());
             return [];
         } catch (\Exception $e) {
             Log::error('API Exception (Leagues): ' . $e->getMessage());
@@ -191,6 +192,15 @@ class FootballApiService
                 $data = $response->json()['response'][0] ?? null;
                 if ($data) {
                     $this->syncFixtures([$data]); // Lưu chi tiết vào DB
+                    
+                    // Nếu trận đấu đã bắt đầu hoặc kết thúc, lấy thêm stats hiệp 1/2
+                    $status = $data['fixture']['status']['short'] ?? '';
+                    if (in_array($status, ['1H', 'HT', '2H', 'ET', 'P', 'FT', 'AET', 'PEN'])) {
+                        $this->getFixtureStatistics($id, '1st');
+                        if (in_array($status, ['2H', 'ET', 'P', 'FT', 'AET', 'PEN'])) {
+                            $this->getFixtureStatistics($id, '2nd');
+                        }
+                    }
                 }
                 return $data;
             }
@@ -200,6 +210,33 @@ class FootballApiService
         } catch (\Exception $e) {
             Log::error('API Exception (FixtureDetails): ' . $e->getMessage());
             return null;
+        }
+    }
+
+    public function getFixtureStatistics($fixtureId, $period = null)
+    {
+        try {
+            $params = ['fixture' => $fixtureId];
+            if ($period) $params['period'] = $period;
+
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'fixtures/statistics', $params);
+
+            if ($response->successful()) {
+                $stats = $response->json()['response'] ?? [];
+                if (!empty($stats)) {
+                    $column = $period === '1st' ? 'stats_1h' : ($period === '2nd' ? 'stats_2h' : 'statistics');
+                    FootballMatch::where('id', $fixtureId)->update([
+                        $column => $stats
+                    ]);
+                }
+                return $stats;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (FixtureStatistics): ' . $e->getMessage());
+            return [];
         }
     }
 
@@ -312,7 +349,9 @@ class FootballApiService
                 ]);
 
             if ($response->successful()) {
-                $standings = $response->json()['response'][0]['league']['standings'][0] ?? [];
+                $json = $response->json();
+                \Illuminate\Support\Facades\Log::info("API Standings Response for league={$leagueId} season={$season}: " . json_encode($json));
+                $standings = $json['response'][0]['league']['standings'][0] ?? [];
                 if (!empty($standings)) {
                     $this->syncStandings($standings, $leagueId, $season);
                 }
@@ -551,6 +590,46 @@ class FootballApiService
         } catch (\Exception $e) {
             Log::error('API Exception (Sidelined): ' . $e->getMessage());
             return [];
+        }
+    }
+    public function getSquad($teamId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'players/squads', [
+                    'team' => $teamId
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['response'][0]['players'] ?? [];
+                if (!empty($data)) {
+                    $this->syncSquad($data, $teamId);
+                }
+                return $data;
+            }
+
+            Log::error('API Error (Squad): ' . $response->body());
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (Squad): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function syncSquad(array $players, $teamId)
+    {
+        foreach ($players as $p) {
+            Player::updateOrCreate(
+                ['id' => $p['id']],
+                [
+                    'name' => $p['name'],
+                    'number' => $p['number'] ?? null,
+                    'position' => $p['position'] ?? null,
+                    'photo' => $p['photo'] ?? null,
+                    'current_team_id' => $teamId
+                ]
+            );
         }
     }
 }
