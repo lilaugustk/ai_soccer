@@ -18,11 +18,22 @@
                         <div class="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
                         Lịch Thi Đấu & Kết Quả
                     </h2>
+                    
+                    <!-- Toggle League Index Button -->
+                    <button v-if="Object.keys(groupedGames).length > 1" 
+                            @click="isLeagueIndexVisible = !isLeagueIndexVisible"
+                            class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-emerald-500 transition-all border border-transparent hover:border-emerald-200 dark:hover:border-emerald-500/30">
+                        <svg class="w-4 h-4 transition-transform duration-300" :class="{ 'rotate-180': !isLeagueIndexVisible }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                        </svg>
+                        {{ isLeagueIndexVisible ? 'Ẩn mục lục' : 'Hiện mục lục' }}
+                    </button>
                 </div>
 
-                <!-- Date Selector Area -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative">
-                    <div class="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm shadow-sm">
+                <!-- Filter Area: Split into two rows -->
+                <div class="flex flex-col gap-4 relative">
+                    <!-- Row 1: Date Selector -->
+                    <div class="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm shadow-sm w-full">
                         <!-- Mini Calendar Toggle -->
                         <div class="relative">
                             <button @click="showDatePicker = !showDatePicker"
@@ -56,173 +67,111 @@
                         <div class="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-0.5"></div>
 
                         <!-- Date Slider -->
-                        <div class="flex gap-1 overflow-x-auto no-scrollbar max-w-[200px] sm:max-w-[400px]">
-                            <button v-for="btn in dateSlider" :key="btn.date" @click="changeDate(btn.date)"
-                                    class="px-3 py-2 rounded-xl text-[10px] font-bold transition-all whitespace-nowrap min-w-[60px] text-center"
+                        <div ref="dateSliderRef" class="flex flex-nowrap gap-1 overflow-x-auto custom-scrollbar flex-1 pb-1 scroll-smooth">
+                            <button v-for="btn in dateSlider" :key="btn.date" 
+                                    :ref="el => { if ((filters?.date || today) === btn.date) activeDateRef = el }"
+                                    @click="changeDate(btn.date)"
+                                    class="px-3 py-2 rounded-xl text-[10px] font-bold transition-all whitespace-nowrap min-w-[60px] text-center shrink-0"
                                     :class="(filters?.date || today) === btn.date ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-emerald-500'">
                                 {{ btn.dayNum }}/{{ dayjs(btn.date).format('MM') }}
                             </button>
                         </div>
                     </div>
 
-                    <!-- League Filter Slider -->
-                    <div v-if="availableLeagues.length > 0" class="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
-                        <button @click="changeLeague(null)"
-                                class="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border whitespace-nowrap"
-                                :class="!filters.league_id ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-950 border-gray-950 dark:border-white shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 text-gray-400 border-gray-100 dark:border-gray-700'">
-                            Tất cả
-                        </button>
-                        <button v-for="league in availableLeagues" :key="league.id" @click="changeLeague(league.id)"
-                                class="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap"
-                                :class="filters.league_id == league.id ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 text-gray-400 border-gray-100 dark:border-gray-700'">
-                            <img v-if="league.logo_url" :src="league.logo_url" class="w-3 h-3 object-contain" />
-                            {{ league.name }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Matches List Grouped by League -->
-            <div v-if="Object.keys(groupedGames).length > 0" class="space-y-10">
-                <div v-for="(games, leagueName) in groupedGames" :key="leagueName">
-                    <!-- League Title -->
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                        <h2 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                            {{ leagueName }}
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-900 rounded-md">{{ games.length }}</span>
-                        </h2>
-                    </div>
-
-                    <!-- Individual Match Cards -->
-                    <div class="grid grid-cols-1 gap-3">
-                        <MatchCard v-for="game in games" :key="game.id" :game="game" />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Empty State -->
-            <div v-else class="flex flex-col items-center justify-center py-24 text-center bg-white/30 dark:bg-gray-800/20 rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-700">
-                <div class="w-20 h-20 mb-6 relative">
-                    <div class="absolute inset-0 bg-emerald-500/10 rounded-full animate-pulse"></div>
-                    <div class="relative w-full h-full flex items-center justify-center">
-                        <svg class="w-10 h-10 text-emerald-500/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                </div>
-                <h3 class="text-lg font-bold mb-2 uppercase tracking-tight text-gray-900 dark:text-white">Không có dữ liệu</h3>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest max-w-xs mx-auto">Chưa có trận đấu nào được nạp cho ngày {{ dayjs(props.filters?.date || today).locale('vi').format('DD/MM') }}</p>
-                <button @click="changeDate(today)" class="mt-8 px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:translate-y-[-2px] transition-all">VỀ HÔM NAY</button>
-            </div>
-        </div>
-
-        <!-- 3. Sidebar: Top Scorers & Hot Leagues -->
-        <div class="space-y-12 shrink-0 w-full lg:w-72">
-            <!-- Countries & Leagues Accordion -->
-            <div class="space-y-8">
-                <!-- Pinned Leagues Section -->
-                <div v-if="pinnedLeagues.length > 0">
-                   <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white uppercase tracking-tight">
-                     <div class="w-1 h-5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
-                     Giải đấu của tôi
-                   </h2>
-                  <div class="space-y-1">
-                     <div v-for="league in pinnedLeagues" :key="league.id" 
-                          class="group/item flex items-center justify-between p-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all border border-transparent hover:border-emerald-100 dark:hover:border-emerald-500/20">
-                        <Link :href="`/leagues/${league.id}`" class="flex items-center gap-3 min-w-0 flex-1">
-                           <div class="w-6 h-6 rounded-md bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0">
-                               <img v-if="league.logo_url" :src="league.logo_url" class="w-full h-full object-contain" />
-                               <span v-else class="text-[8px] font-bold text-emerald-600">{{ league.name.substring(0,2).toUpperCase() }}</span>
-                           </div>
-                           <div class="flex flex-col min-w-0">
-                              <span class="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{{ league.name }}</span>
-                              <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{{ getLocalizedCountryName(league.country_name) }}</span>
-                           </div>
-                        </Link>
-                        <button @click="togglePin(league.id)" class="p-1.5 text-gray-300 hover:text-emerald-500 transition-colors">
-                           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
-                        </button>
-                     </div>
-                  </div>
-               </div>
-
-               <div>
-                  <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white uppercase tracking-tight">
-                    <div class="w-1 h-5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
-                    Tất cả giải đấu
-                  </h2>
-                  
-                  <div class="space-y-1 pr-1">
-                     <div v-for="group in sortedLeagues" :key="group.country_name" class="group">
-                        <!-- Country Header -->
-                        <button @click="toggleCountry(group.country_name)"
-                                :class="[
-                                    'w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all border outline-none',
-                                    expandedCountry === group.country_name 
-                                        ? 'bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/10' 
-                                        : 'bg-white/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-500/50'
-                                ]">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <!-- Country Flag Icon -->
-                                <div class="w-5 h-5 rounded-sm bg-white dark:bg-gray-900 flex items-center justify-center border border-gray-100 dark:border-gray-700 overflow-hidden shrink-0 shadow-sm relative">
-                                    <img :src="getFlagUrl(group.country_name, group.country_code)" 
-                                         class="w-full h-full object-cover"
-                                         @error="(e) => (e.target.style.display = 'none')" />
-                                    <span class="absolute inset-0 flex items-center justify-center text-[7px] font-bold pointer-events-none" 
-                                          :class="expandedCountry === group.country_name ? 'text-white' : 'text-gray-400'"
-                                          style="z-index: -1;">
-                                        {{ group.country_code ? group.country_code.split(' ')[0].toUpperCase().substring(0, 2) : '??' }}
-                                    </span>
-                                </div>
-                                <span class="text-[11px] font-bold truncate">{{ getLocalizedCountryName(group.country_name) }}</span>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <span :class="['text-[8px] font-bold px-1 py-0.5 rounded', expandedCountry === group.country_name ? 'bg-white/20' : 'bg-gray-100 dark:bg-gray-700 text-gray-500']">
-                                    {{ group.leagues.length }}
-                                </span>
-                                <svg :class="['w-2.5 h-2.5 transition-transform duration-300', expandedCountry === group.country_name ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-                        </button>
-
-                        <!-- Leagues List (Accordion Content) -->
-                        <div v-show="expandedCountry === group.country_name" class="mt-2 ml-4 space-y-1 overflow-hidden transition-all">
-                            <div v-for="league in group.leagues" :key="league.id" class="group/item flex items-center justify-between">
-                                <Link :href="`/leagues/${league.id}`"
-                                      class="flex items-center gap-3 p-2 flex-1 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
-                                    <div class="w-6 h-6 rounded-md bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0">
-                                        <img v-if="league.logo_url" :src="league.logo_url" class="w-full h-full object-contain" />
-                                        <span v-else class="text-[8px] font-bold text-emerald-600">{{ league.name.substring(0,2).toUpperCase() }}</span>
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-600 dark:text-gray-400 group-hover/item:text-emerald-600 transition-colors truncate">{{ league.name }}</span>
-                                </Link>
-                                <button @click="togglePin(league.id)" 
-                                        :class="[
-                                            'p-1.5 transition-colors',
-                                            pinnedLeagueIds.includes(league.id) ? 'text-emerald-500' : 'text-gray-200 hover:text-emerald-300'
-                                        ]">
-                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" /></svg>
-                                </button>
-                            </div>
+                    <!-- Row 2: League Filter Slider -->
+                    <div v-if="availableLeagues.length > 0" class="flex flex-nowrap overflow-x-auto custom-scrollbar w-full pb-3 relative">
+                        <!-- Sticky "All" Button -->
+                        <div class="sticky left-0 z-10 pr-4 bg-gradient-to-r from-white dark:from-gray-900 via-white/95 dark:via-gray-900/95 to-transparent shrink-0">
+                            <button @click="changeLeague(null)"
+                                    class="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border whitespace-nowrap"
+                                    :class="!filters.league_id ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-950 border-gray-950 dark:border-white shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 text-gray-400 border-gray-100 dark:border-gray-700'">
+                                Tất cả
+                            </button>
                         </div>
-                     </div>
-                  </div>
-               </div>
+                        
+                        <!-- Scrolling Leagues -->
+                        <div class="flex gap-1.5 flex-nowrap">
+                            <button v-for="league in availableLeagues" :key="league.id" @click="changeLeague(league.id)"
+                                    class="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                                    :class="filters.league_id == league.id ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 text-gray-400 border-gray-100 dark:border-gray-700'">
+                                <img v-if="league.logo_url" :src="league.logo_url" class="w-3 h-3 object-contain" />
+                                {{ league.name }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Navigation & List Container -->
+            <div class="flex items-start transition-all duration-500" :class="isLeagueIndexVisible ? 'gap-8' : 'gap-0'">
+                <!-- League Index (Table of Contents) - Only visible on larger screens -->
+                <div v-if="Object.keys(groupedGames).length > 1" 
+                     class="hidden xl:block sticky top-6 self-start transition-all duration-500 ease-in-out"
+                     :class="isLeagueIndexVisible ? 'w-64 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-10 overflow-hidden'">
+                    <div class="space-y-6 w-64">
+                        <h3 class="flex items-center gap-3 text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tight">
+                            <div class="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
+                            Mục lục
+                        </h3>
+                        <div class="space-y-1.5 max-h-[calc(100vh-250px)] overflow-y-auto no-scrollbar pr-1">
+                            <button v-for="(games, leagueName) in groupedGames" :key="leagueName"
+                                    @click="scrollToLeague(leagueName)"
+                                    class="w-full text-left px-4 py-2.5 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all group/nav flex items-center justify-between gap-3 border border-transparent hover:border-emerald-100 dark:hover:border-emerald-500/20">
+                                <span class="text-[11px] font-bold text-gray-600 dark:text-gray-300 group-hover/nav:text-emerald-600 transition-colors truncate">{{ leagueName }}</span>
+                                <span class="text-[10px] font-black px-2 py-0.5 bg-gray-100 dark:bg-gray-900 rounded-lg text-gray-400 group-hover/nav:text-emerald-500 transition-all tabular-nums">{{ games.length }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matches List Grouped by League -->
+                <div v-if="Object.keys(groupedGames).length > 0" class="flex-1 min-w-0 space-y-10">
+                    <div v-for="(games, leagueName) in groupedGames" :key="leagueName" :id="'league-' + slugify(leagueName)" class="scroll-mt-24">
+                        <!-- League Title -->
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
+                            <h2 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                                {{ leagueName }}
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-900 rounded-md">{{ games.length }}</span>
+                            </h2>
+                        </div>
+
+                        <!-- Individual Match Cards -->
+                        <div class="grid grid-cols-1 gap-3">
+                            <MatchCard v-for="game in games" :key="game.id" :game="game" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else class="flex-1 flex flex-col items-center justify-center py-24 text-center bg-white/30 dark:bg-gray-800/20 rounded-[3rem] border border-dashed border-gray-200 dark:border-gray-700">
+                    <div class="w-20 h-20 mb-6 relative">
+                        <div class="absolute inset-0 bg-emerald-500/10 rounded-full animate-pulse"></div>
+                        <div class="relative w-full h-full flex items-center justify-center">
+                            <svg class="w-10 h-10 text-emerald-500/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2 uppercase tracking-tight text-gray-900 dark:text-white">Không có dữ liệu</h3>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest max-w-xs mx-auto">Chưa có trận đấu nào được nạp cho ngày {{ dayjs(props.filters?.date || today).locale('vi').format('DD/MM') }}</p>
+                    <button @click="changeDate(today)" class="mt-8 px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:translate-y-[-2px] transition-all">VỀ HÔM NAY</button>
+                </div>
             </div>
         </div>
+
+        <LeagueSidebar />
       </div>
     </div>
   </MainLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '../Layouts/MainLayout.vue';
 import MatchCard from '@/Components/MatchCard.vue';
-import { getFullDisplay } from '../Constants/countries';
+import LeagueSidebar from '@/Components/LeagueSidebar.vue';
 import dayjs from "dayjs";
 
 const props = defineProps({
@@ -237,53 +186,37 @@ const props = defineProps({
     availableLeagues: { type: Array, default: () => [] },
 });
 
-// Lấy Leagues từ Shared Props (Bền vững, không load lại khi đổi ngày)
-const groupedLeagues = computed(() => usePage().props.sharedLeagues || []);
-
-const pinnedLeagueIds = ref([]);
-
-onMounted(() => {
-    const saved = localStorage.getItem('pinnedLeagues');
-    if (saved) {
-        try {
-            pinnedLeagueIds.value = JSON.parse(saved);
-        } catch (e) {
-            pinnedLeagueIds.value = [];
-        }
-    }
-});
-
-const togglePin = (leagueId) => {
-    const index = pinnedLeagueIds.value.indexOf(leagueId);
-    if (index > -1) {
-        pinnedLeagueIds.value.splice(index, 1);
-    } else {
-        pinnedLeagueIds.value.push(leagueId);
-    }
-    localStorage.setItem('pinnedLeagues', JSON.stringify(pinnedLeagueIds.value));
-};
-
-const pinnedLeagues = computed(() => {
-    if (!groupedLeagues.value) return [];
-    const all = [];
-    groupedLeagues.value.forEach(group => {
-        group.leagues.forEach(l => {
-            if (pinnedLeagueIds.value.includes(l.id)) {
-                all.push({ ...l, country_name: group.country_name });
-            }
-        });
-    });
-    return all;
-});
+// Lấy thông tin user để lưu ghim riêng biệt cho từng tài khoản
+const user = computed(() => usePage().props.auth.user);
 
 const showDatePicker = ref(false);
 const currentMonthOffset = ref(0);
 const today = dayjs().format("YYYY-MM-DD");
-const expandedCountry = ref('England');
 
-const toggleCountry = (name) => {
-    expandedCountry.value = expandedCountry.value === name ? null : name;
+// Refs cho việc ẩn/hiện mục lục giải đấu
+const isLeagueIndexVisible = ref(true);
+
+// Refs cho việc căn giữa ngày hiện tại
+const dateSliderRef = ref(null);
+const activeDateRef = ref(null);
+
+const scrollToActiveDate = (smooth = true) => {
+    if (activeDateRef.value) {
+        activeDateRef.value.scrollIntoView({
+            behavior: smooth ? 'smooth' : 'auto',
+            inline: 'center',
+            block: 'nearest'
+        });
+    }
 };
+
+onMounted(() => {
+    setTimeout(() => scrollToActiveDate(false), 100);
+});
+
+watch(() => props.filters.date, () => {
+    setTimeout(() => scrollToActiveDate(true), 50);
+});
 
 const calendarDays = computed(() => {
     const baseDate = props.filters.date || today;
@@ -308,8 +241,9 @@ const adjustMonth = (offset) => {
 const dateSlider = computed(() => {
     const dates = [];
     const baseDate = props.filters.date || today;
-    const start = dayjs(baseDate).subtract(3, "day");
-    for (let i = 0; i < 7; i++) {
+    // Hiển thị 10 ngày trước và 10 ngày sau (tổng 21 ngày) để lấp đầy thanh cuộn
+    const start = dayjs(baseDate).subtract(10, "day");
+    for (let i = 0; i < 21; i++) {
         const d = start.add(i, "day");
         dates.push({
             date: d.format("YYYY-MM-DD"),
@@ -334,48 +268,31 @@ const changeLeague = (leagueId) => {
     }, { preserveState: true });
 };
 
-const getFlagUrl = (rawName, countryCode) => {
-    if (!rawName && !countryCode) return '';
-    
-    const mapping = {
-        'England': 'gb-eng', 'Scotland': 'gb-sct', 'Wales': 'gb-wls',
-        'Germany': 'de', 'Spain': 'es', 'Italy': 'it', 'France': 'fr',
-        'Vietnam': 'vn', 'Brazil': 'br', 'Argentina': 'ar', 'Portugal': 'pt',
-        'Netherlands': 'nl', 'World': 'un'
-    };
-    
-    if (mapping[rawName]) return `https://flagcdn.com/w80/${mapping[rawName]}.png`;
-    if (countryCode) return `https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`;
-    
-    const flagCode = rawName.toLowerCase().substring(0, 2);
-    return `https://flagcdn.com/w80/${flagCode}.png`;
+const slugify = (text) => {
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
 };
 
-const getLocalizedCountryName = (rawName) => {
-    // Nếu có hàm getFullDisplay thì dùng, không thì trả về tên gốc
-    try {
-        return getFullDisplay(rawName) || rawName;
-    } catch (e) {
-        return rawName;
+const scrollToLeague = (leagueName) => {
+    const element = document.getElementById('league-' + slugify(leagueName));
+    if (element) {
+        const offset = 100; // Khoảng cách từ đỉnh màn hình
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = element.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - offset;
+
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
     }
 };
 
-const sortedLeagues = computed(() => {
-    if (!groupedLeagues.value || groupedLeagues.value.length === 0) return [];
-    
-    const priorities = ['England', 'Spain', 'Italy', 'Germany', 'France', 'Vietnam', 'World', 'Brazil'];
-    
-    return [...groupedLeagues.value].sort((a, b) => {
-        const indexA = priorities.indexOf(a.country_name);
-        const indexB = priorities.indexOf(b.country_name);
-        
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        
-        return a.country_name.localeCompare(b.country_name);
-    });
-});
 </script>
 
 <style scoped>
@@ -387,7 +304,7 @@ const sortedLeagues = computed(() => {
   scrollbar-width: none;
 }
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+  height: 4px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;

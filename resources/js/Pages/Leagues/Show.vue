@@ -50,7 +50,7 @@
           <div class="border-b border-gray-100 dark:border-gray-700 relative">
               <div class="flex items-center justify-between gap-8">
                   <!-- Tabs with local overflow -->
-                  <div class="flex gap-8 overflow-x-auto no-scrollbar">
+                  <div class="flex gap-8 overflow-x-auto no-scrollbar whitespace-nowrap">
                       <button v-for="tab in tabs" :key="tab.id"
                               @click="activeTab = tab.id"
                               :class="activeTab === tab.id ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'"
@@ -85,7 +85,7 @@
                 <!-- MATCHES -->
                 <div v-else-if="activeTab === 'matches'" key="matches" class="space-y-6">
                     <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 whitespace-nowrap">
                             <button v-for="round in availableRounds" :key="round"
                                     @click="selectedRound = round"
                                     :class="selectedRound === round ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200'"

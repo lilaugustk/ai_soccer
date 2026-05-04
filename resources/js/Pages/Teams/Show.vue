@@ -14,6 +14,7 @@ const props = defineProps({
     stats: { type: Object, default: () => ({}) },
     lastLineup: { type: Object, default: null },
     coachHistory: { type: Array, default: () => [] },
+    isFavorite: { type: Boolean, default: false },
 });
 
 const activeTab = ref("overview");
@@ -59,6 +60,12 @@ const last5Games = computed(() => [...props.recentGames].slice(0, 5).reverse());
 
 const viewMatch = (id) => router.visit(`/matches/${id}`);
 const viewPlayer = (id) => router.visit(`/players/${id}`);
+
+const toggleFavorite = () => {
+    router.post(`/teams/${props.team.id}/favorite`, {}, {
+        preserveScroll: true,
+    });
+};
 
 const getRating = (stat) => {
     return stat.detailed_stats?.[0]?.games?.rating || "N/A";
@@ -148,8 +155,15 @@ const getPitchPlayers = computed(() => {
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <button class="h-10 px-6 bg-gray-950 dark:bg-white text-white dark:text-gray-950 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-lg active:scale-95">
-                            Theo dõi
+                        <button 
+                            @click="toggleFavorite"
+                            class="h-10 px-6 flex items-center gap-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:scale-105 shadow-lg active:scale-95"
+                            :class="isFavorite ? 'bg-rose-500 text-white' : 'bg-gray-950 dark:bg-white text-white dark:text-gray-950'"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-all" :class="isFavorite ? 'fill-current scale-110' : 'fill-none stroke-current'" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                            </svg>
+                            {{ isFavorite ? 'Đã theo dõi' : 'Theo dõi' }}
                         </button>
                     </div>
                 </div>

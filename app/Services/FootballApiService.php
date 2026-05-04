@@ -250,7 +250,11 @@ class FootballApiService
                 ]);
 
             if ($response->successful()) {
-                return $response->json()['response'] ?? [];
+                $data = $response->json()['response'] ?? [];
+                if (!empty($data)) {
+                    $this->syncFixtures($data);
+                }
+                return $data;
             }
             return [];
         } catch (\Exception $e) {
@@ -630,6 +634,25 @@ class FootballApiService
                     'current_team_id' => $teamId
                 ]
             );
+        }
+    }
+
+    public function getOdds($fixtureId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'odds', [
+                    'fixture' => $fixtureId
+                ]);
+
+            if ($response->successful()) {
+                return $response->json()['response'][0]['bookmakers'] ?? [];
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (Odds): ' . $e->getMessage());
+            return [];
         }
     }
 }

@@ -77,8 +77,9 @@
                       <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">Đội bóng</span>
                       <Link v-for="team in searchResults.teams" :key="team.id" :href="`/teams/${team.id}`" @click="showResults = false"
                             class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group">
-                        <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
-                          {{ team.short_name || team.name.substring(0,1) }}
+                        <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center p-1 border border-gray-100 dark:border-gray-600 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors overflow-hidden">
+                          <img v-if="team.logo" :src="team.logo" class="w-full h-full object-contain" />
+                          <span v-else class="text-[10px] font-bold uppercase text-gray-300">{{ team.code || team.name.substring(0,1) }}</span>
                         </div>
                         <span class="text-sm font-bold">{{ team.name }}</span>
                       </Link>
@@ -103,6 +104,81 @@
                   </template>
                 </div>
               </div>
+            </div>
+
+
+            <!-- Auth Menu -->
+            <div class="flex items-center ml-2 border-l border-gray-100 dark:border-gray-700 pl-3">
+              <template v-if="$page.props.auth.user">
+                <!-- Notifications Bell -->
+                <div class="relative mr-2">
+                  <button @click="showNotifications = !showNotifications; if(showNotifications) fetchNotifications()" 
+                          class="p-2 rounded-xl transition-all active:scale-95 relative"
+                          :class="unreadCount > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span v-if="unreadCount > 0" class="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-gray-800 animate-bounce">
+                      {{ unreadCount > 9 ? '9+' : unreadCount }}
+                    </span>
+                  </button>
+
+                  <!-- Notifications Dropdown -->
+                  <div v-if="showNotifications" class="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-[120]">
+                    <div class="p-4 border-b border-gray-50 dark:border-gray-700 flex justify-between items-center">
+                      <h3 class="text-sm font-bold">Thông báo</h3>
+                      <button @click="markAllAsRead" v-if="unreadCount > 0" class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest hover:text-emerald-600">Đánh dấu đã đọc hết</button>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto no-scrollbar">
+                      <div v-if="notifications.length === 0" class="p-8 text-center">
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Không có thông báo mới</p>
+                      </div>
+                      <div v-else v-for="n in notifications" :key="n.id" 
+                           @click="markAsRead(n)"
+                           class="p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-500/10 transition-colors cursor-pointer relative"
+                           :class="{ 'bg-emerald-50/50 dark:bg-emerald-500/5': !n.read_at }">
+                        <div class="flex gap-3">
+                          <div class="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" v-if="!n.read_at"></div>
+                          <div class="flex-1">
+                            <p class="text-xs font-bold text-gray-900 dark:text-white">{{ n.data.message || 'Thông báo mới' }}</p>
+                            <p class="text-[10px] text-gray-400 mt-1">{{ dayjs(n.created_at).fromNow() }}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="relative group">
+                  <button class="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+                    <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-emerald-500 text-white text-xs font-bold ring-2 ring-emerald-500/20">
+                      <img v-if="$page.props.auth.user.avatar" :src="$page.props.auth.user.avatar" class="w-full h-full object-cover" />
+                      <span v-else>{{ $page.props.auth.user.name.substring(0, 1).toUpperCase() }}</span>
+                    </div>
+                    <span class="text-xs font-bold hidden md:block">{{ $page.props.auth.user.name }}</span>
+                    <svg class="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <!-- Dropdown Menu -->
+                  <div class="absolute right-0 mt-2 w-48 py-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110]">
+                    <div class="px-4 py-2 border-b border-gray-50 dark:border-gray-700 mb-1">
+                      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tài khoản</p>
+                      <p class="text-xs font-medium truncate">{{ $page.props.auth.user.email }}</p>
+                    </div>
+                    <Link href="/profile" class="block px-4 py-2 text-xs font-medium hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors">
+                      Hồ sơ của tôi
+                    </Link>
+                    <button @click="logout" class="w-full text-left px-4 py-2 text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
+                      Đăng xuất
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <Link href="/login" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[13px] font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 whitespace-nowrap">
+                  Đăng nhập
+                </Link>
+              </template>
             </div>
 
             <!-- Theme Toggle Button -->
@@ -156,8 +232,14 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/vi';
+
+dayjs.extend(relativeTime);
+dayjs.locale('vi');
 
 // Dark theme switch logic
 const isDarkMode = ref(false);
@@ -167,6 +249,47 @@ const isLoading = ref(false);
 const searchResults = ref({ teams: [], players: [], leagues: [] });
 const debounceTimeout = ref(null);
 const showBackToTop = ref(false);
+
+// Notifications State
+const notifications = ref([]);
+const unreadCount = ref(0);
+const showNotifications = ref(false);
+
+const fetchNotifications = async () => {
+  if (!usePage().props.auth.user) return;
+  try {
+    const resp = await axios.get('/api/notifications');
+    notifications.value = resp.data.notifications;
+    unreadCount.value = resp.data.unreadCount;
+  } catch (e) {
+    console.error('Failed to fetch notifications', e);
+  }
+};
+
+const markAsRead = async (notification) => {
+  if (notification.read_at) return;
+  try {
+    await axios.post(`/api/notifications/${notification.id}/read`);
+    notification.read_at = new Date().toISOString();
+    unreadCount.value = Math.max(0, unreadCount.value - 1);
+  } catch (e) {
+    console.error('Failed to mark as read', e);
+  }
+};
+
+const markAllAsRead = async () => {
+  try {
+    await axios.post('/api/notifications/read-all');
+    notifications.value.forEach(n => n.read_at = new Date().toISOString());
+    unreadCount.value = 0;
+  } catch (e) {
+    console.error('Failed to mark all as read', e);
+  }
+};
+
+const logout = () => {
+  router.post('/logout');
+};
 
 const handleScroll = () => {
   showBackToTop.value = window.scrollY > 300;
@@ -216,6 +339,7 @@ const handleSearch = () => {
 const closeSearch = (e) => {
   if (!e.target.closest('.relative')) {
     showResults.value = false;
+    showNotifications.value = false;
   }
 };
 
@@ -229,6 +353,13 @@ onMounted(() => {
   } else {
     isDarkMode.value = false;
     document.documentElement.classList.remove('dark');
+  }
+  
+  if (usePage().props.auth.user) {
+    fetchNotifications();
+    // Refresh notifications every 2 minutes
+    const interval = setInterval(fetchNotifications, 120000);
+    onUnmounted(() => clearInterval(interval));
   }
 });
 

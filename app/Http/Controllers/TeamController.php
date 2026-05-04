@@ -117,6 +117,11 @@ class TeamController extends Controller
             'topRated' => $seasonStats->sortByDesc(fn($s) => (float)($s->detailed_stats[0]['games']['rating'] ?? 0))->take(5)->values(),
         ];
 
+        $isFavorite = false;
+        if ($request->user()) {
+            $isFavorite = $request->user()->favoriteTeams()->where('team_id', $id)->exists();
+        }
+
         return Inertia::render('Teams/Show', [
             'team' => $team,
             'recentGames' => $recentGames,
@@ -125,6 +130,7 @@ class TeamController extends Controller
             'standings' => $standings,
             'stats' => $stats,
             'lastLineup' => $lineup,
+            'isFavorite' => $isFavorite,
         ]);
     }
 }

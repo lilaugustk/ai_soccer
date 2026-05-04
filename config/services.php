@@ -22,6 +22,12 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
@@ -37,5 +43,8 @@ return [
     'football_api' => [
         'key' => env('FOOTBALL_API_KEY'),
         'base_url' => env('FOOTBALL_API_BASE_URL', 'https://v3.football.api-sports.io/'),
+    ],
+    'groq' => [
+        'key' => env('GROQ_API_KEY'),
     ],
 ];

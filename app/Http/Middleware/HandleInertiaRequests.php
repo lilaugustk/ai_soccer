@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'sharedLeagues' => $sharedLeagues,
+            'globalFavoriteTeams' => $request->user() ? $request->user()->favoriteTeams()->get()->toArray() : [],
         ];
     }
 }

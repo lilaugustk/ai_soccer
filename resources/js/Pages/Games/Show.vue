@@ -1,7 +1,8 @@
 <template>
     <Head :title="`${game.home_team?.name} vs ${game.away_team?.name}`" />
     <MainLayout>
-        <div class="py-8">
+        <div class="pt-2 pb-8 flex flex-col lg:flex-row gap-12">
+            <div class="flex-1 min-w-0">
             <!-- Back Button -->
             <Link
                 href="/matches"
@@ -228,18 +229,14 @@
                         >
                         <span
                             class="text-[10px] font-bold text-gray-900 dark:text-white"
-                            >{{
-                                game.attendance
-                                    ? game.attendance.toLocaleString()
-                                    : "N/A"
-                            }}</span
+                            >{{ game.attendance?.toLocaleString() }}</span
                         >
                     </div>
                 </div>
             </div>
 
             <!-- Tabs Navigation -->
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-8">
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
                 <button
                     v-for="tab in tabs"
                     :key="tab.id"
@@ -261,7 +258,7 @@
                 <div v-if="activeTab === 'lineups'" class="space-y-8">
                     <!-- Formation Pitch (Visual - Flashscore Horizontal Style) -->
                     <div
-                        class="relative bg-slate-950 rounded-[2.5rem] border border-slate-800 p-1.5 md:p-3 overflow-hidden shadow-2xl"
+                        class="relative overflow-hidden"
                     >
                         <!-- Pitch Container -->
                         <div
@@ -314,7 +311,26 @@
                                 class="absolute top-1/2 -translate-y-1/2 right-4 w-6 h-24 md:w-10 md:h-32 border-y border-l border-white/15"
                             ></div>
 
-                            <!-- Team Info Overlays -->
+                            <!-- Team Info Overlays (Lineup Toggle) -->
+                            <div class="absolute top-4 left-1/2 -translate-x-1/2 z-40">
+                                <div class="p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-2xl flex items-center gap-1">
+                                    <button 
+                                        @click="lineupView = 'start'"
+                                        :class="lineupView === 'start' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'"
+                                        class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all"
+                                    >
+                                        Bắt đầu
+                                    </button>
+                                    <button 
+                                        @click="lineupView = 'end'"
+                                        :class="lineupView === 'end' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'"
+                                        class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all"
+                                    >
+                                        Kết thúc
+                                    </button>
+                                </div>
+                            </div>
+
                             <div
                                 class="absolute top-4 left-6 z-40 flex items-center gap-3"
                             >
@@ -385,7 +401,7 @@
                                 <div
                                     v-for="p in processedHomeLineup"
                                     :key="'home-' + p.id"
-                                    class="absolute transition-all duration-700 hover:z-50"
+                                    class="absolute"
                                     :style="p.style"
                                 >
                                     <div
@@ -397,7 +413,7 @@
                                         <div class="relative">
                                             <!-- Avatar with dynamic shadow -->
                                             <div
-                                                class="w-11 h-11 md:w-13 md:h-13 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden group-hover:scale-110 transition-transform duration-300"
+                                                class="w-11 h-11 md:w-13 md:h-13 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden"
                                             >
                                                 <img
                                                     v-if="p.id"
@@ -405,55 +421,10 @@
                                                     class="w-full h-full object-cover rounded-full"
                                                 />
                                             </div>
-                                            <!-- Event Icons (Top Left) -->
-                                            <div class="absolute -top-1.5 -left-3.5 flex flex-col gap-1.5 z-40 items-center">
-                                                <div
-                                                    v-for="(ev, idx) in p.events"
-                                                    :key="idx"
-                                                    class="w-6 h-6 rounded-lg bg-gray-950 border border-white/20 shadow-2xl flex items-center justify-center group/ev relative transition-transform hover:scale-110"
-                                                >
-                                                    <!-- Goal / Assist -->
-                                                    <div v-if="ev.type?.toLowerCase().includes('goal')" class="w-full h-full flex items-center justify-center">
-                                                        <svg v-if="ev.detail?.toLowerCase().includes('own goal')" class="w-3.5 h-3.5 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                                            <circle cx="12" cy="12" r="10"></circle>
-                                                            <path d="M12 2v20M2 12h20"></path>
-                                                        </svg>
-                                                        <svg v-else :class="ev.player?.id === p.id ? 'text-white' : 'text-emerald-400'" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                                            <circle cx="12" cy="12" r="10"></circle>
-                                                            <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07"></path>
-                                                        </svg>
-                                                    </div>
-                                                    <!-- Card -->
-                                                    <div v-else-if="ev.type?.toLowerCase().includes('card')" 
-                                                         :class="ev.detail?.toLowerCase().includes('yellow') ? 'bg-yellow-400' : 'bg-red-500'"
-                                                         class="w-2.5 h-3.5 rounded-[1px] border border-white/10">
-                                                    </div>
-                                                    <!-- Substitution -->
-                                                    <div v-else-if="ev.type?.toLowerCase() === 'subst'" class="flex flex-col items-center justify-center gap-0">
-                                                        <span v-if="ev.player?.id === p.id" class="text-[9px] text-emerald-400 font-black leading-tight">▲</span>
-                                                        <span v-else class="text-[9px] text-rose-400 font-black leading-tight">▼</span>
-                                                    </div>
-
-                                                    <!-- Tooltip -->
-                                                    <div class="absolute bottom-full left-0 mb-2 hidden group-hover/ev:block w-max px-2.5 py-1.5 bg-gray-950 text-white text-[10px] font-bold rounded-lg shadow-2xl z-[200] border border-white/10 pointer-events-none whitespace-nowrap">
-                                                        <template v-if="ev.type?.toLowerCase() === 'subst'">
-                                                            {{ ev.player?.id === p.id ? 'Vào thay: ' + (ev.assist?.name || '...') : 'Ra sân, vào: ' + (ev.player?.name || '...') }}
-                                                        </template>
-                                                        <template v-else-if="ev.type?.toLowerCase().includes('goal')">
-                                                            <span v-if="ev.detail?.toLowerCase().includes('own goal')" class="text-rose-400">Phản lưới nhà ({{ ev.time?.elapsed }}')</span>
-                                                            <span v-else-if="ev.player?.id === p.id">Ghi bàn ({{ ev.time?.elapsed }}')</span>
-                                                            <span v-else class="text-emerald-400">Kiến tạo ({{ ev.time?.elapsed }}')</span>
-                                                        </template>
-                                                        <template v-else-if="ev.type?.toLowerCase().includes('card')">{{ ev.detail }} ({{ ev.time?.elapsed }}')</template>
-                                                        <template v-else>{{ ev.detail || ev.type }}</template>
-                                                        <div class="absolute top-full left-4 -translate-x-1/2 border-[5px] border-transparent border-t-gray-950"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
                                             <!-- Rating (Top Right) -->
                                             <div
                                                 v-if="p.rating"
-                                                class="absolute -top-1.5 -right-3.5 px-1.5 min-w-[30px] h-6 rounded-lg text-[11px] font-black flex items-center justify-center shadow-2xl border-2 border-white/30 z-30 transition-transform group-hover:scale-110"
+                                                class="absolute -top-1.5 -right-3 w-7 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-30"
                                                 :class="getRatingClass(p.rating)"
                                             >
                                                 {{ p.rating }}
@@ -461,7 +432,7 @@
                                         </div>
                                         <div class="flex flex-col items-center">
                                             <div
-                                                class="bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10 group-hover:bg-emerald-600/60 transition-colors"
+                                                class="bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10"
                                             >
                                                 <span
                                                     class="text-[10px] md:text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[80px] block"
@@ -472,8 +443,8 @@
                                             </div>
                                             <span
                                                 class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
-                                                >{{ p.number }}</span
-                                            >
+                                                >{{ p.number }}</span>
+                                            <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-black text-emerald-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
                                         </div>
                                     </div>
                                 </div>
@@ -482,7 +453,7 @@
                                 <div
                                     v-for="p in processedAwayLineup"
                                     :key="'away-' + p.id"
-                                    class="absolute transition-all duration-700 hover:z-50"
+                                    class="absolute"
                                     :style="p.style"
                                 >
                                     <div
@@ -493,7 +464,7 @@
                                     >
                                         <div class="relative">
                                             <div
-                                                class="w-11 h-11 md:w-13 md:h-13 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden group-hover:scale-110 transition-transform duration-300"
+                                                class="w-11 h-11 md:w-13 md:h-13 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden"
                                             >
                                                 <img
                                                     v-if="p.id"
@@ -501,25 +472,10 @@
                                                     class="w-full h-full object-cover rounded-full"
                                                 />
                                             </div>
-                                            <!-- Event Icons (Top Right for Away) -->
-                                            <div
-                                                class="absolute top-0 -right-2 flex flex-col gap-1 items-end z-40"
-                                            >
-                                                <div
-                                                    v-for="(
-                                                        ev, idx
-                                                    ) in p.events"
-                                                    :key="idx"
-                                                    v-html="
-                                                        getSofaIcon(ev.type)
-                                                    "
-                                                    class="scale-90 shadow-2xl"
-                                                ></div>
-                                            </div>
                                             <!-- Rating (Top Left for Away) -->
                                             <div
                                                 v-if="p.rating"
-                                                class="absolute -top-1.5 -left-2.5 px-2 min-w-[28px] h-6 rounded-lg text-[11px] font-black flex items-center justify-center shadow-2xl border-2 border-white/30 z-40 transition-transform group-hover:scale-125"
+                                                class="absolute -top-1.5 -left-2 w-7 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-40"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -529,7 +485,7 @@
                                         </div>
                                         <div class="flex flex-col items-center">
                                             <div
-                                                class="bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10 group-hover:bg-blue-600/60 transition-colors"
+                                                class="bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10"
                                             >
                                                 <span
                                                     class="text-[10px] md:text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[80px] block"
@@ -540,8 +496,8 @@
                                             </div>
                                             <span
                                                 class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
-                                                >{{ p.number }}</span
-                                            >
+                                                >{{ p.number }}</span>
+                                            <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-black text-blue-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
                                         </div>
                                     </div>
                                 </div>
@@ -602,7 +558,7 @@
                                             </div>
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
+                                                class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -657,7 +613,7 @@
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
+                                                class="w-7 h-5 flex items-center justify-center rounded-lg text-[9px] font-bold border border-white/50 dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -735,7 +691,7 @@
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
+                                                class="w-7 h-5 flex items-center justify-center rounded-lg text-[9px] font-bold border border-white/50 dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -796,7 +752,7 @@
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="px-2 py-1 rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
+                                                class="w-7 h-5 flex items-center justify-center rounded-lg text-[9px] font-bold border border-white/50 dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -829,7 +785,7 @@
                     </div>
 
                     <!-- Missing Players (Injuries & Absences) -->
-                    <div class="grid lg:grid-cols-2 gap-8 pt-4">
+                    <div v-if="game.injuries && game.injuries.length > 0" class="grid lg:grid-cols-2 gap-8 pt-4">
                         <div class="space-y-4">
                             <h5
                                 class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2"
@@ -896,21 +852,21 @@
                         <button
                             @click="statsPeriod = 'all'"
                             :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
-                                     statsPeriod === 'all' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
+                                     statsPeriod === 'all' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
                         >
                             Cả trận
                         </button>
                         <button
                             @click="statsPeriod = '1h'"
                             :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
-                                     statsPeriod === '1h' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
+                                     statsPeriod === '1h' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
                         >
                             Hiệp 1
                         </button>
                         <button
                             @click="statsPeriod = '2h'"
                             :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
-                                     statsPeriod === '2h' ? 'bg-red-600 text-white shadow-lg shadow-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
+                                     statsPeriod === '2h' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
                         >
                             Hiệp 2
                         </button>
@@ -986,7 +942,7 @@
                                             class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden"
                                         >
                                             <div
-                                                class="h-full bg-red-600 transition-all duration-1000 float-right"
+                                                class="h-full bg-emerald-500 transition-all duration-1000 float-right"
                                                 :style="{
                                                     width:
                                                         stat.homePercent + '%',
@@ -1232,263 +1188,94 @@
                 </div>
 
                 <!-- Timeline Tab (SofaScore Style) -->
+                <!-- Timeline Tab (Premium Dark Style) -->
                 <div v-else-if="activeTab === 'timeline'" class="py-4">
                     <div
                         v-if="processedEvents.length"
-                        class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]"
+                        class="bg-[#0a1921] rounded-[2rem] shadow-2xl overflow-hidden min-h-[400px] border border-white/5"
                     >
                         <div v-for="(event, idx) in processedEvents" :key="idx">
                             <!-- Period Header (1st Half, 2nd Half) -->
                             <div
                                 v-if="event.isMarker"
-                                class="bg-gray-50/50 dark:bg-gray-900/30 px-5 py-2 border-y border-gray-50 dark:border-gray-700 flex justify-between items-center group/header first:border-t-0"
+                                class="bg-white/5 px-6 py-3 flex justify-between items-center border-b border-white/5 first:border-t-0"
                             >
-                                <span
-                                    class="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 opacity-80"
-                                    >{{ event.label }}</span
-                                >
-                                <span
-                                    v-if="event.score"
-                                    class="text-[10px] font-bold text-gray-400 tracking-widest tabular-nums"
-                                    >{{ event.score }}</span
-                                >
+                                <span class="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">{{ event.label }}</span>
+                                <span v-if="event.score" class="text-[12px] font-black text-white/60 tracking-widest tabular-nums">{{ event.score }}</span>
                             </div>
 
                             <!-- Regular Event Row -->
-                            <div
-                                v-else
-                                class="relative px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/20 transition-colors group/row"
-                            >
-                                <div
-                                    class="flex items-center w-full min-h-[44px]"
-                                >
-                                    <!-- HOME TEAM COLUMN (Left Side) -->
-                                    <div class="w-1/2 flex items-center pr-4">
+                            <div v-else class="px-6 py-4 transition-colors">
+                                <div class="flex items-center w-full">
+                                    <!-- HOME TEAM SIDE -->
+                                    <div class="w-1/2 flex items-center gap-4">
                                         <template v-if="event.side === 'home'">
-                                            <div
-                                                class="w-10 flex-shrink-0 text-left"
-                                            >
-                                                <span
-                                                    class="text-xs font-bold text-gray-950 dark:text-white tabular-nums opacity-60 group-hover/row:opacity-100"
-                                                    >{{
-                                                        event.displayTime
-                                                    }}'</span
-                                                >
-                                                <div
-                                                    v-if="event.eventScore"
-                                                    class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-90 leading-none mt-0.5"
-                                                >
+                                            <span class="text-[11px] font-bold text-white/40 w-8 tabular-nums">{{ event.displayTime }}'</span>
+                                            
+                                            <div class="flex items-center gap-3">
+                                                <!-- Icon -->
+                                                <div v-html="getSofaIcon(event.type)" class="shrink-0"></div>
+                                                
+                                                <!-- Score (if goal) -->
+                                                <div v-if="event.eventScore" class="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-white/10">
                                                     {{ event.eventScore }}
                                                 </div>
-                                            </div>
-                                            <!-- Icon (Middle) -->
-                                            <div
-                                                class="w-10 flex-shrink-0 flex justify-center"
-                                                v-html="getSofaIcon(event.type)"
-                                            ></div>
-                                            <!-- Player Info (Inner) -->
-                                            <div class="flex flex-col">
-                                                <!-- Tên thường -->
-                                                <div
-                                                    v-if="!event.isSubstitution"
-                                                    class="flex items-center gap-2"
-                                                >
-                                                    <Link
-                                                        v-if="event.playerId"
-                                                        :href="
-                                                            '/players/' +
-                                                            event.playerId
-                                                        "
-                                                        class="text-[13px] font-bold text-gray-950 dark:text-white line-clamp-1 capitalize hover:text-emerald-500 transition-colors"
-                                                    >
-                                                        {{
-                                                            event.player.toLowerCase()
-                                                        }}
-                                                    </Link>
-                                                    <span
-                                                        v-else
-                                                        class="text-[13px] font-bold text-gray-950 dark:text-white line-clamp-1 capitalize"
-                                                        >{{
-                                                            event.player.toLowerCase()
-                                                        }}</span
-                                                    >
-                                                </div>
-                                                <span
-                                                    v-if="
-                                                        event.detail &&
-                                                        !event.isSubstitution
-                                                    "
-                                                    class="text-[9px] font-medium text-gray-400 capitalize"
-                                                    >{{ event.detail }}</span
-                                                >
-                                                <!-- Thay người -->
-                                                <div
-                                                    v-if="event.isSubstitution"
-                                                    class="flex flex-col"
-                                                >
-                                                    <Link
-                                                        v-if="event.playerId"
-                                                        :href="
-                                                            '/players/' +
-                                                            event.playerId
-                                                        "
-                                                        class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize hover:underline"
-                                                    >
-                                                        {{
-                                                            event.player.toLowerCase()
-                                                        }}
-                                                    </Link>
-                                                    <span
-                                                        v-else
-                                                        class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize"
-                                                        >{{
-                                                            event.player.toLowerCase()
-                                                        }}</span
-                                                    >
 
-                                                    <Link
-                                                        v-if="event.playerOutId"
-                                                        :href="
-                                                            '/players/' +
-                                                            event.playerOutId
-                                                        "
-                                                        class="text-[11px] font-medium text-red-500 line-clamp-1 capitalize opacity-80 hover:underline"
+                                                <!-- Player Info -->
+                                                <div class="flex flex-wrap items-center gap-x-2">
+                                                    <Link 
+                                                        v-if="event.playerId" 
+                                                        :href="'/players/' + event.playerId"
+                                                        class="text-[13px] font-bold text-white hover:text-emerald-400 transition-colors"
                                                     >
-                                                        {{
-                                                            (
-                                                                event.playerOut ||
-                                                                ""
-                                                            ).toLowerCase()
-                                                        }}
+                                                        {{ event.player }}
                                                     </Link>
-                                                    <span
-                                                        v-else
-                                                        class="text-[11px] font-medium text-red-500 line-clamp-1 capitalize opacity-80"
-                                                        >{{
-                                                            (
-                                                                event.playerOut ||
-                                                                ""
-                                                            ).toLowerCase()
-                                                        }}</span
-                                                    >
+                                                    <span v-else class="text-[13px] font-bold text-white">{{ event.player }}</span>
+                                                    
+                                                    <!-- Detail (Assist, Card reason, Out Player) -->
+                                                    <span v-if="event.isSubstitution" class="text-[11px] font-medium text-white/40 truncate">
+                                                        {{ event.playerOut }}
+                                                    </span>
+                                                    <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-white/40 italic">
+                                                        ({{ event.playerOut || event.detail }})
+                                                    </span>
                                                 </div>
                                             </div>
                                         </template>
                                     </div>
 
-                                    <!-- AWAY TEAM COLUMN (Right Side) -->
-                                    <div
-                                        class="w-1/2 flex items-center justify-end pl-4 text-right"
-                                    >
+                                    <!-- AWAY TEAM SIDE -->
+                                    <div class="w-1/2 flex flex-row-reverse items-center gap-4 text-right">
                                         <template v-if="event.side === 'away'">
-                                            <div
-                                                class="flex flex-col items-end"
-                                            >
-                                                <!-- Tên thường -->
-                                                <div
-                                                    v-if="!event.isSubstitution"
-                                                    class="flex items-center justify-end gap-2"
-                                                >
-                                                    <Link
-                                                        v-if="event.playerId"
-                                                        :href="
-                                                            '/players/' +
-                                                            event.playerId
-                                                        "
-                                                        class="text-[13px] font-bold text-gray-950 dark:text-white line-clamp-1 capitalize hover:text-blue-500 transition-colors"
-                                                    >
-                                                        {{
-                                                            event.player.toLowerCase()
-                                                        }}
-                                                    </Link>
-                                                    <span
-                                                        v-else
-                                                        class="text-[13px] font-bold text-gray-950 dark:text-white line-clamp-1 capitalize"
-                                                        >{{
-                                                            event.player.toLowerCase()
-                                                        }}</span
-                                                    >
-                                                </div>
-                                                <span
-                                                    v-if="
-                                                        event.detail &&
-                                                        !event.isSubstitution
-                                                    "
-                                                    class="text-[9px] font-medium text-gray-400 capitalize"
-                                                    >{{ event.detail }}</span
-                                                >
-                                                <!-- Thay người -->
-                                                <div
-                                                    v-if="event.isSubstitution"
-                                                    class="flex flex-col items-end"
-                                                >
-                                                    <Link
-                                                        v-if="event.playerId"
-                                                        :href="
-                                                            '/players/' +
-                                                            event.playerId
-                                                        "
-                                                        class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize hover:underline"
-                                                    >
-                                                        {{
-                                                            event.player.toLowerCase()
-                                                        }}
-                                                    </Link>
-                                                    <span
-                                                        v-else
-                                                        class="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 line-clamp-1 capitalize"
-                                                        >{{
-                                                            event.player.toLowerCase()
-                                                        }}</span
-                                                    >
-
-                                                    <Link
-                                                        v-if="event.playerOutId"
-                                                        :href="
-                                                            '/players/' +
-                                                            event.playerOutId
-                                                        "
-                                                        class="text-[11px] font-medium text-red-400 line-clamp-1 capitalize opacity-80 hover:underline"
-                                                    >
-                                                        {{
-                                                            (
-                                                                event.playerOut ||
-                                                                ""
-                                                            ).toLowerCase()
-                                                        }}
-                                                    </Link>
-                                                    <span
-                                                        v-else
-                                                        class="text-[11px] font-medium text-red-400 line-clamp-1 capitalize opacity-80"
-                                                        >{{
-                                                            (
-                                                                event.playerOut ||
-                                                                ""
-                                                            ).toLowerCase()
-                                                        }}</span
-                                                    >
-                                                </div>
-                                            </div>
-                                            <!-- Icon (Middle) -->
-                                            <div
-                                                class="w-10 flex-shrink-0 flex justify-center"
-                                                v-html="getSofaIcon(event.type)"
-                                            ></div>
-                                            <!-- Minute (Far Right) -->
-                                            <div
-                                                class="w-10 flex-shrink-0 text-right"
-                                            >
-                                                <span
-                                                    class="text-xs font-bold text-gray-950 dark:text-white tabular-nums opacity-60 group-hover/row:opacity-100"
-                                                    >{{
-                                                        event.displayTime
-                                                    }}'</span
-                                                >
-                                                <div
-                                                    v-if="event.eventScore"
-                                                    class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-90 leading-none mt-0.5"
-                                                >
+                                            <span class="text-[11px] font-bold text-white/40 w-8 tabular-nums text-right">{{ event.displayTime }}'</span>
+                                            
+                                            <div class="flex flex-row-reverse items-center gap-3">
+                                                <!-- Icon -->
+                                                <div v-html="getSofaIcon(event.type)" class="shrink-0"></div>
+                                                
+                                                <!-- Score (if goal) -->
+                                                <div v-if="event.eventScore" class="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-white/10">
                                                     {{ event.eventScore }}
+                                                </div>
+
+                                                <!-- Player Info -->
+                                                <div class="flex flex-row-reverse flex-wrap items-center gap-x-2">
+                                                    <Link 
+                                                        v-if="event.playerId" 
+                                                        :href="'/players/' + event.playerId"
+                                                        class="text-[13px] font-bold text-white hover:text-emerald-400 transition-colors"
+                                                    >
+                                                        {{ event.player }}
+                                                    </Link>
+                                                    <span v-else class="text-[13px] font-bold text-white">{{ event.player }}</span>
+                                                    
+                                                    <!-- Detail (Assist, Card reason, Out Player) -->
+                                                    <span v-if="event.isSubstitution" class="text-[11px] font-medium text-white/40 truncate">
+                                                        {{ event.playerOut }}
+                                                    </span>
+                                                    <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-white/40 italic">
+                                                        ({{ event.playerOut || event.detail }})
+                                                    </span>
                                                 </div>
                                             </div>
                                         </template>
@@ -1497,34 +1284,21 @@
                             </div>
                         </div>
 
-                        <!-- Full Time Footer -->
-                        <div
-                            class="bg-gray-950 dark:bg-gray-900 px-6 py-5 flex items-center justify-between"
-                        >
-                            <span
-                                class="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400"
-                                >Kết thúc trận đấu</span
-                            >
-                            <div class="flex items-center gap-4">
-                                <span
-                                    class="text-lg font-bold text-white px-3 py-1 bg-gray-800 rounded-lg tabular-nums"
-                                    >{{ game.home_score }} :
-                                    {{ game.away_score }}</span
-                                >
+                        <!-- Match End Marker -->
+                        <div class="bg-black/40 px-6 py-6 border-t border-white/5 flex flex-col items-center gap-2">
+                            <span class="text-[9px] font-black uppercase tracking-[0.5em] text-white/20">Kết thúc trận đấu</span>
+                            <div class="flex items-center gap-6">
+                                <span class="text-3xl font-black text-white tabular-nums tracking-tighter">
+                                    {{ game.home_score }} <span class="text-white/20 mx-1">:</span> {{ game.away_score }}
+                                </span>
                             </div>
                         </div>
                     </div>
-                    <div
-                        v-else
-                        class="text-center py-20 bg-gray-50/50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
-                    >
-                        <p
-                            class="text-sm font-bold text-gray-400 uppercase tracking-widest"
-                        >
-                            Diễn biến trận đấu đang được tải...
-                        </p>
-                    </div>
                 </div>
+
+
+
+
 
                 <!-- Standings Tab -->
                 <div v-else-if="activeTab === 'standings'" class="py-4">
@@ -1725,10 +1499,11 @@
                                         prediction.predictions.goals.away || 0
                                     }}</span
                                 >
-                            </div>
                         </div>
                     </div>
-                    <div v-else class="py-20 text-center">
+                </div>
+            </div>
+            <div v-else class="py-20 text-center">
                         <div
                             class="w-16 h-16 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-emerald-500"
                         >
@@ -1758,6 +1533,7 @@
                     </div>
                 </div>
             </div>
+            <LeagueSidebar />
         </div>
     </MainLayout>
 </template>
@@ -1769,6 +1545,7 @@ import MainLayout from "../../Layouts/MainLayout.vue";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import StandingTable from "../../Components/StandingTable.vue";
+import LeagueSidebar from "../../Components/LeagueSidebar.vue";
 
 dayjs.extend(utc);
 
@@ -1785,6 +1562,7 @@ const props = defineProps({
 
 const activeTab = ref("lineups");
 const statsPeriod = ref("all");
+const lineupView = ref("start"); // 'start' or 'end'
 const tabs = [
     { id: "lineups", label: "Đội hình" },
     { id: "stats", label: "Thống kê" },
@@ -1823,11 +1601,11 @@ const getPlayerRating = (playerId) => {
 
 const getRatingClass = (rating) => {
     const val = parseFloat(rating);
-    if (isNaN(val)) return "bg-gray-100 text-gray-400";
-    if (val >= 8.0) return "bg-emerald-600 text-white";
-    if (val >= 7.0) return "bg-emerald-500 text-white";
-    if (val >= 6.0) return "bg-amber-400 text-gray-950";
-    return "bg-rose-500 text-white";
+    if (isNaN(val)) return "bg-gray-200/20 text-gray-400";
+    if (val >= 8.0) return "bg-emerald-500/80 text-white";
+    if (val >= 7.0) return "bg-emerald-400/80 text-white";
+    if (val >= 6.0) return "bg-amber-400/80 text-gray-900";
+    return "bg-rose-400/80 text-white";
 };
 
 // Helper lấy các sự kiện của một cầu thủ
@@ -1927,12 +1705,65 @@ const awayLineupData = computed(() => {
     return lineup || null;
 });
 
+const getCurrentXI = (lineupXI, teamId) => {
+    if (!lineupXI) return [];
+    if (lineupView.value === "start") return lineupXI;
+
+    // Clone start XI
+    let currentXI = JSON.parse(JSON.stringify(lineupXI));
+
+    // Process events for this team
+    const teamEvents = (props.game.events || []).filter(
+        (e) => e.team?.id === teamId,
+    );
+
+    teamEvents.forEach((e) => {
+        if (e.type?.toLowerCase() === "subst") {
+            const playerOutId = e.assist?.id;
+            const playerInId = e.player?.id;
+
+            // Find player out in current XI
+            const idx = currentXI.findIndex(
+                (p) => p.player?.id == playerOutId,
+            );
+            if (idx !== -1) {
+                const subPlayer = (
+                    props.game.lineups?.find((l) => l.team?.id == teamId)
+                        ?.substitutes || []
+                ).find((s) => s.player?.id == playerInId);
+
+                if (subPlayer) {
+                    currentXI[idx] = {
+                        ...subPlayer,
+                        isSubstitutedIn: true,
+                        replacedPlayerName: e.assist?.name,
+                        player: {
+                            ...subPlayer.player,
+                            grid: currentXI[idx].player.grid, // Inherit grid
+                        },
+                    };
+                }
+            }
+        }
+    });
+
+    return currentXI;
+};
+
 const processedHomeLineup = computed(() => {
-    return getLineupWithPositions(homeLineupData.value?.startXI, false);
+    const xi = getCurrentXI(
+        homeLineupData.value?.startXI,
+        props.game.home_team?.id,
+    );
+    return getLineupWithPositions(xi, false);
 });
 
 const processedAwayLineup = computed(() => {
-    return getLineupWithPositions(awayLineupData.value?.startXI, true);
+    const xi = getCurrentXI(
+        awayLineupData.value?.startXI,
+        props.game.away_team?.id,
+    );
+    return getLineupWithPositions(xi, true);
 });
 
 const homeSubstitutes = computed(() => {
@@ -2079,20 +1910,22 @@ const h2hStats = computed(() => {
 
 const getSofaIcon = (type) => {
     if (type === "goal")
-        return `<div class="w-5 h-5 flex items-center justify-center">
-            <svg class="w-4 h-4 text-slate-900 dark:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07"></path>
+        return `<div class="w-6 h-6 flex items-center justify-center bg-white/10 rounded-full shadow-inner">
+            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v10h-2V7zm0 12h2v2h-2v-2z" style="display:none"></path>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1" fill="none"></circle>
+                <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07" stroke="currentColor" stroke-width="1.5"></path>
             </svg>
         </div>`;
     if (type === "card" || type === "yellow card")
-        return `<div class="w-3 h-4 bg-yellow-400 rounded-[2px] shadow-sm border border-white/10"></div>`;
+        return `<div class="w-4 h-5 bg-amber-400 rounded-[3px] shadow-lg border border-white/20 transform rotate-3"></div>`;
     if (type === "red card")
-        return `<div class="w-3 h-4 bg-red-500 rounded-[2px] shadow-sm border border-white/10"></div>`;
+        return `<div class="w-4 h-5 bg-rose-600 rounded-[3px] shadow-lg border border-white/20 transform rotate-3"></div>`;
     if (type === "subst")
-        return `<div class="flex flex-col items-center space-y-0.5 opacity-80">
-            <span class="text-[10px] text-emerald-500 leading-none">▲</span>
-            <span class="text-[10px] text-red-500 leading-none">▼</span>
+        return `<div class="flex items-center justify-center w-6 h-6 bg-emerald-500/10 rounded-full">
+            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
         </div>`;
     return "";
 };
