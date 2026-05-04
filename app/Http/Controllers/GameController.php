@@ -27,17 +27,26 @@ class GameController extends Controller
             $needsUpdate = false;
 
             if ($status === 'finished') {
-                // Đã xong: Chỉ call nếu thiếu 1 trong 3 dữ liệu cốt lõi
-                if (empty($match->lineups) || empty($match->events) || empty($match->statistics)) {
+                // Đã xong: Chỉ call nếu thiếu 1 trong các dữ liệu cốt lõi
+                if (empty($match->lineups) || empty($match->events) || empty($match->statistics) || empty($match->injuries)) {
                     $needsUpdate = true;
                 }
             } elseif ($status === 'live') {
-                // Đang đá: Luôn ưu tiên lấy dữ liệu mới nhất (polling sẽ lo phần này, nhưng load trang đầu cũng nên có)
+                // Đang đá: Luôn ưu tiên lấy dữ liệu mới nhất
                 $needsUpdate = true; 
             } elseif ($status === 'scheduled') {
-                // Chưa đá: Chỉ call nếu thiếu đội hình VÀ trận đấu sắp bắt đầu (trong vòng 1 tiếng)
+                // Chưa đá:
+                // 1. Nếu hoàn toàn chưa có gì (mới import từ lịch thi đấu)
+                if (empty($match->lineups) && empty($match->predictions)) {
+                    $needsUpdate = true;
+                }
+                // 2. Nếu sắp bắt đầu (trong vòng 60p) mà chưa có đội hình
                 $isStartingSoon = $match->match_at && $match->match_at->diffInMinutes(now(), false) > -60;
                 if (empty($match->lineups) && $isStartingSoon) {
+                    $needsUpdate = true;
+                }
+                // 3. Luôn lấy chấn thương cho trận sắp đá nếu chưa có
+                if (empty($match->injuries)) {
                     $needsUpdate = true;
                 }
             }
@@ -85,6 +94,7 @@ class GameController extends Controller
                 'events' => $match->events ?? [],
                 'players' => $match->players ?? [],
                 'prediction' => $match->predictions ?? null,
+                'injuries' => $match->injuries ?? [],
             ];
 
             // Nếu trận đấu đã kết thúc/đang diễn ra nhưng thiếu stats hiệp, gọi API bổ sung
@@ -141,8 +151,8 @@ class GameController extends Controller
             
             \Illuminate\Support\Facades\Log::info("H2H Matches for {$homeId} vs {$awayId}: " . $h2h->count());
 
-            // 3. Standings (Dùng season của trận đấu, fallback về 2024)
-            $season = $match->season ?: 2024;
+            // 3. Standings (Dùng season của trận đấu)
+            $season = $match->season;
             $leagueId = (int)$mappedGame['league']['id'];
 
             $standingsQuery = \App\Models\FootballStanding::with('team')
@@ -221,12 +231,18 @@ class GameController extends Controller
 
             return [
                 'game' => $mappedGame,
-                'h2hMatches' => $h2h,
-                'standings' => $standings,
+                'h2hMatches' => $h2h->values()->all(),
+                'standings' => $standings->values()->all(),
                 'poisson' => $poissonData,
                 'valueBets' => $valueBets,
                 'momentum' => $momentum,
-                'aiInsights' => $aiInsights,
+                'aiInsights' => $aiService->getTacticalInsights([
+                    'home_team' => $mappedGame['home_team'],
+                    'away_team' => $mappedGame['away_team'],
+                    'league' => $mappedGame['league'],
+                    'statistics' => $mappedGame['statistics'],
+                    'h2h' => $h2h
+                ]),
             ];
         });
 
@@ -245,6 +261,17 @@ class GameController extends Controller
     public function predictions()
     {
         return Inertia::render('Predictions/Index');
+    }
+
+    public function sync($id, FootballApiService $apiService)
+    {
+        // 1. Xóa cache
+        \Illuminate\Support\Facades\Cache::forget("match_data_v17_{$id}");
+
+        // 2. Ép buộc call API lấy chi tiết
+        $apiService->getFixtureDetails($id);
+
+        return back()->with('success', 'Dữ liệu đã được cập nhật!');
     }
 }
      

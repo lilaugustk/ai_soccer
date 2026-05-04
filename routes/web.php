@@ -17,6 +17,7 @@ Route::get('/matches', function () {
     return redirect()->route('dashboard');
 });
 Route::get('/matches/{id}', [GameController::class, 'show'])->name('games.show');
+Route::post('/matches/{id}/sync', [GameController::class, 'sync'])->name('games.sync');
 Route::get('/predictions', [GameController::class, 'predictions'])->name('predictions.index');
 
 Route::get('/leagues', function () {

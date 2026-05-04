@@ -10,7 +10,7 @@ class FootballMatch extends Model
         'id', 'league_id', 'home_team_id', 'away_team_id',
         'match_at', 'status', 'round', 'referee', 'venue_name', 'venue_city', 'attendance',
         'home_score', 'away_score', 'season',
-        'events', 'lineups', 'statistics', 'stats_1h', 'stats_2h', 'players', 'predictions'
+        'events', 'lineups', 'statistics', 'stats_1h', 'stats_2h', 'players', 'predictions', 'injuries'
     ];
 
     public $incrementing = false; // Fixture ID từ API
@@ -24,6 +24,7 @@ class FootballMatch extends Model
         'stats_2h' => 'array',
         'predictions' => 'array',
         'players' => 'array',
+        'injuries' => 'array',
     ];
 
     public function league()

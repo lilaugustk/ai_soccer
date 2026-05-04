@@ -103,7 +103,22 @@
 
                 <!-- SCORERS -->
                 <div v-else-if="activeTab === 'scorers'" key="scorers">
-                    <TopScorerList :scorers="topScorers" />
+                    <TopPlayerList :players="topScorers" statKey="goals" statLabel="Bàn thắng" />
+                </div>
+
+                <!-- ASSISTS -->
+                <div v-else-if="activeTab === 'assists'" key="assists">
+                    <TopPlayerList :players="topAssists" statKey="assists" statLabel="Kiến tạo" />
+                </div>
+
+                <!-- YELLOW CARDS -->
+                <div v-else-if="activeTab === 'yellow_cards'" key="yellow_cards">
+                    <TopPlayerList :players="topYellowCards" statKey="yellow_cards" statLabel="Thẻ vàng" />
+                </div>
+
+                <!-- RED CARDS -->
+                <div v-else-if="activeTab === 'red_cards'" key="red_cards">
+                    <TopPlayerList :players="topRedCards" statKey="red_cards" statLabel="Thẻ đỏ" />
                 </div>
                 
             </transition>
@@ -112,21 +127,11 @@
 
         <!-- RIGHT SIDEBAR (Ad/Info) -->
         <aside class="hidden xl:block w-72 shrink-0 space-y-6 pt-[38px]">
-             <!-- Top Scorer Preview -->
-             <div class="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-5 shadow-sm">
-                <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Vua phá lưới</h3>
-                <div v-if="topScorers && topScorers.length > 0" class="space-y-3">
-                    <div v-for="(scorer, idx) in topScorers.slice(0, 5)" :key="scorer.player_id" class="flex items-center gap-3">
-                        <span class="text-[10px] font-bold text-gray-300 w-4">{{ idx + 1 }}</span>
-                        <img :src="scorer.photo" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700" />
-                        <div class="min-w-0 flex-1">
-                            <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">{{ scorer.player_name }}</p>
-                            <p class="text-[9px] text-gray-400 truncate">{{ scorer.goals }} bàn</p>
-                        </div>
-                    </div>
-                </div>
-                <div v-else class="text-[9px] text-center text-gray-400 py-4 italic">Đang cập nhật...</div>
-             </div>
+             <!-- Top Players Previews -->
+             <TopPlayerPreview title="Vua phá lưới" :players="topScorers" statKey="goals" statLabel="bàn" />
+             <TopPlayerPreview title="Kiến tạo" :players="topAssists" statKey="assists" statLabel="lần" />
+             <TopPlayerPreview title="Thẻ vàng" :players="topYellowCards" statKey="yellow_cards" statLabel="thẻ" />
+             <TopPlayerPreview title="Thẻ đỏ" :players="topRedCards" statKey="red_cards" statLabel="thẻ" />
         </aside>
 
       </div>
@@ -139,13 +144,17 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import StandingTable from '@/Components/StandingTable.vue';
-import TopScorerList from '@/Components/TopScorerList.vue';
+import TopPlayerList from '@/Components/TopPlayerList.vue';
+import TopPlayerPreview from '@/Components/TopPlayerPreview.vue';
 import MatchCard from '@/Components/MatchCard.vue';
 
 const props = defineProps({
   league: Object,
   standings: Array,
   topScorers: Array,
+  topAssists: Array,
+  topYellowCards: Array,
+  topRedCards: Array,
   matches: Array,
   season: [Number, String]
 });
@@ -183,7 +192,10 @@ const selectedRound = ref(getDefaultRound());
 const tabs = [
   { id: 'standings', name: 'Bảng xếp hạng' },
   { id: 'matches', name: 'Kết quả & Lịch thi đấu' },
-  { id: 'scorers', name: 'Vua phá lưới' }
+  { id: 'scorers', name: 'Vua phá lưới' },
+  { id: 'assists', name: 'Kiến tạo' },
+  { id: 'yellow_cards', name: 'Thẻ vàng' },
+  { id: 'red_cards', name: 'Thẻ đỏ' }
 ];
 
 const changeSeason = (s) => {

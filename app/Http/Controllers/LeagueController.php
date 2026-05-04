@@ -100,13 +100,82 @@ class LeagueController extends Controller
             return $s;
         });
 
-        // 2. Vua phá lưới
+        // 2. Vua phá lưới và các top khác
         $topScorers = \App\Models\FootballScorer::with('team')
             ->where('league_id', $id)
             ->where('season', $season)
+            ->where('goals', '>', 0)
             ->orderBy('goals', 'desc')
             ->limit(10)
             ->get();
+
+        if ($topScorers->isEmpty()) {
+            $this->apiService->getTopScorers($id, $season);
+            $topScorers = \App\Models\FootballScorer::with('team')
+                ->where('league_id', $id)
+                ->where('season', $season)
+                ->where('goals', '>', 0)
+                ->orderBy('goals', 'desc')
+                ->limit(10)
+                ->get();
+        }
+
+        $topAssists = \App\Models\FootballScorer::with('team')
+            ->where('league_id', $id)
+            ->where('season', $season)
+            ->where('assists', '>', 0)
+            ->orderBy('assists', 'desc')
+            ->limit(10)
+            ->get();
+
+        if ($topAssists->isEmpty()) {
+            $this->apiService->getTopAssists($id, $season);
+            $topAssists = \App\Models\FootballScorer::with('team')
+                ->where('league_id', $id)
+                ->where('season', $season)
+                ->where('assists', '>', 0)
+                ->orderBy('assists', 'desc')
+                ->limit(10)
+                ->get();
+        }
+
+        $topYellowCards = \App\Models\FootballScorer::with('team')
+            ->where('league_id', $id)
+            ->where('season', $season)
+            ->where('yellow_cards', '>', 0)
+            ->orderBy('yellow_cards', 'desc')
+            ->limit(10)
+            ->get();
+
+        if ($topYellowCards->isEmpty()) {
+            $this->apiService->getTopYellowCards($id, $season);
+            $topYellowCards = \App\Models\FootballScorer::with('team')
+                ->where('league_id', $id)
+                ->where('season', $season)
+                ->where('yellow_cards', '>', 0)
+                ->orderBy('yellow_cards', 'desc')
+                ->limit(10)
+                ->get();
+        }
+
+        $topRedCards = \App\Models\FootballScorer::with('team')
+            ->where('league_id', $id)
+            ->where('season', $season)
+            ->where('red_cards', '>', 0)
+            ->orderBy('red_cards', 'desc')
+            ->limit(10)
+            ->get();
+
+        if ($topRedCards->isEmpty()) {
+            $this->apiService->getTopRedCards($id, $season);
+            $topRedCards = \App\Models\FootballScorer::with('team')
+                ->where('league_id', $id)
+                ->where('season', $season)
+                ->where('red_cards', '>', 0)
+                ->orderBy('red_cards', 'desc')
+                ->limit(10)
+                ->get();
+        }
 
         // 3. Trận đấu với logo_url và sắp xếp - LỌC THEO MÙA GIẢI
         $matches = \App\Models\FootballMatch::with(['homeTeam', 'awayTeam'])
@@ -128,6 +197,9 @@ class LeagueController extends Controller
             'league' => $league,
             'standings' => $standings,
             'topScorers' => $topScorers,
+            'topAssists' => $topAssists,
+            'topYellowCards' => $topYellowCards,
+            'topRedCards' => $topRedCards,
             'matches' => $matches,
             'season' => $season
         ]);

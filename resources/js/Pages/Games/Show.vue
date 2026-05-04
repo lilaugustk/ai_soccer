@@ -260,26 +260,37 @@
                     <div
                         class="relative overflow-hidden"
                     >
+                        <!-- Expand Button -->
+                        <button
+                            @click="showPitchModal = true"
+                            class="absolute top-3 right-3 z-50 w-9 h-9 bg-black/50 hover:bg-black/70 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center transition-all hover:scale-110 shadow-xl group"
+                            title="Xem toàn màn hình"
+                        >
+                            <svg class="w-4 h-4 text-white/80 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                        </button>
                         <!-- Pitch Container -->
                         <div
-                            class="relative w-full aspect-[1.4/1] md:aspect-[2/1] bg-[#1a3326] rounded-2xl overflow-hidden"
+                            class="relative w-full aspect-[1.4/1] md:aspect-[2/1] bg-gradient-to-br from-[#1e4d35] to-[#143a28] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-[#2c5d44]"
                         >
                             <!-- Grass Background with Pattern -->
                             <div
-                                class="absolute inset-0 bg-[#1a3326] overflow-hidden"
+                                class="absolute inset-0 overflow-hidden"
                             >
                                 <div
-                                    class="absolute inset-0 opacity-[0.08]"
+                                    class="absolute inset-0 opacity-[0.15]"
                                     style="
                                         background-image: repeating-linear-gradient(
                                             90deg,
                                             transparent,
                                             transparent 10%,
-                                            rgba(255, 255, 255, 0.05) 10%,
-                                            rgba(255, 255, 255, 0.05) 20%
+                                            rgba(255, 255, 255, 0.1) 10%,
+                                            rgba(255, 255, 255, 0.1) 20%
                                         );
                                     "
                                 ></div>
+                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(44,93,68,0.4),transparent)]"></div>
                             </div>
 
                             <!-- Pitch Markings -->
@@ -319,7 +330,7 @@
                                         :class="lineupView === 'start' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'"
                                         class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all"
                                     >
-                                        Bắt đầu
+                                        Xuất phát
                                     </button>
                                     <button 
                                         @click="lineupView = 'end'"
@@ -331,67 +342,8 @@
                                 </div>
                             </div>
 
-                            <div
-                                class="absolute top-4 left-6 z-40 flex items-center gap-3"
-                            >
-                                <div
-                                    class="px-2.5 py-1.5 rounded-lg bg-[#2c4238]/95 border border-white/10 flex items-center gap-2 shadow-xl backdrop-blur-md"
-                                >
-                                    <div
-                                        class="w-5 h-5 rounded-md flex items-center justify-center shadow-inner"
-                                        :class="getRatingClass(homeAverageRating)"
-                                    >
-                                        <span
-                                            class="text-[10px] font-bold"
-                                            >Ø</span
-                                        >
-                                    </div>
-                                    <span
-                                        class="text-sm font-bold text-white tabular-nums tracking-tight"
-                                        >{{ homeAverageRating }}</span
-                                    >
-                                </div>
-                                <div
-                                    v-if="game.home_formation"
-                                    class="px-2 py-1 bg-black/30 rounded border border-white/5 backdrop-blur-sm"
-                                >
-                                    <span
-                                        class="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]"
-                                        >{{ game.home_formation }}</span
-                                    >
-                                </div>
-                            </div>
 
-                            <div
-                                class="absolute top-4 right-6 z-40 flex items-center gap-3 flex-row-reverse"
-                            >
-                                <div
-                                    class="px-2.5 py-1.5 rounded-lg bg-[#2c4238]/95 border border-white/10 flex items-center gap-2 flex-row-reverse shadow-xl backdrop-blur-md"
-                                >
-                                    <div
-                                        class="w-5 h-5 rounded-md flex items-center justify-center shadow-inner"
-                                        :class="getRatingClass(awayAverageRating)"
-                                    >
-                                        <span
-                                            class="text-[10px] font-bold"
-                                            >Ø</span
-                                        >
-                                    </div>
-                                    <span
-                                        class="text-sm font-bold text-white tabular-nums tracking-tight"
-                                        >{{ awayAverageRating }}</span
-                                    >
-                                </div>
-                                <div
-                                    v-if="game.away_formation"
-                                    class="px-2 py-1 bg-black/30 rounded border border-white/5 backdrop-blur-sm"
-                                >
-                                    <span
-                                        class="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em] text-right"
-                                        >{{ game.away_formation }}</span
-                                    >
-                                </div>
-                            </div>
+
 
 
 
@@ -502,15 +454,149 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Empty Data Overlay -->
+                            <div v-if="!processedHomeLineup.length && !processedAwayLineup.length" 
+                                 class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                                <div class="p-8 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl text-center max-w-sm mx-4 border border-gray-100 dark:border-gray-700">
+                                    <div class="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg class="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <h4 class="text-base font-bold text-gray-900 dark:text-white mb-2">Chưa có dữ liệu đội hình</h4>
+                                    <p class="text-[11px] text-gray-400 mb-6 font-medium leading-relaxed">Dữ liệu chi tiết trận đấu đang được cập nhật hoặc không khả dụng cho trận đấu này.</p>
+                                    <button 
+                                        @click="refreshMatchData"
+                                        :disabled="isRefreshing"
+                                        class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/25"
+                                    >
+                                        {{ isRefreshing ? 'Đang cập nhật...' : 'Cập nhật ngay' }}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Pitch Fullscreen Modal -->
+                    <Teleport to="body">
+                        <Transition name="modal-fade">
+                        <div
+                            v-if="showPitchModal"
+                            class="fixed inset-0 z-[9999] flex items-center justify-center p-3"
+                            @click.self="showPitchModal = false"
+                        >
+                            <!-- Backdrop -->
+                            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="showPitchModal = false"></div>
+
+                            <!-- Modal Content -->
+                            <div class="relative w-full max-w-7xl mx-auto">
+                                <!-- Header -->
+                                <div class="flex items-center justify-between mb-4 px-2">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex items-center gap-2">
+                                            <img v-if="game.home_team?.logo_url" :src="game.home_team?.logo_url" class="w-7 h-7 object-contain" />
+                                            <span class="text-white font-bold text-sm">{{ game.home_team?.name }}</span>
+                                        </div>
+                                        <span class="text-white/40 font-bold">vs</span>
+                                        <div class="flex items-center gap-2">
+                                            <img v-if="game.away_team?.logo_url" :src="game.away_team?.logo_url" class="w-7 h-7 object-contain" />
+                                            <span class="text-white font-bold text-sm">{{ game.away_team?.name }}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        @click="showPitchModal = false"
+                                        class="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-all border border-white/10"
+                                    >
+                                        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- Full Pitch -->
+                                <div class="relative w-full aspect-[2/1] bg-gradient-to-br from-[#1e4d35] to-[#143a28] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-[#2c5d44]">
+                                    <!-- Grass Pattern -->
+                                    <div class="absolute inset-0 overflow-hidden">
+                                        <div class="absolute inset-0 opacity-[0.15]" style="background-image: repeating-linear-gradient(90deg, transparent, transparent 10%, rgba(255,255,255,0.1) 10%, rgba(255,255,255,0.1) 20%);"></div>
+                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(44,93,68,0.4),transparent)]"></div>
+                                    </div>
+                                    <!-- Pitch Markings -->
+                                    <div class="absolute inset-[4%] border-2 border-white/15 pointer-events-none"></div>
+                                    <div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/15 -translate-x-1/2"></div>
+                                    <div class="absolute top-1/2 left-1/2 w-32 h-32 border-2 border-white/15 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                                    <div class="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-white/30 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                                    <!-- Penalty Areas -->
+                                    <div class="absolute top-1/2 -translate-y-1/2 left-4 w-24 h-64 border-y border-r border-white/15"></div>
+                                    <div class="absolute top-1/2 -translate-y-1/2 left-4 w-10 h-32 border-y border-r border-white/15"></div>
+                                    <div class="absolute top-1/2 -translate-y-1/2 right-4 w-24 h-64 border-y border-l border-white/15"></div>
+                                    <div class="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-32 border-y border-l border-white/15"></div>
+
+                                    <!-- Lineup Toggle -->
+                                    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-40">
+                                        <div class="p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-2xl flex items-center gap-1">
+                                            <button @click="lineupView = 'start'" :class="lineupView === 'start' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all">Bắt đầu</button>
+                                            <button @click="lineupView = 'end'" :class="lineupView === 'end' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all">Kết thúc</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Formation Labels -->
+                                    <div class="absolute top-4 left-6 z-40">
+                                        <div v-if="game.home_formation" class="px-2 py-1 bg-black/30 rounded border border-white/5">
+                                            <span class="text-[11px] font-bold text-white/60 uppercase tracking-[0.2em]">{{ game.home_formation }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="absolute top-4 right-6 z-40">
+                                        <div v-if="game.away_formation" class="px-2 py-1 bg-black/30 rounded border border-white/5">
+                                            <span class="text-[11px] font-bold text-white/60 uppercase tracking-[0.2em]">{{ game.away_formation }}</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Players -->
+                                    <div class="absolute inset-0 z-30">
+                                        <!-- Home -->
+                                        <div v-for="p in processedHomeLineup" :key="'mhome-' + p.id" class="absolute" :style="p.style">
+                                            <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="router.visit(`/players/${p.id}`); showPitchModal = false">
+                                                <div class="relative">
+                                                    <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
+                                                        <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover rounded-full" />
+                                                    </div>
+                                                    <div v-if="p.rating" class="absolute -top-1.5 -right-3 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-30" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
+                                                </div>
+                                                <div class="bg-black/50 px-2.5 py-1 rounded backdrop-blur-sm border border-white/10">
+                                                    <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name.split(' ').pop() }}</span>
+                                                </div>
+                                                <span class="text-[9px] font-bold text-white/75 uppercase tracking-widest drop-shadow-md">{{ p.number }}</span>
+                                            </div>
+                                        </div>
+                                        <!-- Away -->
+                                        <div v-for="p in processedAwayLineup" :key="'maway-' + p.id" class="absolute" :style="p.style">
+                                            <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="router.visit(`/players/${p.id}`); showPitchModal = false">
+                                                <div class="relative">
+                                                    <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
+                                                        <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover rounded-full" />
+                                                    </div>
+                                                    <div v-if="p.rating" class="absolute -top-1.5 -left-2 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-40" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
+                                                </div>
+                                                <div class="bg-black/50 px-2.5 py-1 rounded backdrop-blur-sm border border-white/10">
+                                                    <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name.split(' ').pop() }}</span>
+                                                </div>
+                                                <span class="text-[9px] font-bold text-white/75 uppercase tracking-widest drop-shadow-md">{{ p.number }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </Transition>
+                    </Teleport>
 
                     <!-- Lineup Lists & Substitutes -->
                     <div class="grid lg:grid-cols-2 gap-8">
                         <!-- Home Detailed -->
                         <div class="space-y-6">
                             <h4
-                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border border-gray-100 dark:border-gray-700"
+                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700"
                             >
                                 Đội hình: {{ game.home_team.name }}
                             </h4>
@@ -546,13 +632,13 @@
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
                                                     >{{ p.name }}</Link
                                                 >
-                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ p.pos }}</span>
+                                                <span class="text-[9px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">{{ p.pos }}</span>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.is_captain"
-                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-bold text-gray-400"
+                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-bold text-slate-500 dark:text-gray-400"
                                             >
                                                 C
                                             </div>
@@ -573,7 +659,7 @@
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700"
                                 >
                                     <span
-                                        class="text-[9px] font-bold uppercase tracking-widest text-gray-400"
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-400"
                                         >Dự bị</span
                                     >
                                 </div>
@@ -589,7 +675,7 @@
                                             class="flex items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                         >
                                             <span
-                                                class="w-6 text-xs font-bold text-gray-300"
+                                                class="w-6 text-xs font-bold text-slate-400 dark:text-gray-500"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -607,7 +693,7 @@
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
                                                     >{{ p.name }}</Link
                                                 >
-                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{{ p.pos }}</span>
+                                                <span class="text-[9px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">{{ p.pos }}</span>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3">
@@ -630,7 +716,7 @@
                                 >
                                         <div>
                                             <span
-                                                class="block text-[8px] font-bold uppercase text-gray-400"
+                                                class="block text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400"
                                                 >Huấn luyện viên</span
                                             >
                                             <span
@@ -647,7 +733,7 @@
                         <!-- Away Detailed -->
                         <div class="space-y-6">
                             <h4
-                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border border-gray-100 dark:border-gray-700 text-right"
+                                class="px-6 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700 text-right"
                             >
                                 Đội hình: {{ game.away_team.name }}
                             </h4>
@@ -685,7 +771,7 @@
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
                                                     >{{ p.name }}</Link
                                                 >
-                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider text-right">{{ p.pos }}</span>
+                                                <span class="text-[9px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider text-right">{{ p.pos }}</span>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3">
@@ -700,7 +786,7 @@
                                             </div>
                                             <div
                                                 v-if="p.is_captain"
-                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-bold text-gray-400"
+                                                class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[8px] font-bold text-slate-500 dark:text-gray-400"
                                             >
                                                 C
                                             </div>
@@ -712,7 +798,7 @@
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700 text-right"
                                 >
                                     <span
-                                        class="text-[9px] font-bold uppercase tracking-widest text-gray-400"
+                                        class="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-400"
                                         >Dự bị</span
                                     >
                                 </div>
@@ -746,7 +832,7 @@
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
                                                     >{{ p.name }}</Link
                                                 >
-                                                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider text-right">{{ p.pos }}</span>
+                                                <span class="text-[9px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider text-right">{{ p.pos }}</span>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-3">
@@ -769,7 +855,7 @@
                                 >
                                         <div class="text-right">
                                             <span
-                                                class="block text-[8px] font-bold uppercase text-gray-400"
+                                                class="block text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400"
                                                 >Huấn luyện viên</span
                                             >
                                             <span
@@ -785,61 +871,73 @@
                     </div>
 
                     <!-- Missing Players (Injuries & Absences) -->
+                    <!-- Missing Players (Injuries & Absences) -->
                     <div v-if="game.injuries && game.injuries.length > 0" class="grid lg:grid-cols-2 gap-8 pt-4">
+                        <!-- Home Injuries -->
                         <div class="space-y-4">
-                            <h5
-                                class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2"
-                            >
-                                <svg
-                                    class="w-3 h-3"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="3"
-                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                    />
+                            <h5 class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
-                                Chấn thương & Vắng mặt
+                                Vắng mặt: {{ game.home_team.name }}
                             </h5>
-                            <div
-                                class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 text-center py-10"
-                            >
-                                <span class="text-xs font-medium text-gray-400"
-                                    >Không có dữ liệu chấn thương cho trận đấu
-                                    này</span
-                                >
+                            <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                                <div v-if="game.injuries.filter(i => i.team.id === game.home_team.id).length > 0" class="divide-y divide-gray-50 dark:divide-gray-700">
+                                    <div v-for="injury in game.injuries.filter(i => i.team.id === game.home_team.id)" :key="injury.player.id" class="px-6 py-4 flex items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-900 overflow-hidden border border-gray-100 dark:border-gray-800">
+                                            <img :src="injury.player.photo" class="w-full h-full object-cover" />
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ injury.player.name }}</div>
+                                            <div class="flex items-center gap-1.5 mt-0.5">
+                                                <span :class="[
+                                                    'px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider',
+                                                    injury.type === 'Questionable' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                ]">
+                                                    {{ injury.type === 'Questionable' ? 'Bỏ ngỏ' : 'Vắng mặt' }}
+                                                </span>
+                                                <span class="text-[10px] text-slate-500 dark:text-gray-400 font-medium line-clamp-1">{{ injury.reason }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="p-10 text-center">
+                                    <span class="text-xs font-medium text-slate-500 dark:text-gray-400">Không có dữ liệu vắng mặt</span>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Away Injuries -->
                         <div class="space-y-4">
-                            <h5
-                                class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2 justify-end"
-                            >
-                                Chấn thương & Vắng mặt
-                                <svg
-                                    class="w-3 h-3"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="3"
-                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                    />
+                            <h5 class="px-6 text-[9px] font-bold uppercase tracking-widest text-red-500 flex items-center gap-2 lg:flex-row-reverse">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
+                                Vắng mặt: {{ game.away_team.name }}
                             </h5>
-                            <div
-                                class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 text-center py-10"
-                            >
-                                <span class="text-xs font-medium text-gray-400"
-                                    >Không có dữ liệu chấn thương cho trận đấu
-                                    này</span
-                                >
+                            <div class="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                                <div v-if="game.injuries.filter(i => i.team.id === game.away_team.id).length > 0" class="divide-y divide-gray-50 dark:divide-gray-700">
+                                    <div v-for="injury in game.injuries.filter(i => i.team.id === game.away_team.id)" :key="injury.player.id" class="px-6 py-4 flex flex-row-reverse items-center gap-4">
+                                        <div class="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-900 overflow-hidden border border-gray-100 dark:border-gray-800">
+                                            <img :src="injury.player.photo" class="w-full h-full object-cover" />
+                                        </div>
+                                        <div class="flex-1 text-right">
+                                            <div class="text-sm font-bold text-gray-900 dark:text-white">{{ injury.player.name }}</div>
+                                            <div class="flex flex-row-reverse items-center gap-1.5 mt-0.5">
+                                                <span :class="[
+                                                    'px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider',
+                                                    injury.type === 'Questionable' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                                ]">
+                                                    {{ injury.type === 'Questionable' ? 'Bỏ ngỏ' : 'Vắng mặt' }}
+                                                </span>
+                                                <span class="text-[10px] text-slate-500 dark:text-gray-400 font-medium line-clamp-1">{{ injury.reason }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else class="p-10 text-center">
+                                    <span class="text-xs font-medium text-slate-500 dark:text-gray-400">Không có dữ liệu vắng mặt</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -914,7 +1012,7 @@
                                         </div>
 
                                         <span
-                                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 text-center flex-1 pb-1"
+                                            class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 text-center flex-1 pb-1"
                                         >
                                             {{ stat.label }}
                                         </span>
@@ -970,7 +1068,7 @@
                         class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
                     >
                         <p
-                            class="text-sm font-bold text-gray-400 uppercase tracking-widest"
+                            class="text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest"
                         >
                             Dữ liệu thống kê đang được xử lý...
                         </p>
@@ -994,7 +1092,7 @@
                                     Thống kê đối đầu
                                 </h3>
                                 <span
-                                    class="text-[10px] font-bold text-gray-400"
+                                    class="text-[10px] font-bold text-slate-500 dark:text-gray-400"
                                     >{{ h2hMatches.length }} trận gần nhất</span
                                 >
                             </div>
@@ -1039,7 +1137,7 @@
                                                 >{{ h2hStats.draws }}</span
                                             >
                                             <span
-                                                class="text-[8px] font-bold text-gray-400 uppercase mt-0.5"
+                                                class="text-[8px] font-bold text-slate-500 dark:text-gray-400 uppercase mt-0.5"
                                                 >Hòa</span
                                             >
                                         </div>
@@ -1180,7 +1278,7 @@
                             </svg>
                         </div>
                         <p
-                            class="text-sm font-bold text-gray-400 uppercase tracking-widest"
+                            class="text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest"
                         >
                             Chưa có dữ liệu lịch sử đối đầu giữa hai đội
                         </p>
@@ -1188,36 +1286,36 @@
                 </div>
 
                 <!-- Timeline Tab (SofaScore Style) -->
-                <!-- Timeline Tab (Premium Dark Style) -->
+                <!-- Timeline Tab (Premium Style) -->
                 <div v-else-if="activeTab === 'timeline'" class="py-4">
                     <div
                         v-if="processedEvents.length"
-                        class="bg-[#0a1921] rounded-[2rem] shadow-2xl overflow-hidden min-h-[400px] border border-white/5"
+                        class="bg-white dark:bg-[#0a1921] rounded-[2rem] shadow-xl dark:shadow-2xl overflow-hidden min-h-[400px] border border-gray-100 dark:border-white/5"
                     >
                         <div v-for="(event, idx) in processedEvents" :key="idx">
                             <!-- Period Header (1st Half, 2nd Half) -->
                             <div
                                 v-if="event.isMarker"
-                                class="bg-white/5 px-6 py-3 flex justify-between items-center border-b border-white/5 first:border-t-0"
+                                class="bg-gray-50 dark:bg-white/5 px-6 py-3 flex justify-between items-center border-b border-gray-100 dark:border-white/5 first:border-t-0"
                             >
-                                <span class="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">{{ event.label }}</span>
-                                <span v-if="event.score" class="text-[12px] font-black text-white/60 tracking-widest tabular-nums">{{ event.score }}</span>
+                                <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-white/40">{{ event.label }}</span>
+                                <span v-if="event.score" class="text-[12px] font-black text-slate-500 dark:text-white/60 tracking-widest tabular-nums">{{ event.score }}</span>
                             </div>
 
                             <!-- Regular Event Row -->
-                            <div v-else class="px-6 py-4 transition-colors">
+                            <div v-else class="px-6 py-4 border-b border-gray-50 dark:border-transparent last:border-0 transition-colors">
                                 <div class="flex items-center w-full">
                                     <!-- HOME TEAM SIDE -->
                                     <div class="w-1/2 flex items-center gap-4">
                                         <template v-if="event.side === 'home'">
-                                            <span class="text-[11px] font-bold text-white/40 w-8 tabular-nums">{{ event.displayTime }}'</span>
+                                            <span class="text-[11px] font-bold text-slate-400 dark:text-white/40 w-8 tabular-nums">{{ event.displayTime }}'</span>
                                             
                                             <div class="flex items-center gap-3">
                                                 <!-- Icon -->
                                                 <div v-html="getSofaIcon(event.type)" class="shrink-0"></div>
                                                 
                                                 <!-- Score (if goal) -->
-                                                <div v-if="event.eventScore" class="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-white/10">
+                                                <div v-if="event.eventScore" class="px-2 py-0.5 bg-slate-900 dark:bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-slate-800 dark:border-white/10">
                                                     {{ event.eventScore }}
                                                 </div>
 
@@ -1226,17 +1324,17 @@
                                                     <Link 
                                                         v-if="event.playerId" 
                                                         :href="'/players/' + event.playerId"
-                                                        class="text-[13px] font-bold text-white hover:text-emerald-400 transition-colors"
+                                                        class="text-[13px] font-bold text-slate-900 dark:text-white hover:text-emerald-500 transition-colors"
                                                     >
                                                         {{ event.player }}
                                                     </Link>
-                                                    <span v-else class="text-[13px] font-bold text-white">{{ event.player }}</span>
+                                                    <span v-else class="text-[13px] font-bold text-slate-900 dark:text-white">{{ event.player }}</span>
                                                     
                                                     <!-- Detail (Assist, Card reason, Out Player) -->
-                                                    <span v-if="event.isSubstitution" class="text-[11px] font-medium text-white/40 truncate">
+                                                    <span v-if="event.isSubstitution" class="text-[11px] font-medium text-slate-400 dark:text-white/40 truncate">
                                                         {{ event.playerOut }}
                                                     </span>
-                                                    <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-white/40 italic">
+                                                    <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-slate-400 dark:text-white/40 italic">
                                                         ({{ event.playerOut || event.detail }})
                                                     </span>
                                                 </div>
@@ -1247,14 +1345,14 @@
                                     <!-- AWAY TEAM SIDE -->
                                     <div class="w-1/2 flex flex-row-reverse items-center gap-4 text-right">
                                         <template v-if="event.side === 'away'">
-                                            <span class="text-[11px] font-bold text-white/40 w-8 tabular-nums text-right">{{ event.displayTime }}'</span>
+                                            <span class="text-[11px] font-bold text-slate-400 dark:text-white/40 w-8 tabular-nums text-right">{{ event.displayTime }}'</span>
                                             
                                             <div class="flex flex-row-reverse items-center gap-3">
                                                 <!-- Icon -->
                                                 <div v-html="getSofaIcon(event.type)" class="shrink-0"></div>
                                                 
                                                 <!-- Score (if goal) -->
-                                                <div v-if="event.eventScore" class="px-2 py-0.5 bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-white/10">
+                                                <div v-if="event.eventScore" class="px-2 py-0.5 bg-slate-900 dark:bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-slate-800 dark:border-white/10">
                                                     {{ event.eventScore }}
                                                 </div>
 
@@ -1263,17 +1361,17 @@
                                                     <Link 
                                                         v-if="event.playerId" 
                                                         :href="'/players/' + event.playerId"
-                                                        class="text-[13px] font-bold text-white hover:text-emerald-400 transition-colors"
+                                                        class="text-[13px] font-bold text-slate-900 dark:text-white hover:text-emerald-500 transition-colors"
                                                     >
                                                         {{ event.player }}
                                                     </Link>
-                                                    <span v-else class="text-[13px] font-bold text-white">{{ event.player }}</span>
+                                                    <span v-else class="text-[13px] font-bold text-slate-900 dark:text-white">{{ event.player }}</span>
                                                     
                                                     <!-- Detail (Assist, Card reason, Out Player) -->
-                                                    <span v-if="event.isSubstitution" class="text-[11px] font-medium text-white/40 truncate">
+                                                    <span v-if="event.isSubstitution" class="text-[11px] font-medium text-slate-400 dark:text-white/40 truncate">
                                                         {{ event.playerOut }}
                                                     </span>
-                                                    <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-white/40 italic">
+                                                    <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-slate-400 dark:text-white/40 italic">
                                                         ({{ event.playerOut || event.detail }})
                                                     </span>
                                                 </div>
@@ -1285,11 +1383,11 @@
                         </div>
 
                         <!-- Match End Marker -->
-                        <div class="bg-black/40 px-6 py-6 border-t border-white/5 flex flex-col items-center gap-2">
-                            <span class="text-[9px] font-black uppercase tracking-[0.5em] text-white/20">Kết thúc trận đấu</span>
+                        <div class="bg-gray-50 dark:bg-black/40 px-6 py-6 border-t border-gray-100 dark:border-white/5 flex flex-col items-center gap-2">
+                            <span class="text-[9px] font-black uppercase tracking-[0.5em] text-slate-300 dark:text-white/20">Kết thúc trận đấu</span>
                             <div class="flex items-center gap-6">
-                                <span class="text-3xl font-black text-white tabular-nums tracking-tighter">
-                                    {{ game.home_score }} <span class="text-white/20 mx-1">:</span> {{ game.away_score }}
+                                <span class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                                    {{ game.home_score }} <span class="text-slate-200 dark:text-white/20 mx-1">:</span> {{ game.away_score }}
                                 </span>
                             </div>
                         </div>
@@ -1307,19 +1405,44 @@
                             <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
                                 Bảng xếp hạng {{ game.league?.name }}
                             </h3>
-                            <span class="text-[10px] font-bold text-gray-400">Mùa giải {{ game.season }}</span>
+                            <span class="text-[10px] font-bold text-slate-500 dark:text-gray-400">Mùa giải {{ game.season }}</span>
                         </div>
                         <StandingTable :standings="standings" :league-id="game.league?.id" />
                     </div>
                     <div v-else class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                        <p class="text-sm font-bold text-gray-400 uppercase tracking-widest">
+                        <p class="text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest">
                             Dữ liệu bảng xếp hạng đang được cập nhật...
                         </p>
                     </div>
                 </div>
 
                 <!-- Analysis Tab (API Predictions) -->
-                <div v-else-if="activeTab === 'analysis'" class="py-4">
+                <div v-else-if="activeTab === 'analysis'" class="py-4 space-y-8">
+                    <!-- Tactical AI Insights (Groq) -->
+                    <div v-if="aiInsights" class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 text-slate-900 dark:text-white relative overflow-hidden border border-gray-100 dark:border-slate-800 shadow-xl dark:shadow-2xl">
+                        <div class="absolute top-0 right-0 p-8 opacity-[0.03] dark:opacity-10 text-slate-900 dark:text-white">
+                             <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/></svg>
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-4 mb-8">
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 dark:border-emerald-500/30">
+                                    <svg class="w-6 h-6 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400 mb-1">AI Tactical Analysis</h3>
+                                    <p class="text-[10px] text-slate-400 dark:text-slate-400 font-medium uppercase tracking-widest">Phân tích chuyên sâu từ trí tuệ nhân tạo</p>
+                                </div>
+                            </div>
+
+                            <div class="prose dark:prose-invert prose-sm max-w-none">
+                                <div class="whitespace-pre-wrap text-slate-600 dark:text-slate-200 leading-relaxed font-medium text-sm" v-html="aiInsights.replace(/\n/g, '<br>')"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div v-if="prediction" class="space-y-6">
                         <!-- Expert Advice Card -->
                         <div
@@ -1371,7 +1494,7 @@
                             class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm"
                         >
                             <h4
-                                class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 text-center"
+                                class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-400 mb-6 text-center"
                             >
                                 Xác suất kết quả (Win Probability)
                             </h4>
@@ -1431,7 +1554,7 @@
                                             }}</span
                                         >
                                         <span
-                                            class="text-[8px] font-bold uppercase text-gray-400 tracking-tighter"
+                                            class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 tracking-tighter"
                                             >{{ game.home_team.name }}</span
                                         >
                                     </div>
@@ -1444,7 +1567,7 @@
                                             }}</span
                                         >
                                         <span
-                                            class="text-[8px] font-bold uppercase text-gray-400 tracking-tighter"
+                                            class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 tracking-tighter"
                                             >Hòa</span
                                         >
                                     </div>
@@ -1457,7 +1580,7 @@
                                             }}</span
                                         >
                                         <span
-                                            class="text-[8px] font-bold uppercase text-gray-400 tracking-tighter"
+                                            class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 tracking-tighter"
                                             >{{ game.away_team.name }}</span
                                         >
                                     </div>
@@ -1471,7 +1594,7 @@
                                 class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center"
                             >
                                 <span
-                                    class="text-[8px] font-bold uppercase text-gray-400 mb-2"
+                                    class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 mb-2"
                                     >Tài / Xỉu (Over/Under)</span
                                 >
                                 <span
@@ -1486,7 +1609,7 @@
                                 class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center"
                             >
                                 <span
-                                    class="text-[8px] font-bold uppercase text-gray-400 mb-2"
+                                    class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 mb-2"
                                     >Bàn thắng kỳ vọng</span
                                 >
                                 <span
@@ -1558,11 +1681,13 @@ const props = defineProps({
     game: { type: Object, required: true },
     h2hMatches: { type: Array, default: () => [] },
     standings: { type: Array, default: () => [] },
+    aiInsights: { type: String, default: null },
 });
 
 const activeTab = ref("lineups");
 const statsPeriod = ref("all");
 const lineupView = ref("start"); // 'start' or 'end'
+const showPitchModal = ref(false);
 const tabs = [
     { id: "lineups", label: "Đội hình" },
     { id: "stats", label: "Thống kê" },
@@ -1583,6 +1708,17 @@ onMounted(() => {
         activeTab.value = hash;
     }
 });
+
+const isRefreshing = ref(false);
+const refreshMatchData = () => {
+    isRefreshing.value = true;
+    router.post(`/matches/${props.game.id}/sync`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            isRefreshing.value = false;
+        }
+    });
+};
 
 // Helper lấy rating của cầu thủ từ dữ liệu statistics
 const getPlayerRating = (playerId) => {
@@ -1709,41 +1845,38 @@ const getCurrentXI = (lineupXI, teamId) => {
     if (!lineupXI) return [];
     if (lineupView.value === "start") return lineupXI;
 
-    // Clone start XI
     let currentXI = JSON.parse(JSON.stringify(lineupXI));
 
-    // Process events for this team
-    const teamEvents = (props.game.events || []).filter(
-        (e) => e.team?.id === teamId,
+    // API-Football substitution event:
+    // e.player = cầu thủ RA SÂN (đang trong startXI)
+    // e.assist = cầu thủ VÀO SÂN (trong danh sách substitutes)
+    const substEvents = (props.game.events || []).filter(
+        (e) => e.team?.id == teamId && e.type?.toLowerCase() === "subst"
     );
 
-    teamEvents.forEach((e) => {
-        if (e.type?.toLowerCase() === "subst") {
-            const playerOutId = e.assist?.id;
-            const playerInId = e.player?.id;
+    substEvents.forEach((e) => {
+        const playerOutId = e.player?.id;  // RA SÂN → tìm trong currentXI
+        const playerInId  = e.assist?.id;  // VÀO SÂN → tìm trong substitutes
 
-            // Find player out in current XI
-            const idx = currentXI.findIndex(
-                (p) => p.player?.id == playerOutId,
-            );
-            if (idx !== -1) {
-                const subPlayer = (
-                    props.game.lineups?.find((l) => l.team?.id == teamId)
-                        ?.substitutes || []
-                ).find((s) => s.player?.id == playerInId);
+        const idx = currentXI.findIndex((p) => p.player?.id == playerOutId);
+        if (idx === -1) return;
 
-                if (subPlayer) {
-                    currentXI[idx] = {
-                        ...subPlayer,
-                        isSubstitutedIn: true,
-                        replacedPlayerName: e.assist?.name,
-                        player: {
-                            ...subPlayer.player,
-                            grid: currentXI[idx].player.grid, // Inherit grid
-                        },
-                    };
-                }
-            }
+        const lineupData = props.game.lineups?.find((l) => l.team?.id == teamId);
+        const subPlayer = (lineupData?.substitutes || []).find(
+            (s) => s.player?.id == playerInId
+        );
+
+        if (subPlayer) {
+            currentXI[idx] = {
+                ...subPlayer,
+                isSubstitutedIn: true,
+                substituteMinute: e.time?.elapsed,
+                replacedPlayerName: e.player?.name,
+                player: {
+                    ...subPlayer.player,
+                    grid: currentXI[idx].player.grid,
+                },
+            };
         }
     });
 
@@ -1910,17 +2043,16 @@ const h2hStats = computed(() => {
 
 const getSofaIcon = (type) => {
     if (type === "goal")
-        return `<div class="w-6 h-6 flex items-center justify-center bg-white/10 rounded-full shadow-inner">
-            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v10h-2V7zm0 12h2v2h-2v-2z" style="display:none"></path>
+        return `<div class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-white/10 rounded-full shadow-inner">
+            <svg class="w-4 h-4 text-slate-900 dark:text-white" viewBox="0 0 24 24" fill="currentColor">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1" fill="none"></circle>
                 <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07" stroke="currentColor" stroke-width="1.5"></path>
             </svg>
         </div>`;
     if (type === "card" || type === "yellow card")
-        return `<div class="w-4 h-5 bg-amber-400 rounded-[3px] shadow-lg border border-white/20 transform rotate-3"></div>`;
+        return `<div class="w-4 h-5 bg-amber-400 rounded-[3px] shadow-lg border border-white/20 dark:border-white/10 transform rotate-3"></div>`;
     if (type === "red card")
-        return `<div class="w-4 h-5 bg-rose-600 rounded-[3px] shadow-lg border border-white/20 transform rotate-3"></div>`;
+        return `<div class="w-4 h-5 bg-rose-600 rounded-[3px] shadow-lg border border-white/20 dark:border-white/10 transform rotate-3"></div>`;
     if (type === "subst")
         return `<div class="flex items-center justify-center w-6 h-6 bg-emerald-500/10 rounded-full">
             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
@@ -1995,5 +2127,16 @@ const getMatchStatus = (game) => {
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+
+/* Modal Transition */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+    transform: scale(0.97);
 }
 </style>

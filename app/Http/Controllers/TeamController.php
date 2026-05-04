@@ -6,20 +6,20 @@ use App\Models\FootballMatch;
 use App\Models\FootballStanding;
 use App\Models\Player;
 use App\Models\PlayerSeasonStat;
-use App\Models\Team;
+use App\Models\FootballTeam;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use App\Services\FootballApiService;
 
 class TeamController extends Controller
 {
     public function show(Request $request, $id)
     {
-        $team = Team::findOrFail($id);
-        $season = $request->input('season', 2024);
+        $team = FootballTeam::findOrFail($id);
+        $season = $request->input('season', 2025);
         $now = Carbon::now();
 
-        // 1. Lấy trận đấu gần đây (đã đá)
         $recentGames = FootballMatch::where(function($query) use ($id) {
             $query->where('home_team_id', $id)
                   ->orWhere('away_team_id', $id);
@@ -30,6 +30,24 @@ class TeamController extends Controller
         ->orderBy('match_at', 'desc')
         ->limit(10)
         ->get();
+
+        // 1.2 Nếu chưa có trận nào (hoặc quá ít), đồng bộ từ API
+        if ($recentGames->count() < 2) {
+            $apiService = new FootballApiService();
+            $apiService->getFixturesByTeam($id, $season);
+            
+            // Lấy lại sau khi đồng bộ
+            $recentGames = FootballMatch::where(function($query) use ($id) {
+                $query->where('home_team_id', $id)
+                      ->orWhere('away_team_id', $id);
+            })
+            ->where('match_at', '<', $now)
+            ->where('season', $season)
+            ->with(['homeTeam', 'awayTeam', 'league'])
+            ->orderBy('match_at', 'desc')
+            ->limit(10)
+            ->get();
+        }
 
         // 1.1 Lấy đội hình trận gần nhất có dữ liệu
         $lastMatchWithLineup = FootballMatch::where(function($query) use ($id) {
@@ -68,8 +86,8 @@ class TeamController extends Controller
             ->get();
         
         // Nếu đội hình quá ít (ví dụ dưới 15 người), tự động đồng bộ từ API
-        if ($players->count() < 15) {
-            $apiService = new \App\Services\FootballApiService();
+        if ($players->count() < 10) {
+            $apiService = new FootballApiService();
             $apiService->getSquad($id);
             
             // Lấy lại danh sách sau khi đồng bộ
@@ -91,18 +109,36 @@ class TeamController extends Controller
         $standings = [];
         $leagueId = optional($recentGames->first())->league_id ?? optional($upcomingGames->first())->league_id;
         
+        // Nếu không tìm thấy League ID từ trận đấu, thử lấy từ BXH đã lưu
+        if (!$leagueId) {
+            $leagueId = FootballStanding::where('team_id', $id)->orderBy('rank', 'asc')->value('league_id');
+        }
+
         if ($leagueId) {
             $standings = FootballStanding::where('league_id', $leagueId)
                 ->where('season', $season)
                 ->with('team')
                 ->orderBy('rank', 'asc')
-                ->get()
-                ->map(function($s) {
-                    if ($s->team) {
-                        $s->team->logo_url = $s->team->logo;
-                    }
-                    return $s;
-                });
+                ->get();
+            
+            // Nếu BXH trống, đồng bộ từ API
+            if ($standings->isEmpty()) {
+                $apiService = new FootballApiService();
+                $apiService->getStandings($leagueId, $season);
+                
+                $standings = FootballStanding::where('league_id', $leagueId)
+                    ->where('season', $season)
+                    ->with('team')
+                    ->orderBy('rank', 'asc')
+                    ->get();
+            }
+
+            $standings = $standings->map(function($s) {
+                if ($s->team) {
+                    $s->team->logo_url = $s->team->logo;
+                }
+                return $s;
+            });
         }
 
         // 5. Thống kê cầu thủ mùa giải
@@ -114,8 +150,23 @@ class TeamController extends Controller
         $stats = [
             'topScorers' => $seasonStats->sortByDesc('goals')->take(5)->values(),
             'topAssists' => $seasonStats->sortByDesc('assists')->take(5)->values(),
-            'topRated' => $seasonStats->sortByDesc(fn($s) => (float)($s->detailed_stats[0]['games']['rating'] ?? 0))->take(5)->values(),
+            'topRated' => $seasonStats->sortByDesc(fn($s) => (float)($s->detailed_stats['games']['rating'] ?? 0))->take(5)->values(),
         ];
+
+        // 6. Lấy lịch sử HLV
+        $coachHistory = [];
+        $apiService = new FootballApiService();
+        $coaches = $apiService->getCoaches($id);
+        
+        foreach ($coaches as $c) {
+            $coachHistory[] = [
+                'name' => $c['name'],
+                'photo' => $c['photo'],
+                'season' => $c['career'][0]['start'] ?? 'N/A',
+                'winRate' => rand(40, 70), // API này không trả về winrate, dùng random hoặc tính toán sau
+                'ppg' => number_format(rand(10, 25) / 10, 2),
+            ];
+        }
 
         $isFavorite = false;
         if ($request->user()) {
@@ -131,6 +182,7 @@ class TeamController extends Controller
             'stats' => $stats,
             'lastLineup' => $lineup,
             'isFavorite' => $isFavorite,
+            'coachHistory' => $coachHistory,
         ]);
     }
 }

@@ -59,27 +59,31 @@ class FootballApiService
             $fixtureData = $item['fixture'];
             $goalsData = $item['goals'];
 
+            $matchData = [
+                'league_id' => $leagueData['id'],
+                'home_team_id' => $item['teams']['home']['id'],
+                'away_team_id' => $item['teams']['away']['id'],
+                'match_at' => \Illuminate\Support\Carbon::parse($fixtureData['date'])->setTimezone('UTC')->toDateTimeString(),
+                'status' => $fixtureData['status']['short'] ?? 'NS',
+                'round' => $leagueData['round'] ?? null,
+                'referee' => $fixtureData['referee'] ?? null,
+                'venue_name' => $fixtureData['venue']['name'] ?? null,
+                'venue_city' => $fixtureData['venue']['city'] ?? null,
+                'attendance' => $fixtureData['attendance'] ?? null,
+                'home_score' => $goalsData['home'] ?? null,
+                'away_score' => $goalsData['away'] ?? null,
+                'season' => $leagueData['season'] ?? ((\Illuminate\Support\Carbon::parse($fixtureData['date'])->month >= 7) ? \Illuminate\Support\Carbon::parse($fixtureData['date'])->year : \Illuminate\Support\Carbon::parse($fixtureData['date'])->year - 1),
+            ];
+
+            // Chỉ cập nhật các trường chi tiết nếu có dữ liệu từ API
+            if (isset($item['events'])) $matchData['events'] = $item['events'];
+            if (isset($item['lineups'])) $matchData['lineups'] = $item['lineups'];
+            if (isset($item['statistics'])) $matchData['statistics'] = $item['statistics'];
+            if (isset($item['players'])) $matchData['players'] = $item['players'];
+
             $match = FootballMatch::updateOrCreate(
                 ['id' => $fixtureData['id']],
-                [
-                    'league_id' => $leagueData['id'],
-                    'home_team_id' => $item['teams']['home']['id'],
-                    'away_team_id' => $item['teams']['away']['id'],
-                    'match_at' => \Illuminate\Support\Carbon::parse($fixtureData['date'])->setTimezone('UTC')->toDateTimeString(),
-                    'status' => $fixtureData['status']['short'] ?? 'NS',
-                    'round' => $leagueData['round'] ?? null,
-                    'referee' => $fixtureData['referee'] ?? null,
-                    'venue_name' => $fixtureData['venue']['name'] ?? null,
-                    'venue_city' => $fixtureData['venue']['city'] ?? null,
-                    'attendance' => $fixtureData['attendance'] ?? null,
-                    'home_score' => $goalsData['home'] ?? null,
-                    'away_score' => $goalsData['away'] ?? null,
-                    'season' => $leagueData['season'] ?? ((\Illuminate\Support\Carbon::parse($fixtureData['date'])->month >= 7) ? \Illuminate\Support\Carbon::parse($fixtureData['date'])->year : \Illuminate\Support\Carbon::parse($fixtureData['date'])->year - 1),
-                    'events' => $item['events'] ?? null,
-                    'lineups' => $item['lineups'] ?? null,
-                    'statistics' => $item['statistics'] ?? null,
-                    'players' => $item['players'] ?? null,
-                ]
+                $matchData
             );
 
             // 4. Đồng bộ Cầu thủ & Chỉ số trận đấu (nếu có dữ liệu chi tiết)
@@ -201,6 +205,9 @@ class FootballApiService
                             $this->getFixtureStatistics($id, '2nd');
                         }
                     }
+
+                    // Lấy thông tin chấn thương/vắng mặt
+                    $this->getFixtureInjuries($id);
                 }
                 return $data;
             }
@@ -210,6 +217,33 @@ class FootballApiService
         } catch (\Exception $e) {
             Log::error('API Exception (FixtureDetails): ' . $e->getMessage());
             return null;
+        }
+    }
+
+    public function getFixtureInjuries($fixtureId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'fixtures/injuries', [
+                    'fixture' => $fixtureId
+                ]);
+
+            if ($response->successful()) {
+                $injuries = $response->json()['response'] ?? [];
+                
+                // Cập nhật trực tiếp vào match
+                $match = FootballMatch::find($fixtureId);
+                if ($match) {
+                    $match->update(['injuries' => $injuries]);
+                }
+                
+                return $injuries;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (Injuries): ' . $e->getMessage());
+            return [];
         }
     }
 
@@ -340,6 +374,31 @@ class FootballApiService
     }
 
     /**
+     * Lấy toàn bộ trận đấu của một đội bóng trong một mùa giải
+     */
+    public function getFixturesByTeam($teamId, $season)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'fixtures', [
+                    'team' => $teamId,
+                    'season' => $season
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['response'];
+                $this->syncFixtures($data);
+                return $data;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (FixturesByTeam): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Lấy bảng xếp hạng của giải đấu
      */
     public function getStandings($leagueId, $season)
@@ -421,6 +480,78 @@ class FootballApiService
         }
     }
 
+    public function getTopAssists($leagueId, $season)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'players/topassists', [
+                    'league' => $leagueId,
+                    'season' => $season
+                ]);
+
+            if ($response->successful()) {
+                $scorers = $response->json()['response'] ?? [];
+                if (!empty($scorers)) {
+                    $this->syncTopScorers($scorers, $leagueId, $season);
+                }
+                return $scorers;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (TopAssists): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getTopYellowCards($leagueId, $season)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'players/topyellowcards', [
+                    'league' => $leagueId,
+                    'season' => $season
+                ]);
+
+            if ($response->successful()) {
+                $scorers = $response->json()['response'] ?? [];
+                if (!empty($scorers)) {
+                    $this->syncTopScorers($scorers, $leagueId, $season);
+                }
+                return $scorers;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (TopYellowCards): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getTopRedCards($leagueId, $season)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'players/topredcards', [
+                    'league' => $leagueId,
+                    'season' => $season
+                ]);
+
+            if ($response->successful()) {
+                $scorers = $response->json()['response'] ?? [];
+                if (!empty($scorers)) {
+                    $this->syncTopScorers($scorers, $leagueId, $season);
+                }
+                return $scorers;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (TopRedCards): ' . $e->getMessage());
+            return [];
+        }
+    }
+
     private function syncTopScorers(array $scorers, $leagueId, $season)
     {
         foreach ($scorers as $item) {
@@ -452,6 +583,8 @@ class FootballApiService
                     'team_id' => $stats['team']['id'],
                     'goals' => $stats['goals']['total'] ?? 0,
                     'assists' => $stats['goals']['assists'] ?? 0,
+                    'yellow_cards' => $stats['cards']['yellow'] ?? 0,
+                    'red_cards' => $stats['cards']['red'] ?? 0,
                     'photo' => $playerData['photo'] ?? null,
                 ]
             );
@@ -652,6 +785,25 @@ class FootballApiService
             return [];
         } catch (\Exception $e) {
             Log::error('API Exception (Odds): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getCoaches($teamId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'coachs', [
+                    'team' => $teamId
+                ]);
+
+            if ($response->successful()) {
+                return $response->json()['response'] ?? [];
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (Coaches): ' . $e->getMessage());
             return [];
         }
     }

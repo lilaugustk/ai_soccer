@@ -8,7 +8,7 @@ class FootballScorer extends Model
 {
     protected $fillable = [
         'player_id', 'player_name', 'team_id', 'league_id', 'season',
-        'goals', 'assists', 'photo'
+        'goals', 'assists', 'yellow_cards', 'red_cards', 'photo'
     ];
 
     public function league()
