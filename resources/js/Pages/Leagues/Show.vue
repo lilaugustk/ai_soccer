@@ -2,7 +2,7 @@
   <Head :title="`${league.name} - Kết quả, Lịch thi đấu, BXH | AI Soccer`" />
   
   <MainLayout>
-    <div class="py-6 relative min-h-screen">
+    <div class="pt-2 pb-8 relative min-h-screen">
       <!-- AI Background Blobs -->
       <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/5 dark:bg-emerald-500/5 rounded-full blur-[100px] -z-10 animate-pulse"></div>
       
@@ -52,7 +52,7 @@
                   <!-- Tabs with local overflow -->
                   <div class="flex gap-8 overflow-x-auto no-scrollbar whitespace-nowrap">
                       <button v-for="tab in tabs" :key="tab.id"
-                              @click="activeTab = tab.id"
+                              @click="switchTab(tab.id)"
                               :class="activeTab === tab.id ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'"
                               class="pb-4 px-1 text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap outline-none">
                           {{ tab.name }}
@@ -84,17 +84,25 @@
 
                 <!-- MATCHES -->
                 <div v-else-if="activeTab === 'matches'" key="matches" class="space-y-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 whitespace-nowrap">
+                        <div ref="roundsScrollRef" 
+                             @mousedown="onMouseDown"
+                             @mouseleave="onMouseLeave"
+                             @mouseup="onMouseUp"
+                             @mousemove="onMouseMove"
+                             class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 w-full min-w-0 whitespace-nowrap scroll-smooth cursor-grab active:cursor-grabbing select-none">
                             <button v-for="round in availableRounds" :key="round"
                                     @click="selectedRound = round"
-                                    :class="selectedRound === round ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200'"
-                                    class="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap">
+                                    :class="selectedRound === round ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm'"
+                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0">
                                 {{ round }}
                             </button>
-                            <button @click="selectedRound = 'all'" :class="selectedRound === 'all' ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'" class="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider whitespace-nowrap">Tất cả</button>
+                            <button @click="selectedRound = 'all'" 
+                                    :class="selectedRound === 'all' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700'" 
+                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest whitespace-nowrap shrink-0">
+                                Tất cả
+                            </button>
                         </div>
-                    </div>
+
                     <div v-if="filteredMatches.length === 0" class="py-20 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">Không có dữ liệu trận đấu</div>
                     <div v-else class="grid grid-cols-1 gap-2">
                         <MatchCard v-for="match in filteredMatches" :key="match.id" :game="match" />
@@ -159,7 +167,15 @@ const props = defineProps({
   season: [Number, String]
 });
 
-const activeTab = ref('standings');
+const activeTab = ref(new URLSearchParams(window.location.search).get('tab') || 'standings');
+
+const switchTab = (tabId) => {
+    activeTab.value = tabId;
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    window.history.replaceState({}, '', url);
+};
+
 const isSeasonOpen = ref(false);
 const expandedCountry = ref(props.league.country_name);
 
@@ -240,15 +256,56 @@ const handleOutsideClick = (e) => {
   if (!e.target.closest('.season-dropdown')) isSeasonOpen.value = false;
 };
 
-onMounted(() => window.addEventListener('click', handleOutsideClick));
-onUnmounted(() => window.removeEventListener('click', handleOutsideClick));
+// --- Drag-to-scroll logic ---
+const roundsScrollRef = ref(null);
+let isDown = false;
+let startX;
+let scrollLeft;
+
+const onMouseDown = (e) => {
+    isDown = true;
+    roundsScrollRef.value.classList.add('cursor-grabbing');
+    roundsScrollRef.value.classList.remove('cursor-grab');
+    startX = e.pageX - roundsScrollRef.value.offsetLeft;
+    scrollLeft = roundsScrollRef.value.scrollLeft;
+};
+
+const onMouseLeave = () => {
+    isDown = false;
+    roundsScrollRef.value.classList.remove('cursor-grabbing');
+    roundsScrollRef.value.classList.add('cursor-grab');
+};
+
+const onMouseUp = () => {
+    isDown = false;
+    roundsScrollRef.value.classList.remove('cursor-grabbing');
+    roundsScrollRef.value.classList.add('cursor-grab');
+};
+
+const onMouseMove = (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - roundsScrollRef.value.offsetLeft;
+    const walk = (x - startX) * 2; // Tốc độ cuộn
+    roundsScrollRef.value.scrollLeft = scrollLeft - walk;
+};
+
+onMounted(() => {
+    window.addEventListener('click', handleOutsideClick);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('click', handleOutsideClick);
+});
 </script>
 
 <style scoped>
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.custom-scrollbar::-webkit-scrollbar { width: 3px; }
+.custom-scrollbar::-webkit-scrollbar { height: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); }
+.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
 </style>

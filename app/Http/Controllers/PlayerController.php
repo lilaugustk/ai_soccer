@@ -63,23 +63,39 @@ class PlayerController extends Controller
         $this->apiService = $apiService;
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        // Load player first
-        $player = Player::findOrFail($id);
+        // Try to find the player, if not found, fetch from API
+        $player = Player::find($id);
 
-        // Check if we need to sync from API (e.g. if no season stats or missing detailed_stats)
-        $latestStat = PlayerSeasonStat::where('player_id', $id)
-            ->where('season', 2024)
-            ->first();
-
-        if (!$latestStat || is_null($latestStat->detailed_stats)) {
-            $this->apiService->getPlayerStats($id, 2024); // Sync for 2024 season
-            // Refresh relationships
-            $player->load(['team', 'seasonStats.league', 'seasonStats.team']);
-        } else {
-            $player->load(['team', 'seasonStats.league', 'seasonStats.team']);
+        if (!$player) {
+            // Player doesn't exist, fetch their latest season profile
+            $this->apiService->syncPlayerIfNotFound($id);
+            $player = Player::findOrFail($id); // If still fails, it throws 404
         }
+
+        // Fetch seasons list if available_seasons is null or profile is incomplete
+        if (is_null($player->available_seasons) || is_null($player->firstname) || is_null($player->birth_date)) {
+            $this->apiService->syncPlayerIfNotFound($id);
+            $player->refresh();
+        }
+
+        // Determine requested season (default to latest available or 2024)
+        $availableSeasons = $player->available_seasons ?: [];
+        $requestedSeason = $request->input('season', (!empty($availableSeasons) ? max($availableSeasons) : 2024));
+
+        // Check if we need to sync from API for the requested season
+        $hasStatForSeason = PlayerSeasonStat::where('player_id', $id)
+            ->where('season', $requestedSeason)
+            ->whereNotNull('detailed_stats')
+            ->exists();
+
+        if (!$hasStatForSeason) {
+            $this->apiService->getPlayerStats($id, $requestedSeason); // Sync for requested season
+            $player->refresh();
+        }
+
+        $player->load(['team', 'seasonStats.league', 'seasonStats.team']);
 
         // Season stats sorted newest first — this is the "career timeline"
         $seasonStats = $player->seasonStats()
@@ -105,15 +121,15 @@ class PlayerController extends Controller
         $latestStat = $seasonStats->first();
 
         // Sync additional career data if empty
-        if (is_null($player->transfers)) {
+        if (empty($player->transfers)) {
             $this->apiService->getPlayerTransfers($id);
             $player->refresh();
         }
-        if (is_null($player->trophies)) {
+        if (empty($player->trophies)) {
             $this->apiService->getPlayerTrophies($id);
             $player->refresh();
         }
-        if (is_null($player->sidelined_history)) {
+        if (empty($player->sidelined_history)) {
             $this->apiService->getPlayerSidelined($id);
             $player->refresh();
         }
@@ -130,11 +146,13 @@ class PlayerController extends Controller
         ];
 
         return Inertia::render('Players/Show', [
-            'player'       => $player,
-            'seasonStats'  => $seasonStats,
-            'latestStat'   => $latestStat,
-            'matchHistory' => $matchHistory,
-            'careerTotals' => $careerTotals,
+            'player'          => $player,
+            'seasonStats'     => $seasonStats,
+            'latestStat'      => $latestStat,
+            'matchHistory'    => $matchHistory,
+            'careerTotals'    => $careerTotals,
+            'availableSeasons' => $player->available_seasons ?: [],
+            'currentSeason'   => (int)$requestedSeason,
         ]);
     }
 }

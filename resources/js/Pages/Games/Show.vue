@@ -945,30 +945,7 @@
 
                 <!-- Match Stats Tab -->
                 <div v-else-if="activeTab === 'stats'" class="py-4 space-y-6">
-                    <!-- Sub Tabs (Flashscore style) -->
-                    <div class="flex justify-center gap-1 mb-8">
-                        <button
-                            @click="statsPeriod = 'all'"
-                            :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
-                                     statsPeriod === 'all' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
-                        >
-                            Cả trận
-                        </button>
-                        <button
-                            @click="statsPeriod = '1h'"
-                            :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
-                                     statsPeriod === '1h' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
-                        >
-                            Hiệp 1
-                        </button>
-                        <button
-                            @click="statsPeriod = '2h'"
-                            :class="['px-5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all', 
-                                     statsPeriod === '2h' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700']"
-                        >
-                            Hiệp 2
-                        </button>
-                    </div>
+
 
                     <div v-if="matchStatsGroups.length" class="space-y-6">
                         <div
@@ -1082,96 +1059,48 @@
                         class="space-y-8"
                     >
                         <!-- Premium H2H Summary Card -->
+                        <!-- Compact H2H Summary Card -->
                         <div
-                            class="bg-white dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-white/5 shadow-sm"
+                            class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm"
                         >
-                            <div class="flex items-center justify-between mb-8">
-                                <h3
-                                    class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500"
-                                >
-                                    Thống kê đối đầu
-                                </h3>
-                                <span
-                                    class="text-[10px] font-bold text-slate-500 dark:text-gray-400"
-                                    >{{ h2hMatches.length }} trận gần nhất</span
-                                >
+                            <div class="flex items-center justify-between mb-5">
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Thống kê đối đầu</h3>
+                                <span class="text-[9px] font-bold text-slate-400 bg-gray-50 dark:bg-white/5 px-2 py-0.5 rounded-full">{{ h2hMatches.length }} trận gần nhất</span>
                             </div>
 
-                            <div class="flex items-center gap-4 h-12">
-                                <!-- Home Wins Bar -->
-                                <div class="relative flex-1 h-full group">
-                                    <div
-                                        class="absolute inset-0 bg-emerald-500/10 rounded-2xl"
+                            <div class="space-y-5">
+                                <!-- Multi-segment Ratio Bar -->
+                                <div class="flex h-2.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/5 shadow-inner">
+                                    <div 
+                                        class="bg-emerald-500 h-full transition-all duration-1000 ease-out"
+                                        :style="{ width: (h2hStats.homeWins / h2hMatches.length) * 100 + '%' }"
                                     ></div>
-                                    <div
-                                        class="h-full bg-emerald-500 rounded-2xl flex items-center px-4 transition-all"
-                                        :style="{
-                                            width:
-                                                Math.max(
-                                                    20,
-                                                    (h2hStats.homeWins /
-                                                        h2hMatches.length) *
-                                                        100,
-                                                ) + '%',
-                                        }"
-                                    >
-                                        <span
-                                            class="text-white font-bold text-lg"
-                                            >{{ h2hStats.homeWins }}</span
-                                        >
-                                    </div>
-                                    <span
-                                        class="absolute -bottom-6 left-0 text-[9px] font-bold uppercase text-emerald-600 tracking-tighter"
-                                        >{{ game.home_team?.name }} thắng</span
-                                    >
+                                    <div 
+                                        class="bg-gray-300 dark:bg-gray-600 h-full transition-all duration-1000 ease-out"
+                                        :style="{ width: (h2hStats.draws / h2hMatches.length) * 100 + '%' }"
+                                    ></div>
+                                    <div 
+                                        class="bg-blue-500 h-full transition-all duration-1000 ease-out"
+                                        :style="{ width: (h2hStats.awayWins / h2hMatches.length) * 100 + '%' }"
+                                    ></div>
                                 </div>
 
-                                <!-- Draws Bar -->
-                                <div class="w-20 h-full relative">
-                                    <div
-                                        class="absolute inset-0 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center"
-                                    >
-                                        <div class="flex flex-col items-center">
-                                            <span
-                                                class="text-gray-500 font-bold text-lg leading-none"
-                                                >{{ h2hStats.draws }}</span
-                                            >
-                                            <span
-                                                class="text-[8px] font-bold text-slate-500 dark:text-gray-400 uppercase mt-0.5"
-                                                >Hòa</span
-                                            >
-                                        </div>
+                                <!-- Details Row -->
+                                <div class="grid grid-cols-3 items-center">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ h2hStats.homeWins }}</span>
+                                        <span class="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter truncate">{{ game.home_team?.name }} thắng</span>
                                     </div>
-                                </div>
+                                    
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ h2hStats.draws }}</span>
+                                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Hòa</span>
+                                    </div>
 
-                                <!-- Away Wins Bar -->
-                                <div
-                                    class="relative flex-1 h-full group flex justify-end"
-                                >
-                                    <div
-                                        class="absolute inset-0 bg-blue-500/10 rounded-2xl"
-                                    ></div>
-                                    <div
-                                        class="h-full bg-blue-500 rounded-2xl flex items-center justify-end px-4 transition-all"
-                                        :style="{
-                                            width:
-                                                Math.max(
-                                                    20,
-                                                    (h2hStats.awayWins /
-                                                        h2hMatches.length) *
-                                                        100,
-                                                ) + '%',
-                                        }"
-                                    >
-                                        <span
-                                            class="text-white font-bold text-lg"
-                                            >{{ h2hStats.awayWins }}</span
-                                        >
+                                    <div class="flex flex-col items-end">
+                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ h2hStats.awayWins }}</span>
+                                        <span class="text-[8px] font-bold text-blue-500 uppercase tracking-tighter truncate text-right">{{ game.away_team?.name }} thắng</span>
                                     </div>
-                                    <span
-                                        class="absolute -bottom-6 right-0 text-[9px] font-bold uppercase text-blue-600 tracking-tighter text-right"
-                                        >{{ game.away_team?.name }} thắng</span
-                                    >
                                 </div>
                             </div>
                         </div>
@@ -1188,10 +1117,8 @@
                                         class="text-[10px] font-bold text-slate-400 tabular-nums"
                                     >
                                         {{
-                                            m.fixture?.date
-                                                ? dayjs(m.fixture.date).format(
-                                                      "DD/MM/YYYY",
-                                                  )
+                                            m.fixture?.date && dayjs(m.fixture.date).isValid()
+                                                ? dayjs(m.fixture.date).format("DD/MM/YYYY")
                                                 : "N/A"
                                         }}
                                     </span>
@@ -1312,7 +1239,14 @@
                                             
                                             <div class="flex items-center gap-3">
                                                 <!-- Icon -->
-                                                <div v-html="getSofaIcon(event.type)" class="shrink-0"></div>
+                                                <!-- Icon with Tooltip -->
+                                                <div class="relative group shrink-0">
+                                                    <div v-html="getSofaIcon(event.type)"></div>
+                                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 pointer-events-none z-50 whitespace-nowrap">
+                                                        {{ translateDetail(event.type) }}
+                                                        <div class="absolute top-full left-1/2 -translate-x-1/2 border-[4px] border-transparent border-t-slate-900"></div>
+                                                    </div>
+                                                </div>
                                                 
                                                 <!-- Score (if goal) -->
                                                 <div v-if="event.eventScore" class="px-2 py-0.5 bg-slate-900 dark:bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-slate-800 dark:border-white/10">
@@ -1335,7 +1269,7 @@
                                                         {{ event.playerOut }}
                                                     </span>
                                                     <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-slate-400 dark:text-white/40 italic">
-                                                        ({{ event.playerOut || event.detail }})
+                                                        ({{ event.playerOut || translateDetail(event.detail) }})
                                                     </span>
                                                 </div>
                                             </div>
@@ -1349,7 +1283,14 @@
                                             
                                             <div class="flex flex-row-reverse items-center gap-3">
                                                 <!-- Icon -->
-                                                <div v-html="getSofaIcon(event.type)" class="shrink-0"></div>
+                                                <!-- Icon with Tooltip -->
+                                                <div class="relative group shrink-0">
+                                                    <div v-html="getSofaIcon(event.type)"></div>
+                                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-1 group-hover:translate-y-0 pointer-events-none z-50 whitespace-nowrap">
+                                                        {{ translateDetail(event.type) }}
+                                                        <div class="absolute top-full left-1/2 -translate-x-1/2 border-[4px] border-transparent border-t-slate-900"></div>
+                                                    </div>
+                                                </div>
                                                 
                                                 <!-- Score (if goal) -->
                                                 <div v-if="event.eventScore" class="px-2 py-0.5 bg-slate-900 dark:bg-white/10 rounded text-[10px] font-black text-white tabular-nums border border-slate-800 dark:border-white/10">
@@ -1372,7 +1313,7 @@
                                                         {{ event.playerOut }}
                                                     </span>
                                                     <span v-else-if="event.playerOut || event.detail" class="text-[11px] font-medium text-slate-400 dark:text-white/40 italic">
-                                                        ({{ event.playerOut || event.detail }})
+                                                        ({{ event.playerOut || translateDetail(event.detail) }})
                                                     </span>
                                                 </div>
                                             </div>
@@ -1400,18 +1341,18 @@
 
                 <!-- Standings Tab -->
                 <div v-else-if="activeTab === 'standings'" class="py-4">
-                    <div v-if="standings && standings.length" class="space-y-6">
+                    <div v-if="isValidStandings" class="space-y-6">
                         <div class="flex items-center justify-between px-4">
-                            <h3 class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                            <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                                 Bảng xếp hạng {{ game.league?.name }}
                             </h3>
-                            <span class="text-[10px] font-bold text-slate-500 dark:text-gray-400">Mùa giải {{ game.season }}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mùa giải {{ game.season }}</span>
                         </div>
                         <StandingTable :standings="standings" :league-id="game.league?.id" />
                     </div>
                     <div v-else class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
                         <p class="text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest">
-                            Dữ liệu bảng xếp hạng đang được cập nhật...
+                            Chưa có dữ liệu bảng xếp hạng cho mùa giải này
                         </p>
                     </div>
                 </div>
@@ -1685,7 +1626,6 @@ const props = defineProps({
 });
 
 const activeTab = ref("lineups");
-const statsPeriod = ref("all");
 const lineupView = ref("start"); // 'start' or 'end'
 const showPitchModal = ref(false);
 const tabs = [
@@ -1915,14 +1855,7 @@ const awaySubstitutes = computed(() => {
 
 // Mapping Thống kê
 const matchStatsGroups = computed(() => {
-    let stats = [];
-    if (statsPeriod.value === "1h") {
-        stats = props.game.stats_1h || [];
-    } else if (statsPeriod.value === "2h") {
-        stats = props.game.stats_2h || [];
-    } else {
-        stats = props.game.statistics || [];
-    }
+    let stats = props.game.statistics || [];
 
     if (stats.length < 2) return [];
 
@@ -2015,10 +1948,16 @@ const prediction = computed(() => props.game.prediction);
 const sortedH2H = computed(() => {
     const matches = [...(props.h2hMatches || [])];
     return matches.sort((a, b) => {
-        const dateA = new Date(a.fixture?.date || 0);
-        const dateB = new Date(b.fixture?.date || 0);
-        return dateB - dateA; // Mới nhất lên đầu
+        const dateA = dayjs(a.fixture?.date);
+        const dateB = dayjs(b.fixture?.date);
+        return dateB.valueOf() - dateA.valueOf(); // Mới nhất lên đầu
     });
+});
+
+const isValidStandings = computed(() => {
+    return props.standings && 
+           props.standings.length > 0 && 
+           props.standings.some(s => s.team?.name);
 });
 
 const h2hStats = computed(() => {
@@ -2041,12 +1980,25 @@ const h2hStats = computed(() => {
     return { homeWins, awayWins, draws };
 });
 
+const translateDetail = (detail) => {
+    if (!detail) return "";
+    const lower = detail.toLowerCase().trim();
+    if (lower === "goal" || lower.includes("normal goal")) return "Bàn thắng";
+    if (lower.includes("yellow card")) return "Thẻ vàng";
+    if (lower.includes("red card")) return "Thẻ đỏ";
+    if (lower.includes("own goal")) return "Phản lưới nhà";
+    if (lower.includes("penalty")) return "Phạt đền";
+    if (lower.includes("missed penalty")) return "Hỏng phạt đền";
+    if (lower.includes("var")) return "VAR";
+    if (lower === "subst") return "Thay người";
+    return detail;
+};
+
 const getSofaIcon = (type) => {
     if (type === "goal")
         return `<div class="w-6 h-6 flex items-center justify-center bg-gray-100 dark:bg-white/10 rounded-full shadow-inner">
             <svg class="w-4 h-4 text-slate-900 dark:text-white" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1" fill="none"></circle>
-                <path d="M12 2v20M2 12h20M12 12l7.07-7.07M12 12L4.93 4.93M12 12l-7.07 7.07M12 12l7.07 7.07" stroke="currentColor" stroke-width="1.5"></path>
+                <path d="M12,2C6.47,2,2,6.47,2,12s4.47,10,10,10s10-4.47,10-10S17.53,2,12,2z M12,4c1.23,0,2.39,0.3,3.42,0.82l-1.03,1.42 C14.12,6.6,13.62,6.8,13.1,6.8H10.9c-0.52,0-1.02-0.2-1.29-0.56L8.58,4.82C9.61,4.3,10.77,4,12,4z M5.14,7.44L6.37,9.1 c0.27,0.36,0.27,0.85,0,1.21l-1.23,1.66c-0.1,0.13-0.14,0.3-0.14,0.47v0.11C4.34,11.37,4,10.19,4,9c0-0.55,0.07-1.09,0.19-1.6 C4.47,7.31,4.82,7.35,5.14,7.44z M11.12,20.01l1.1-1.5c0.27-0.36,0.76-0.56,1.29-0.56h2.2c0.52,0,1.02,0.2,1.29,0.56l1.1,1.5 c-1.44,1.15-3.26,1.85-5.24,1.96C10.94,21.51,10.98,20.73,11.12,20.01z M19.81,11.6c-0.12-1.19-0.46-2.31-0.99-3.32 c0.33-0.1,0.67-0.13,1-0.13c0.32,0,0.63,0.03,0.94,0.1C20.88,9.26,20.93,10.43,19.95,11.44C19.86,11.53,19.83,11.57,19.81,11.6z M12,14.5l-2-1.5v-2l2-1.5l2,1.5v2L12,14.5z"/>
             </svg>
         </div>`;
     if (type === "card" || type === "yellow card")

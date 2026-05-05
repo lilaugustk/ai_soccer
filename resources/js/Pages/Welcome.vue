@@ -33,7 +33,7 @@
                 <!-- Filter Area: Split into two rows -->
                 <div class="flex flex-col gap-4 relative">
                     <!-- Row 1: Date Selector -->
-                    <div class="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm shadow-sm w-full">
+                    <div class="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm shadow-sm w-fit max-w-full">
                         <!-- Mini Calendar Toggle -->
                         <div class="relative">
                             <button @click="showDatePicker = !showDatePicker"
@@ -67,7 +67,12 @@
                         <div class="h-5 w-px bg-gray-200 dark:bg-gray-700 mx-0.5"></div>
 
                         <!-- Date Slider -->
-                        <div ref="dateSliderRef" class="flex flex-nowrap gap-1 overflow-x-auto custom-scrollbar flex-1 pb-1 scroll-smooth">
+                        <div ref="dateSliderRef" 
+                             @mousedown="dateDrag.onMouseDown"
+                             @mouseleave="dateDrag.onMouseLeave"
+                             @mouseup="dateDrag.onMouseUp"
+                             @mousemove="dateDrag.onMouseMove"
+                             class="flex flex-nowrap gap-1 overflow-x-auto custom-scrollbar flex-1 pb-1 scroll-smooth cursor-grab active:cursor-grabbing select-none">
                             <button v-for="btn in dateSlider" :key="btn.date" 
                                     :ref="el => { if ((filters?.date || today) === btn.date) activeDateRef = el }"
                                     @click="changeDate(btn.date)"
@@ -79,7 +84,13 @@
                     </div>
 
                     <!-- Row 2: League Filter Slider -->
-                    <div v-if="availableLeagues.length > 0" class="flex flex-nowrap overflow-x-auto custom-scrollbar w-full pb-3 relative">
+                    <div v-if="availableLeagues.length > 0" 
+                         ref="leagueSliderRef"
+                         @mousedown="leagueDrag.onMouseDown"
+                         @mouseleave="leagueDrag.onMouseLeave"
+                         @mouseup="leagueDrag.onMouseUp"
+                         @mousemove="leagueDrag.onMouseMove"
+                         class="flex flex-nowrap overflow-x-auto custom-scrollbar w-full pb-3 relative cursor-grab active:cursor-grabbing select-none">
                         <!-- Sticky "All" Button -->
                         <div class="sticky left-0 z-10 pr-4 bg-gradient-to-r from-white dark:from-gray-900 via-white/95 dark:via-gray-900/95 to-transparent shrink-0">
                             <button @click="changeLeague(null)"
@@ -199,6 +210,41 @@ const isLeagueIndexVisible = ref(true);
 // Refs cho việc căn giữa ngày hiện tại
 const dateSliderRef = ref(null);
 const activeDateRef = ref(null);
+const leagueSliderRef = ref(null);
+
+// --- Drag-to-scroll logic factory ---
+const setupDragScroll = (containerRef) => {
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    return {
+        onMouseDown: (e) => {
+            isDown = true;
+            containerRef.value.classList.add('cursor-grabbing');
+            startX = e.pageX - containerRef.value.offsetLeft;
+            scrollLeft = containerRef.value.scrollLeft;
+        },
+        onMouseLeave: () => {
+            isDown = false;
+            containerRef.value.classList.remove('cursor-grabbing');
+        },
+        onMouseUp: () => {
+            isDown = false;
+            containerRef.value.classList.remove('cursor-grabbing');
+        },
+        onMouseMove: (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - containerRef.value.offsetLeft;
+            const walk = (x - startX) * 2;
+            containerRef.value.scrollLeft = scrollLeft - walk;
+        }
+    };
+};
+
+const dateDrag = setupDragScroll(dateSliderRef);
+const leagueDrag = setupDragScroll(leagueSliderRef);
 
 const scrollToActiveDate = (smooth = true) => {
     if (activeDateRef.value) {
@@ -241,9 +287,9 @@ const adjustMonth = (offset) => {
 const dateSlider = computed(() => {
     const dates = [];
     const baseDate = props.filters.date || today;
-    // Hiển thị 10 ngày trước và 10 ngày sau (tổng 21 ngày) để lấp đầy thanh cuộn
-    const start = dayjs(baseDate).subtract(10, "day");
-    for (let i = 0; i < 21; i++) {
+    // Hiển thị 15 ngày trước và 15 ngày sau (tổng 31 ngày) để thanh cuộn trông ngắn và đẹp hơn
+    const start = dayjs(baseDate).subtract(15, "day");
+    for (let i = 0; i < 31; i++) {
         const d = start.add(i, "day");
         dates.push({
             date: d.format("YYYY-MM-DD"),
@@ -303,17 +349,10 @@ const scrollToLeague = (leagueName) => {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.custom-scrollbar::-webkit-scrollbar {
-  height: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
-}
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #334155;
-}
+.custom-scrollbar::-webkit-scrollbar { height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); }
+.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
 </style>

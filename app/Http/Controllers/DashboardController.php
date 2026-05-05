@@ -32,16 +32,21 @@ class DashboardController extends Controller
         // 2. Tự động đồng bộ nếu:
         // - Chưa có trận đấu nào trong DB cho ngày này
         // - HOẶC còn trận đấu ở trạng thái 'NS' (chưa đá) mặc dù đã qua ngày
+        // Thêm cơ chế Cache để tránh spam API (chỉ đồng bộ lại sau mỗi 60 phút)
         $hasPendingMatches = $matches->whereIn('status', ['NS', 'TBD'])->count() > 0;
         $isPastDate = \Carbon\Carbon::parse($dateStr)->isPast();
+        $cacheKey = "sync_fixtures_{$dateStr}";
 
-        if ($matches->isEmpty() || ($isPastDate && $hasPendingMatches)) {
+        if (($matches->isEmpty() || ($isPastDate && $hasPendingMatches)) && !cache()->has($cacheKey)) {
             // Nạp dữ liệu ngày hiện tại
             $apiService->getFixturesByDate($dateStr); 
             
             // Nạp thêm dữ liệu ngày hôm trước (UTC) để xử lý các trận rạng sáng (GMT+7)
             $yesterdayUTC = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
             $apiService->getFixturesByDate($yesterdayUTC);
+
+            // Đánh dấu đã đồng bộ ngày này, chờ 60 phút sau mới cho phép đồng bộ lại
+            cache()->put($cacheKey, true, now()->addMinutes(60));
 
             $matches = $matchesQuery->get();
         }

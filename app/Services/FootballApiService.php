@@ -335,12 +335,22 @@ class FootballApiService
                 ]);
 
             if ($response->successful()) {
-                $data = $response->json()['response'];
-                $this->syncFixtures($data); // Lưu hàng loạt vào DB
+                $json = $response->json();
+                
+                // Kiểm tra lỗi nghiệp vụ từ API (ngay cả khi HTTP 200)
+                if (!empty($json['errors'])) {
+                    Log::error("API Business Error (Date $date): " . json_encode($json['errors']));
+                    return [];
+                }
+
+                $data = $json['response'] ?? [];
+                if (!empty($data)) {
+                    $this->syncFixtures($data); // Lưu hàng loạt vào DB
+                }
                 return $data;
             }
 
-            Log::error('API Error (Date): ' . $response->body());
+            Log::error('API HTTP Error (Date): ' . $response->body());
             return [];
         } catch (\Exception $e) {
             Log::error('API Exception (Date): ' . $e->getMessage());
@@ -430,6 +440,16 @@ class FootballApiService
     private function syncStandings(array $standings, $leagueId, $season)
     {
         foreach ($standings as $item) {
+            // Đồng bộ Team trước
+            $teamData = $item['team'];
+            \App\Models\FootballTeam::updateOrCreate(
+                ['id' => $teamData['id']],
+                [
+                    'name' => $teamData['name'],
+                    'logo' => $teamData['logo'] ?? null,
+                ]
+            );
+
             \App\Models\FootballStanding::updateOrCreate(
                 [
                     'league_id' => $leagueId,
@@ -618,51 +638,28 @@ class FootballApiService
         }
     }
 
-    private function syncPlayerStats(array $data, $season)
+    public function syncPlayerIfNotFound($playerId)
     {
-        $p = $data['player'];
-        
-        // 1. Cập nhật Profile cầu thủ
-        \App\Models\Player::updateOrCreate(
-            ['id' => $p['id']],
-            [
-                'name' => $p['name'],
-                'firstname' => $p['firstname'] ?? null,
-                'lastname' => $p['lastname'] ?? null,
-                'nationality' => $p['nationality'] ?? null,
-                'birth_year' => isset($p['birth']['date']) ? date('Y', strtotime($p['birth']['date'])) : null,
-                'height' => $p['height'] ?? null,
-                'weight' => $p['weight'] ?? null,
-                'injured' => $p['injured'] ?? false,
-                'number' => $data['statistics'][0]['player']['number'] ?? null, // Số áo thường nằm trong stats
-                'photo' => $p['photo'] ?? null,
-                'position' => $data['statistics'][0]['games']['position'] ?? null,
-            ]
-        );
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'players/seasons', [
+                    'player' => $playerId
+                ]);
 
-        // 2. Cập nhật Thống kê từng giải đấu
-        foreach ($data['statistics'] as $stat) {
-            $leagueId = $stat['league']['id'];
-            $teamId = $stat['team']['id'];
-
-            \App\Models\PlayerSeasonStat::updateOrCreate(
-                [
-                    'player_id' => $p['id'],
-                    'league_id' => $leagueId,
-                    'season' => $season, 
-                ],
-                [
-                    'team_id' => $teamId,
-                    'games' => $stat['games']['appearences'] ?? 0,
-                    'games_starts' => $stat['games']['lineups'] ?? 0,
-                    'minutes' => $stat['games']['minutes'] ?? 0,
-                    'goals' => $stat['goals']['total'] ?? 0,
-                    'assists' => $stat['goals']['assists'] ?? 0,
-                    'cards_yellow' => $stat['cards']['yellow'] ?? 0,
-                    'cards_red' => $stat['cards']['red'] ?? 0,
-                    'detailed_stats' => $stat, // Lưu toàn bộ JSON để trích xuất chỉ số nâng cao
-                ]
-            );
+            if ($response->successful()) {
+                $seasons = $response->json()['response'] ?? [];
+                if (!empty($seasons)) {
+                    \App\Models\Player::updateOrCreate(
+                        ['id' => $playerId],
+                        ['available_seasons' => $seasons]
+                    );
+                    $latestSeason = max($seasons);
+                    $this->getPlayerStats($playerId, $latestSeason);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('API Exception (SyncPlayer): ' . $e->getMessage());
         }
     }
 
@@ -676,14 +673,17 @@ class FootballApiService
                 ]);
 
             if ($response->successful()) {
-                $data = $response->json()['response'] ?? [];
-                $transfers = $data[0]['transfers'] ?? [];
-                \App\Models\Player::where('id', $playerId)->update(['transfers' => $transfers]);
-                return $transfers;
+                $data = $response->json()['response'][0]['transfers'] ?? [];
+                $player = \App\Models\Player::find($playerId);
+                if ($player) {
+                    $player->transfers = $data;
+                    $player->save();
+                }
+                return $data;
             }
             return [];
         } catch (\Exception $e) {
-            Log::error('API Exception (Transfers): ' . $e->getMessage());
+            Log::error('API Exception (PlayerTransfers): ' . $e->getMessage());
             return [];
         }
     }
@@ -693,18 +693,24 @@ class FootballApiService
         try {
             $response = Http::withHeaders($this->getHeaders())
                 ->withoutVerifying()
-                ->get($this->getBaseUrl() . 'players/trophies', [
+                ->get($this->getBaseUrl() . 'trophies', [
                     'player' => $playerId
                 ]);
 
             if ($response->successful()) {
                 $data = $response->json()['response'] ?? [];
-                \App\Models\Player::where('id', $playerId)->update(['trophies' => $data]);
+                Log::info("Trophies for player {$playerId}: " . count($data) . " items found.");
+                $player = \App\Models\Player::find($playerId);
+                if ($player) {
+                    $player->trophies = $data;
+                    $player->save();
+                }
                 return $data;
             }
+            Log::error("Trophy API failed for {$playerId}: " . $response->body());
             return [];
         } catch (\Exception $e) {
-            Log::error('API Exception (Trophies): ' . $e->getMessage());
+            Log::error('API Exception (PlayerTrophies): ' . $e->getMessage());
             return [];
         }
     }
@@ -714,21 +720,102 @@ class FootballApiService
         try {
             $response = Http::withHeaders($this->getHeaders())
                 ->withoutVerifying()
-                ->get($this->getBaseUrl() . 'players/sidelined', [
+                ->get($this->getBaseUrl() . 'sidelined', [
                     'player' => $playerId
                 ]);
 
             if ($response->successful()) {
                 $data = $response->json()['response'] ?? [];
-                \App\Models\Player::where('id', $playerId)->update(['sidelined_history' => $data]);
+                Log::info("Sidelined history for player {$playerId}: " . count($data) . " items found.");
+                $player = \App\Models\Player::find($playerId);
+                if ($player) {
+                    $player->sidelined_history = $data;
+                    $player->save();
+                }
                 return $data;
             }
+            Log::error("Sidelined API failed for {$playerId}: " . $response->body());
             return [];
         } catch (\Exception $e) {
-            Log::error('API Exception (Sidelined): ' . $e->getMessage());
+            Log::error('API Exception (PlayerSidelined): ' . $e->getMessage());
             return [];
         }
     }
+
+    private function syncPlayerStats(array $data, $season)
+    {
+        $p = $data['player'];
+        
+        // 1. Cập nhật Profile cầu thủ
+        \App\Models\Player::updateOrCreate(
+            ['id' => $p['id']],
+            [
+                'name' => $p['name'],
+                'firstname' => $p['firstname'] ?? null,
+                'lastname' => $p['lastname'] ?? null,
+                'nationality' => $p['nationality'] ?? null,
+                'birth_year' => isset($p['birth']['date']) ? date('Y', strtotime($p['birth']['date'])) : null,
+                'birth_date' => $p['birth']['date'] ?? null,
+                'birth_place' => $p['birth']['place'] ?? null,
+                'birth_country' => $p['birth']['country'] ?? null,
+                'height' => $p['height'] ?? null,
+                'weight' => $p['weight'] ?? null,
+                'injured' => $p['injured'] ?? false,
+                'number' => $data['statistics'][0]['games']['number'] ?? null, // Số áo nằm trong games.number
+                'photo' => $p['photo'] ?? null,
+                'position' => $data['statistics'][0]['games']['position'] ?? null,
+            ]
+        );
+
+        // 2. Cập nhật Thống kê từng giải đấu
+        foreach ($data['statistics'] as $stat) {
+            $leagueId = $stat['league']['id'];
+            $teamId = $stat['team']['id'];
+
+            if ($leagueId) {
+                \App\Models\FootballLeague::updateOrCreate(
+                    ['id' => $leagueId],
+                    [
+                        'name' => $stat['league']['name'] ?? 'Unknown',
+                        'logo' => $stat['league']['logo'] ?? null,
+                        'country_name' => $stat['league']['country'] ?? null,
+                    ]
+                );
+            }
+
+            if ($teamId) {
+                \App\Models\FootballTeam::updateOrCreate(
+                    ['id' => $teamId],
+                    [
+                        'name' => $stat['team']['name'] ?? 'Unknown',
+                        'logo' => $stat['team']['logo'] ?? null,
+                    ]
+                );
+            }
+
+            if ($leagueId && $teamId) {
+                \App\Models\PlayerSeasonStat::updateOrCreate(
+                    [
+                        'player_id' => $p['id'],
+                        'league_id' => $leagueId,
+                        'season' => $season, 
+                    ],
+                    [
+                        'team_id' => $teamId,
+                        'games' => $stat['games']['appearences'] ?? 0,
+                    'games_starts' => $stat['games']['lineups'] ?? 0,
+                    'minutes' => $stat['games']['minutes'] ?? 0,
+                    'goals' => $stat['goals']['total'] ?? 0,
+                    'assists' => $stat['goals']['assists'] ?? 0,
+                    'cards_yellow' => $stat['cards']['yellow'] ?? 0,
+                    'cards_red' => $stat['cards']['red'] ?? 0,
+                    'detailed_stats' => $stat, // Lưu toàn bộ JSON để trích xuất chỉ số nâng cao
+                ]
+            );
+            }
+        }
+    }
+
     public function getSquad($teamId)
     {
         try {

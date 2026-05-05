@@ -50,6 +50,7 @@ class SyncBulkCommand extends Command
             } else {
                 $this->line("     V Đã nạp/cập nhật " . count($fixtures) . " trận đấu.");
             }
+            sleep(6);
 
             // 2. Lấy BXH (1 Request)
             $this->comment("   + Đang cập nhật bảng xếp hạng...");
@@ -59,6 +60,7 @@ class SyncBulkCommand extends Command
             } else {
                 $this->line("     V Đã cập nhật BXH cho " . count($standings) . " đội.");
             }
+            sleep(6);
 
             // 3. Lấy Vua phá lưới (1 Request)
             $this->comment("   + Đang cập nhật danh sách vua phá lưới...");
@@ -66,14 +68,41 @@ class SyncBulkCommand extends Command
             if (empty($scorers)) {
                 $this->error("     X Không lấy được danh sách ghi bàn.");
             } else {
-                $this->line("     V Đã cập nhật " . count($scorers) . " cầu thủ.");
+                $this->line("     V Đã cập nhật " . count($scorers) . " cầu thủ ghi bàn.");
             }
+            sleep(6);
 
-            // Nghỉ để tránh Rate Limit (Tổng cộng 3 requests cho 1 giải đấu)
-            if ($index < count($leagueIds) - 1) {
-                $this->info("   --- Đang chờ 7 giây để bảo vệ Rate Limit ---");
-                sleep(7);
+            // 4. Lấy Kiến tạo (1 Request)
+            $this->comment("   + Đang cập nhật danh sách kiến tạo...");
+            $assists = $apiService->getTopAssists($id, $season);
+            if (empty($assists)) {
+                $this->error("     X Không lấy được danh sách kiến tạo.");
+            } else {
+                $this->line("     V Đã cập nhật " . count($assists) . " cầu thủ kiến tạo.");
             }
+            sleep(6);
+
+            // 5. Lấy Thẻ vàng (1 Request)
+            $this->comment("   + Đang cập nhật danh sách thẻ vàng...");
+            $yellowCards = $apiService->getTopYellowCards($id, $season);
+            if (empty($yellowCards)) {
+                $this->error("     X Không lấy được danh sách thẻ vàng.");
+            } else {
+                $this->line("     V Đã cập nhật " . count($yellowCards) . " cầu thủ nhận thẻ vàng.");
+            }
+            sleep(6);
+
+            // 6. Lấy Thẻ đỏ (1 Request)
+            $this->comment("   + Đang cập nhật danh sách thẻ đỏ...");
+            $redCards = $apiService->getTopRedCards($id, $season);
+            if (empty($redCards)) {
+                $this->error("     X Không lấy được danh sách thẻ đỏ.");
+            } else {
+                $this->line("     V Đã cập nhật " . count($redCards) . " cầu thủ nhận thẻ đỏ.");
+            }
+            sleep(6);
+
+
         }
 
         $endTime = microtime(true);

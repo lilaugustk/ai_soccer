@@ -178,10 +178,48 @@ class GameController extends Controller
                 }
             }
 
-            $standings = $standings->map(function($s) {
+            // 3.1 Lấy 5 trận gần nhất của giải đấu này cho mỗi đội để hiển thị chi tiết trong tooltip
+            $teamIds = $standings->pluck('team_id');
+            $allMatches = \App\Models\FootballMatch::where('league_id', $leagueId)
+                ->where('season', $season)
+                ->where(function($q) use ($teamIds) {
+                    $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
+                })
+                ->whereIn('status', ['FT', 'AET', 'PEN'])
+                ->orderBy('match_at', 'desc')
+                ->with(['homeTeam', 'awayTeam'])
+                ->get();
+
+            $matchesByTeam = [];
+            foreach ($allMatches as $m) {
+                foreach ([$m->home_team_id, $m->away_team_id] as $tId) {
+                    if ($teamIds->contains($tId)) {
+                        if (!isset($matchesByTeam[$tId])) $matchesByTeam[$tId] = [];
+                        if (count($matchesByTeam[$tId]) < 5) {
+                            $res = 'D';
+                            if ($m->home_score > $m->away_score) {
+                                $res = ($tId == $m->home_team_id) ? 'W' : 'L';
+                            } elseif ($m->home_score < $m->away_score) {
+                                $res = ($tId == $m->away_team_id) ? 'W' : 'L';
+                            }
+
+                            $matchesByTeam[$tId][] = [
+                                'date' => \Illuminate\Support\Carbon::parse($m->match_at)->format('d/m'),
+                                'home' => $m->homeTeam?->name,
+                                'away' => $m->awayTeam?->name,
+                                'score' => "{$m->home_score} - {$m->away_score}",
+                                'res' => $res
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $standings = $standings->map(function($s) use ($matchesByTeam) {
                     if ($s->team) {
                         $s->team->logo_url = $s->team->logo ?: 'https://via.placeholder.com/150?text=' . urlencode($s->team->name);
                     }
+                    $s->recent_matches = array_reverse($matchesByTeam[$s->team_id] ?? []);
                     return $s;
                 });
 

@@ -18,6 +18,9 @@ class Player extends Model
         'nationality',
         'position',
         'birth_year',
+        'birth_date',
+        'birth_place',
+        'birth_country',
         'height',
         'weight',
         'injured',
@@ -27,12 +30,14 @@ class Player extends Model
         'transfers',
         'trophies',
         'sidelined_history',
+        'available_seasons',
     ];
 
     protected $casts = [
         'transfers'         => 'array',
         'trophies'          => 'array',
         'sidelined_history' => 'array',
+        'available_seasons' => 'array',
         'injured'           => 'boolean',
     ];
 

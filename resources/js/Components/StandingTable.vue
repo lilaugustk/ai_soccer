@@ -79,17 +79,17 @@
                 <span class="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[120px] lg:max-w-none">{{ team.team?.name }}</span>
               </Link>
             </td>
-            <td class="px-2 py-3 text-[11px] text-center font-medium">{{ team.played }}</td>
-            <td class="px-2 py-3 text-[11px] text-center">{{ team.win }}</td>
-            <td class="px-2 py-3 text-[11px] text-center">{{ team.draw }}</td>
-            <td class="px-2 py-3 text-[11px] text-center">{{ team.lose }}</td>
+            <td class="px-2 py-3 text-[11px] text-center font-medium">{{ team.played || 0 }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.win || 0 }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.draw || 0 }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.lose || 0 }}</td>
             <td class="px-2 py-3 text-[10px] text-center text-gray-400 hidden md:table-cell">
-              {{ team.goals_for }}:{{ team.goals_against }}
+              {{ team.goals_for || 0 }}:{{ team.goals_against || 0 }}
             </td>
-            <td class="px-2 py-3 text-[11px] text-center font-bold" :class="(team.goals_for - team.goals_against) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
-              {{ team.goals_for - team.goals_against }}
+            <td class="px-2 py-3 text-[11px] text-center font-bold" :class="((team.goals_for || 0) - (team.goals_against || 0)) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+              {{ (team.goals_for || 0) - (team.goals_against || 0) }}
             </td>
-            <td class="px-2 py-3 text-[11px] text-center font-bold text-emerald-600 dark:text-emerald-400">{{ team.points }}</td>
+            <td class="px-2 py-3 text-[11px] text-center font-bold text-emerald-600 dark:text-emerald-400">{{ team.points || 0 }}</td>
             <td class="px-4 py-3">
               <div class="flex justify-center gap-0.5">
                 <div v-for="(item, idx) in getDisplayForm(team)" :key="idx"
@@ -114,6 +114,9 @@
                           <span class="text-[9px] font-bold text-gray-300 truncate max-w-[90px]">{{ item.away }}</span>
                           <span class="text-[10px] font-bold text-white tabular-nums">{{ item.score.split(' - ')[1] }}</span>
                         </div>
+                      </div>
+                      <div v-else class="text-center py-1">
+                        <span class="text-[8px] text-gray-500 font-bold italic">Chi tiết trận đấu chưa có sẵn</span>
                       </div>
                     </div>
                     <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-950"></div>
