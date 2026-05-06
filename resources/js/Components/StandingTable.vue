@@ -160,13 +160,14 @@ const props = defineProps({
 
 const translateDesc = (desc) => {
   if (!desc) return '';
-  let translated = desc;
-  if (desc.includes('Champions League')) translated = 'Cúp C1 / Champions League';
-  else if (desc.includes('Europa League')) translated = 'Cúp C2 / Europa League';
-  else if (desc.includes('Conference League')) translated = 'Cúp C3 / Conference League';
-  else if (desc.includes('Relegation') || desc.includes('Xuống hạng')) translated = 'Xuống hạng';
-  else if (desc.includes('Promotion')) translated = 'Thăng hạng';
-  return translated;
+  const d = desc.toLowerCase();
+  if (d.includes('champions league')) return 'Cúp C1 / Champions League';
+  if (d.includes('europa league')) return 'Cúp C2 / Europa League';
+  if (d.includes('conference league')) return 'Cúp C3 / Conference League';
+  if (d.includes('relegation play-off') || d.includes('relegation playoff')) return 'Play-off xuống hạng';
+  if (d.includes('relegation') || d.includes('xuống hạng')) return 'Xuống hạng';
+  if (d.includes('promotion')) return 'Thăng hạng';
+  return desc;
 };
 
 const getZoneColorClass = (desc) => {
@@ -175,6 +176,7 @@ const getZoneColorClass = (desc) => {
   if (d.includes('champions league')) return 'bg-blue-500';
   if (d.includes('europa league')) return 'bg-amber-500';
   if (d.includes('conference league')) return 'bg-emerald-500';
+  if (d.includes('relegation play-off') || d.includes('relegation playoff')) return 'bg-orange-500';
   if (d.includes('relegation') || d.includes('xuống hạng')) return 'bg-rose-500';
   if (d.includes('play-off') || d.includes('promotion')) return 'bg-indigo-500';
   return 'bg-gray-300';
@@ -184,13 +186,16 @@ const dynamicLegend = computed(() => {
   const legends = [];
   const seen = new Set();
   props.standings.forEach(team => {
-    if (team.description && !seen.has(team.description)) {
-      seen.add(team.description);
-      legends.push({
-        original: team.description,
-        translated: translateDesc(team.description),
-        color: getZoneColorClass(team.description)
-      });
+    if (team.description) {
+      const translated = translateDesc(team.description);
+      if (!seen.has(translated)) {
+        seen.add(translated);
+        legends.push({
+          original: team.description,
+          translated: translated,
+          color: getZoneColorClass(team.description)
+        });
+      }
     }
   });
   const priority = (text) => {
@@ -198,10 +203,11 @@ const dynamicLegend = computed(() => {
     if (t.includes('champions league')) return 1;
     if (t.includes('europa league')) return 2;
     if (t.includes('conference league')) return 3;
-    if (t.includes('relegation') || t.includes('xuống hạng')) return 5;
+    if (t.includes('play-off xuống hạng')) return 5;
+    if (t.includes('xuống hạng')) return 6;
     return 4;
   };
-  return legends.sort((a, b) => priority(a.original) - priority(b.original));
+  return legends.sort((a, b) => priority(a.translated) - priority(b.translated));
 });
 
 const getDisplayForm = (team) => {

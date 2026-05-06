@@ -945,6 +945,54 @@
 
                 <!-- Match Stats Tab -->
                 <div v-else-if="activeTab === 'stats'" class="py-4 space-y-6">
+                    <!-- Detailed Comparison Stats (Moved from Analysis) -->
+                    <div v-if="prediction && prediction.comparison" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">So sánh chỉ số chi tiết</h3>
+                        </div>
+
+                        <div class="space-y-6">
+                            <!-- Radar Chart Visualization -->
+                            <div class="py-4 border-b border-gray-50 dark:border-white/5 mb-6">
+                                <RadarChart :data="prediction.comparison" />
+                            </div>
+
+                            <div v-for="(val, key) in {
+                                total: 'Sức mạnh tổng thể',
+                                form: 'Phong độ hiện tại',
+                                att: 'Khả năng tấn công',
+                                def: 'Khả năng phòng ngự',
+                                poisson_distribution: 'Dự đoán Poisson',
+                                h2h: 'Thành tích đối đầu',
+                                goals: 'Hiệu suất ghi bàn'
+                            }" :key="key" class="space-y-3">
+                                <div class="flex justify-between items-end">
+                                    <div class="flex items-baseline gap-1.5 w-28">
+                                        <span class="text-sm font-bold text-emerald-500 tabular-nums leading-none">{{ prediction.comparison[key]?.home }}</span>
+                                    </div>
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 text-center flex-1 pb-1">{{ val }}</span>
+                                    <div class="flex justify-end items-baseline gap-1.5 w-28">
+                                        <span class="text-sm font-bold text-blue-500 tabular-nums leading-none">{{ prediction.comparison[key]?.away }}</span>
+                                    </div>
+                                </div>
+                                <!-- side-by-side Progress Bars (Matching Stats style) -->
+                                <div class="flex gap-2 items-center h-1 px-1">
+                                    <div class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                        <div
+                                            class="h-full bg-emerald-500 transition-all duration-1000 float-right"
+                                            :style="{ width: prediction.comparison[key]?.home }"
+                                        ></div>
+                                    </div>
+                                    <div class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                        <div
+                                            class="h-full bg-blue-500 transition-all duration-1000"
+                                            :style="{ width: prediction.comparison[key]?.away }"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
 
                     <div v-if="matchStatsGroups.length" class="space-y-6">
@@ -975,15 +1023,15 @@
                                 >
                                     <div class="flex justify-between items-end">
                                         <div
-                                            class="flex flex-col items-start w-20"
+                                            class="flex items-baseline gap-1.5 w-28"
                                         >
                                             <span
-                                                class="text-xl font-bold text-slate-900 dark:text-white leading-none"
+                                                class="text-sm font-bold text-slate-900 dark:text-white leading-none"
                                                 >{{ stat.home }}</span
                                             >
                                             <span
                                                 v-if="stat.homeDetail"
-                                                class="text-[9px] font-bold text-slate-400 dark:text-white/30 mt-1"
+                                                class="text-[10px] font-bold text-slate-400 dark:text-white/30"
                                                 >({{ stat.homeDetail }})</span
                                             >
                                         </div>
@@ -995,16 +1043,16 @@
                                         </span>
 
                                         <div
-                                            class="flex flex-col items-end w-20"
+                                            class="flex justify-end items-baseline gap-1.5 w-28"
                                         >
                                             <span
-                                                class="text-xl font-bold text-slate-900 dark:text-white leading-none"
-                                                >{{ stat.away }}</span
+                                                v-if="stat.awayDetail"
+                                                class="text-[10px] font-bold text-slate-400 dark:text-white/30"
+                                                >({{ stat.awayDetail }})</span
                                             >
                                             <span
-                                                v-if="stat.awayDetail"
-                                                class="text-[9px] font-bold text-slate-400 dark:text-white/30 mt-1"
-                                                >({{ stat.awayDetail }})</span
+                                                class="text-sm font-bold text-slate-900 dark:text-white leading-none"
+                                                >{{ stat.away }}</span
                                             >
                                         </div>
                                     </div>
@@ -1065,7 +1113,7 @@
                         >
                             <div class="flex items-center justify-between mb-5">
                                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Thống kê đối đầu</h3>
-                                <span class="text-[9px] font-bold text-slate-400 bg-gray-50 dark:bg-white/5 px-2 py-0.5 rounded-full">{{ h2hMatches.length }} trận gần nhất</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">{{ h2hMatches.length }} trận gần nhất</span>
                             </div>
 
                             <div class="space-y-5">
@@ -1223,10 +1271,10 @@
                             <!-- Period Header (1st Half, 2nd Half) -->
                             <div
                                 v-if="event.isMarker"
-                                class="bg-gray-50 dark:bg-white/5 px-6 py-3 flex justify-between items-center border-b border-gray-100 dark:border-white/5 first:border-t-0"
+                                class="bg-gray-50 dark:bg-white/5 px-6 py-2.5 flex justify-between items-center border-b border-gray-100 dark:border-white/5 first:border-t-0"
                             >
-                                <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-white/40">{{ event.label }}</span>
-                                <span v-if="event.score" class="text-[12px] font-black text-slate-500 dark:text-white/60 tracking-widest tabular-nums">{{ event.score }}</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-400">{{ event.label }}</span>
+                                <span v-if="event.score" class="text-[11px] font-bold text-slate-900 dark:text-white tabular-nums tracking-wider">{{ event.score }}</span>
                             </div>
 
                             <!-- Regular Event Row -->
@@ -1325,9 +1373,9 @@
 
                         <!-- Match End Marker -->
                         <div class="bg-gray-50 dark:bg-black/40 px-6 py-6 border-t border-gray-100 dark:border-white/5 flex flex-col items-center gap-2">
-                            <span class="text-[9px] font-black uppercase tracking-[0.5em] text-slate-300 dark:text-white/20">Kết thúc trận đấu</span>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-400">Kết thúc trận đấu</span>
                             <div class="flex items-center gap-6">
-                                <span class="text-3xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
+                                <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums tracking-tighter">
                                     {{ game.home_score }} <span class="text-slate-200 dark:text-white/20 mx-1">:</span> {{ game.away_score }}
                                 </span>
                             </div>
@@ -1346,7 +1394,7 @@
                             <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                                 Bảng xếp hạng {{ game.league?.name }}
                             </h3>
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mùa giải {{ game.season }}</span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mùa giải {{ formatSeason(game.season, game.league?.country_name) }}</span>
                         </div>
                         <StandingTable :standings="standings" :league-id="game.league?.id" />
                     </div>
@@ -1360,214 +1408,69 @@
                 <!-- Analysis Tab (API Predictions) -->
                 <div v-else-if="activeTab === 'analysis'" class="py-4 space-y-8">
                     <!-- Tactical AI Insights (Groq) -->
-                    <div v-if="aiInsights" class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 text-slate-900 dark:text-white relative overflow-hidden border border-gray-100 dark:border-slate-800 shadow-xl dark:shadow-2xl">
-                        <div class="absolute top-0 right-0 p-8 opacity-[0.03] dark:opacity-10 text-slate-900 dark:text-white">
-                             <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z"/></svg>
-                        </div>
-                        
-                        <div class="relative z-10">
-                            <div class="flex items-center gap-4 mb-8">
-                                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 dark:border-emerald-500/30">
-                                    <svg class="w-6 h-6 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div v-if="aiInsights" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                 </div>
-                                <div>
-                                    <h3 class="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400 mb-1">AI Tactical Analysis</h3>
-                                    <p class="text-[10px] text-slate-400 dark:text-slate-400 font-medium uppercase tracking-widest">Phân tích chuyên sâu từ trí tuệ nhân tạo</p>
-                                </div>
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">AI Tactical Analysis</h3>
                             </div>
+                        </div>
 
-                            <div class="prose dark:prose-invert prose-sm max-w-none">
-                                <div class="whitespace-pre-wrap text-slate-600 dark:text-slate-200 leading-relaxed font-medium text-sm" v-html="aiInsights.replace(/\n/g, '<br>')"></div>
-                            </div>
+                        <div class="prose dark:prose-invert prose-sm max-w-none">
+                            <div class="whitespace-pre-wrap text-slate-600 dark:text-slate-300 leading-relaxed font-medium text-[13px]" v-html="aiInsights.replace(/\n/g, '<br>')"></div>
                         </div>
                     </div>
 
                     <div v-if="prediction" class="space-y-6">
-                        <!-- Expert Advice Card -->
-                        <div
-                            class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl p-6 text-white shadow-lg shadow-emerald-500/20"
-                        >
-                            <div class="flex items-center gap-3 mb-4">
-                                <div
-                                    class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center"
-                                >
-                                    <svg
-                                        class="w-6 h-6"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                                        />
-                                    </svg>
-                                </div>
-                                <h3
-                                    class="text-xs font-bold uppercase tracking-[0.2em]"
-                                >
-                                    Lời khuyên chuyên gia
-                                </h3>
-                            </div>
-                            <p class="text-xl md:text-2xl font-bold mb-2">
-                                {{ prediction.predictions.advice }}
-                            </p>
-                            <div
-                                class="flex items-center gap-2 text-[10px] font-bold text-white/80 uppercase tracking-widest"
-                            >
-                                <span>Dự đoán đội thắng: </span>
-                                <span
-                                    class="bg-white/20 px-2 py-0.5 rounded-full"
-                                    >{{
-                                        prediction.predictions.winner?.name ||
-                                        "N/A"
-                                    }}</span
-                                >
-                            </div>
-                        </div>
 
                         <!-- Probability Chart -->
-                        <div
-                            class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm"
-                        >
-                            <h4
-                                class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-400 mb-6 text-center"
-                            >
-                                Xác suất kết quả (Win Probability)
-                            </h4>
+                        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Xác suất kết quả</h3>
+                            </div>
+
                             <div class="space-y-6">
-                                <!-- Win/Draw/Loss Percentages -->
-                                <div
-                                    class="flex h-3 rounded-full overflow-hidden bg-gray-50 dark:bg-gray-700 shadow-inner"
-                                >
-                                    <div
-                                        :style="{
-                                            width: prediction.predictions
-                                                .percent.home,
-                                        }"
-                                        class="bg-emerald-500 h-full relative group"
-                                    >
-                                        <div
-                                            class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            Chủ nhà
-                                        </div>
-                                    </div>
-                                    <div
-                                        :style="{
-                                            width: prediction.predictions
-                                                .percent.draw,
-                                        }"
-                                        class="bg-gray-400 h-full relative group"
-                                    >
-                                        <div
-                                            class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            Hòa
-                                        </div>
-                                    </div>
-                                    <div
-                                        :style="{
-                                            width: prediction.predictions
-                                                .percent.away,
-                                        }"
-                                        class="bg-blue-500 h-full relative group"
-                                    >
-                                        <div
-                                            class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            Đội khách
-                                        </div>
-                                    </div>
+                                <!-- Multi-segment Ratio Bar (Matching H2H style) -->
+                                <div class="flex h-2.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/5 shadow-inner">
+                                    <div 
+                                        class="bg-emerald-500 h-full transition-all duration-1000 ease-out"
+                                        :style="{ width: prediction.predictions.percent.home }"
+                                    ></div>
+                                    <div 
+                                        class="bg-gray-300 dark:bg-gray-600 h-full transition-all duration-1000 ease-out"
+                                        :style="{ width: prediction.predictions.percent.draw }"
+                                    ></div>
+                                    <div 
+                                        class="bg-blue-500 h-full transition-all duration-1000 ease-out"
+                                        :style="{ width: prediction.predictions.percent.away }"
+                                    ></div>
                                 </div>
+
                                 <!-- Legend -->
-                                <div class="grid grid-cols-3 text-center">
+                                <div class="grid grid-cols-3 items-center">
                                     <div class="flex flex-col">
-                                        <span
-                                            class="text-2xl font-bold text-emerald-500"
-                                            >{{
-                                                prediction.predictions.percent
-                                                    .home
-                                            }}</span
-                                        >
-                                        <span
-                                            class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 tracking-tighter"
-                                            >{{ game.home_team.name }}</span
-                                        >
+                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ prediction.predictions.percent.home }}</span>
+                                        <span class="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter truncate">{{ game.home_team.name }}</span>
                                     </div>
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-2xl font-bold text-gray-400"
-                                            >{{
-                                                prediction.predictions.percent
-                                                    .draw
-                                            }}</span
-                                        >
-                                        <span
-                                            class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 tracking-tighter"
-                                            >Hòa</span
-                                        >
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ prediction.predictions.percent.draw }}</span>
+                                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Hòa</span>
                                     </div>
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-2xl font-bold text-blue-500"
-                                            >{{
-                                                prediction.predictions.percent
-                                                    .away
-                                            }}</span
-                                        >
-                                        <span
-                                            class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 tracking-tighter"
-                                            >{{ game.away_team.name }}</span
-                                        >
+                                    <div class="flex flex-col items-end text-right">
+                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ prediction.predictions.percent.away }}</span>
+                                        <span class="text-[8px] font-bold text-blue-500 uppercase tracking-tighter truncate text-right">{{ game.away_team.name }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Comparison Stats (Attack/Defense) -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div
-                                class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center"
-                            >
-                                <span
-                                    class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 mb-2"
-                                    >Tài / Xỉu (Over/Under)</span
-                                >
-                                <span
-                                    class="text-lg font-bold text-gray-900 dark:text-white"
-                                    >{{
-                                        prediction.predictions.under_over ||
-                                        "N/A"
-                                    }}</span
-                                >
-                            </div>
-                            <div
-                                class="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center text-center"
-                            >
-                                <span
-                                    class="text-[8px] font-bold uppercase text-slate-500 dark:text-gray-400 mb-2"
-                                    >Bàn thắng kỳ vọng</span
-                                >
-                                <span
-                                    class="text-lg font-bold text-emerald-500"
-                                    >{{
-                                        prediction.predictions.goals.home || 0
-                                    }}
-                                    -
-                                    {{
-                                        prediction.predictions.goals.away || 0
-                                    }}</span
-                                >
-                        </div>
+
                     </div>
-                </div>
-            </div>
-            <div v-else class="py-20 text-center">
+                    <div v-else class="py-20 text-center">
                         <div
                             class="w-16 h-16 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-emerald-500"
                         >
@@ -1590,10 +1493,21 @@
                         >
                             Dữ liệu phân tích đang được cập nhật...
                         </h3>
-                        <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto">
+                        <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto mb-8">
                             Vui lòng chờ trong giây lát khi hệ thống tổng hợp
                             thông tin từ API.
                         </p>
+                        <button 
+                            @click="refreshMatchData"
+                            :disabled="isRefreshing"
+                            class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/25 inline-flex items-center gap-2"
+                        >
+                            <svg v-if="isRefreshing" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {{ isRefreshing ? 'Đang tải...' : 'Cập nhật ngay' }}
+                        </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1610,6 +1524,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import StandingTable from "../../Components/StandingTable.vue";
 import LeagueSidebar from "../../Components/LeagueSidebar.vue";
+import RadarChart from "../../Components/RadarChart.vue";
 
 dayjs.extend(utc);
 
@@ -1918,14 +1833,13 @@ const matchStatsGroups = computed(() => {
         {
             group: "CHUYỀN BÓNG",
             items: [
-                processStat(
-                    "Số đường chuyền",
-                    "Passes %",
-                    "%",
-                    "Passes accurate",
-                ),
                 processStat("Tổng số đường chuyền", "Total passes"),
-                processStat("Chuyền chính xác", "Passes accurate"),
+                processStat(
+                    "Chuyền chính xác",
+                    "Passes accurate",
+                    "",
+                    "Passes %"
+                ),
             ].filter((i) => i.home != "0" || i.away != "0"),
         },
         {
@@ -2069,6 +1983,26 @@ const getMatchStatus = (game) => {
     if (game.status === "finished") return "KẾT THÚC";
     if (game.status === "live") return "TRỰC TIẾP";
     return "LỊCH THI ĐẤU";
+};
+const formatSeason = (s, country = null) => {
+    if (!s) return '—';
+    const year = parseInt(s);
+    if (isNaN(year)) return s;
+
+    // Danh sách các quốc gia/giải đấu thường đá trong 1 năm dương lịch (Xuân-Thu)
+    const singleYearCountries = [
+        'Brazil', 'USA', 'Japan', 'South Korea', 'Norway', 'Sweden', 
+        'Finland', 'China', 'Iceland', 'Estonia', 'Latvia', 'Lithuania',
+        'Kazakhstan', 'Belarus', 'Republic of Ireland', 'Singapore'
+    ];
+
+    // Các giải đấu đặc biệt hoặc World Cup, Euro, Friendly cũng thường hiện 1 năm
+    if (country && (singleYearCountries.includes(country) || ['World', 'Europe'].includes(country))) {
+        return s.toString();
+    }
+
+    // Mặc định cho các giải Thu-Xuân (Châu Âu, Saudi, Việt Nam mới...)
+    return `${year}-${year + 1}`;
 };
 </script>
 

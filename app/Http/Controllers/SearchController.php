@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Team;
+use App\Models\FootballTeam;
 use App\Models\Player;
 use App\Models\League;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Log;
 class SearchController extends Controller
 {
     public function index(Request $request)
@@ -21,8 +21,8 @@ class SearchController extends Controller
             ]);
         }
 
-        \Log::info("Search query: " . $query);
-        $teams = Team::where('name', 'LIKE', "%{$query}%")
+        Log::info("Search query: " . $query);
+        $teams = FootballTeam::where('name', 'LIKE', "%{$query}%")
             ->orWhere('code', 'LIKE', "%{$query}%")
             ->limit(5)
             ->get();

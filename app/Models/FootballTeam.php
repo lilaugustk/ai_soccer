@@ -7,7 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class FootballTeam extends Model
 {
     protected $fillable = [
-        'id', 'name', 'code', 'logo', 'country'
+        'id', 'name', 'code', 'logo', 'country', 'coach_history', 'coach_history_last_sync'
+    ];
+
+    protected $casts = [
+        'coach_history' => 'array',
+        'coach_history_last_sync' => 'datetime',
     ];
 
     public $incrementing = false; // Dùng ID từ API

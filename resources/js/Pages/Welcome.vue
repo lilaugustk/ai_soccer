@@ -12,7 +12,7 @@
         <!-- 2. Main Content: Full Schedule & Results -->
         <div class="flex-1 space-y-8 min-w-0">
             <!-- Header & Date/League Filters -->
-            <div class="flex flex-col gap-6 mb-8 relative z-30">
+            <div class="flex flex-col gap-6 mb-8 relative z-[40]">
                 <div class="flex items-center justify-between">
                     <h2 class="text-xl font-bold flex items-center gap-3 text-gray-900 dark:text-white uppercase tracking-tight">
                         <div class="w-1.5 h-6 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]"></div>
@@ -33,10 +33,10 @@
                 <!-- Filter Area: Split into two rows -->
                 <div class="flex flex-col gap-4 relative">
                     <!-- Row 1: Date Selector -->
-                    <div class="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm shadow-sm w-fit max-w-full">
+                    <div class="flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm shadow-sm w-fit max-w-full relative z-[21]">
                         <!-- Mini Calendar Toggle -->
-                        <div class="relative">
-                            <button @click="showDatePicker = !showDatePicker"
+                        <div class="relative date-picker-container">
+                            <button @click="toggleDatePicker"
                                     class="p-2 rounded-xl bg-white dark:bg-gray-700 shadow-sm text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-500/30 transition-all">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -44,23 +44,44 @@
                             </button>
 
                             <!-- Date Picker Dropdown -->
-                             <div v-if="showDatePicker" class="absolute top-full left-0 mt-2 z-[60] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-700 p-4 w-72">
-                                <div class="flex items-center justify-between mb-4">
-                                    <span class="text-[10px] font-bold uppercase text-gray-400 tracking-widest">Tháng {{ dayjs(props.filters?.date || today).format("M, [Năm] YYYY") }}</span>
-                                    <div class="flex gap-1">
-                                        <button @click="adjustMonth(-1)" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" /></svg></button>
-                                        <button @click="adjustMonth(1)" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" /></svg></button>
+                             <div v-if="showDatePicker" 
+                                  class="absolute top-full left-0 mt-3 z-[100] bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-gray-800 p-6 w-80 transform transition-all duration-300 ease-out">
+                                <div class="flex items-center justify-between mb-6">
+                                    <span class="text-xs font-black uppercase text-gray-900 dark:text-white tracking-[0.1em]">
+                                        {{ dayjs(props.filters?.date || today).add(currentMonthOffset, 'month').format("MMMM [Năm] YYYY") }}
+                                    </span>
+                                    <div class="flex gap-2">
+                                        <button @click.stop="adjustMonth(-1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-500 hover:text-emerald-500">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
+                                        </button>
+                                        <button @click.stop="adjustMonth(1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-500 hover:text-emerald-500">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-7 gap-1 mb-4">
-                                    <span v-for="d in ['CN','T2','T3','T4','T5','T6','T7']" :key="d" class="text-center text-[8px] font-bold text-gray-300">{{ d }}</span>
-                                    <button v-for="day in calendarDays" :key="day.date" @click="changeDate(day.date); showDatePicker = false;"
-                                            class="h-8 w-8 rounded-xl flex items-center justify-center text-[10px] font-bold transition-all"
-                                            :class="[day.isCurrentMonth ? '' : 'opacity-20', (filters?.date || today) === day.date ? 'bg-emerald-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300']">
+                                <div class="grid grid-cols-7 gap-1.5 mb-6">
+                                    <span v-for="d in ['CN','T2','T3','T4','T5','T6','T7']" :key="d" 
+                                          class="text-center text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase pb-2">
+                                        {{ d }}
+                                    </span>
+                                    <button v-for="day in calendarDays" :key="day.date" 
+                                            @click="changeDate(day.date); showDatePicker = false;"
+                                            class="h-9 w-9 rounded-xl flex items-center justify-center text-[11px] font-bold transition-all relative group"
+                                            :class="[
+                                                day.isCurrentMonth ? '' : 'opacity-20', 
+                                                (filters?.date || today) === day.date 
+                                                    ? 'bg-emerald-500 text-white shadow-[0_8px_20px_rgba(16,185,129,0.3)] scale-110 z-10' 
+                                                    : 'hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
+                                            ]">
                                         {{ day.dayNum }}
+                                        <div v-if="day.date === today && (filters?.date || today) !== day.date" 
+                                             class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-emerald-500 rounded-full"></div>
                                     </button>
                                 </div>
-                                <button @click="changeDate(today); showDatePicker = false;" class="w-full py-2 bg-gray-50 dark:bg-gray-700 rounded-xl text-[9px] font-bold uppercase tracking-widest text-emerald-600">Hôm nay</button>
+                                <button @click="changeDate(today); showDatePicker = false;" 
+                                        class="w-full py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600 dark:text-emerald-400 transition-all border border-transparent hover:border-emerald-100 dark:hover:border-emerald-500/20">
+                                    Hôm nay
+                                </button>
                             </div>
                         </div>
 
@@ -90,7 +111,7 @@
                          @mouseleave="leagueDrag.onMouseLeave"
                          @mouseup="leagueDrag.onMouseUp"
                          @mousemove="leagueDrag.onMouseMove"
-                         class="flex flex-nowrap overflow-x-auto custom-scrollbar w-full pb-3 relative cursor-grab active:cursor-grabbing select-none">
+                         class="flex flex-nowrap overflow-x-auto custom-scrollbar w-full pb-3 relative cursor-grab active:cursor-grabbing select-none z-10">
                         <!-- Sticky "All" Button -->
                         <div class="sticky left-0 z-10 pr-4 bg-gradient-to-r from-white dark:from-gray-900 via-white/95 dark:via-gray-900/95 to-transparent shrink-0">
                             <button @click="changeLeague(null)"
@@ -127,9 +148,26 @@
                         <div class="space-y-1.5 max-h-[calc(100vh-250px)] overflow-y-auto no-scrollbar pr-1">
                             <button v-for="(games, leagueName) in groupedGames" :key="leagueName"
                                     @click="scrollToLeague(leagueName)"
-                                    class="w-full text-left px-4 py-2.5 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all group/nav flex items-center justify-between gap-3 border border-transparent hover:border-emerald-100 dark:hover:border-emerald-500/20">
-                                <span class="text-[11px] font-bold text-gray-600 dark:text-gray-300 group-hover/nav:text-emerald-600 transition-colors truncate">{{ leagueName }}</span>
-                                <span class="text-[10px] font-black px-2 py-0.5 bg-gray-100 dark:bg-gray-900 rounded-lg text-gray-400 group-hover/nav:text-emerald-500 transition-all tabular-nums">{{ games.length }}</span>
+                                    class="group/item w-full text-left p-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all flex items-center justify-between gap-3 border border-transparent hover:border-emerald-100 dark:hover:border-emerald-500/20">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <!-- League Logo -->
+                                    <div class="w-8 h-8 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-0.5 shrink-0 shadow-sm transition-transform group-hover/item:scale-110">
+                                        <img v-if="games[0].league.logo_url" :src="games[0].league.logo_url" class="w-full h-full object-contain" />
+                                        <span v-else class="text-[10px] font-bold text-emerald-600 uppercase">{{ games[0].league.name.substring(0,2) }}</span>
+                                    </div>
+
+                                    <div class="flex flex-col min-w-0">
+                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover/item:text-emerald-600 transition-colors">
+                                            {{ leagueName.includes(' (') ? leagueName.split(' (')[0] : leagueName }}
+                                        </span>
+                                        <span v-if="leagueName.includes(' (')" class="text-[8px] font-bold text-gray-400 dark:text-white uppercase tracking-widest">
+                                            {{ translateCountry(leagueName.split(' (')[1].replace(')', '')) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] font-black px-2 py-0.5 bg-gray-100 dark:bg-white/10 rounded-lg text-gray-400 dark:text-white group-hover/item:text-emerald-500 transition-all tabular-nums shrink-0 flex items-center justify-center min-w-[20px]">
+                                    {{ games.length }}
+                                </span>
                             </button>
                         </div>
                     </div>
@@ -142,8 +180,13 @@
                         <div class="flex items-center gap-2 mb-4">
                             <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
                             <h2 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                                {{ leagueName }}
-                                <span class="text-[9px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-900 rounded-md">{{ games.length }}</span>
+                                <span class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                    <span class="text-gray-900 dark:text-white">{{ leagueName.includes(' (') ? leagueName.split(' (')[0] : leagueName }}</span>
+                                    <span v-if="leagueName.includes(' (')" class="text-gray-400 dark:text-white font-medium">({{ translateCountry(leagueName.split(' (')[1].replace(')', '')) }})</span>
+                                </span>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 bg-gray-100 dark:bg-white/10 rounded-md text-gray-600 dark:text-white flex items-center justify-center min-w-[18px]">
+                                    {{ games.length }}
+                                </span>
                             </h2>
                         </div>
 
@@ -178,7 +221,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '../Layouts/MainLayout.vue';
 import MatchCard from '@/Components/MatchCard.vue';
@@ -256,13 +299,70 @@ const scrollToActiveDate = (smooth = true) => {
     }
 };
 
+const toggleDatePicker = () => {
+    showDatePicker.value = !showDatePicker.value;
+    if (showDatePicker.value) {
+        currentMonthOffset.value = 0;
+    }
+};
+
+const closeDatePicker = (e) => {
+    if (showDatePicker.value && !e.target.closest('.date-picker-container')) {
+        showDatePicker.value = false;
+    }
+};
+
 onMounted(() => {
     setTimeout(() => scrollToActiveDate(false), 100);
+    window.addEventListener('click', closeDatePicker);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('click', closeDatePicker);
 });
 
 watch(() => props.filters.date, () => {
     setTimeout(() => scrollToActiveDate(true), 50);
 });
+
+const translateCountry = (country) => {
+    const map = {
+        'England': 'Anh',
+        'Spain': 'Tây Ban Nha',
+        'Italy': 'Ý',
+        'Germany': 'Đức',
+        'France': 'Pháp',
+        'Vietnam': 'Việt Nam',
+        'World': 'Quốc tế',
+        'Brazil': 'Brazil',
+        'Argentina': 'Argentina',
+        'Portugal': 'Bồ Đào Nha',
+        'Netherlands': 'Hà Lan',
+        'Denmark': 'Đan Mạch',
+        'Czech Republic': 'Cộng hòa Séc',
+        'Belgium': 'Bỉ',
+        'Switzerland': 'Thụy Sĩ',
+        'Austria': 'Áo',
+        'Norway': 'Na Uy',
+        'Sweden': 'Thụy Điển',
+        'Poland': 'Ba Lan',
+        'Turkey': 'Thổ Nhĩ Kỳ',
+        'Ukraine': 'Ukraine',
+        'Greece': 'Hy Lạp',
+        'Russia': 'Nga',
+        'Scotland': 'Scotland',
+        'Wales': 'Wales',
+        'Ireland': 'Ireland',
+        'Northern Ireland': 'Bắc Ireland',
+        'South Korea': 'Hàn Quốc',
+        'Japan': 'Nhật Bản',
+        'Saudi Arabia': 'Ả Rập Xê-út',
+        'Australia': 'Australia',
+        'USA': 'Hoa Kỳ',
+        'Mexico': 'Mexico',
+    };
+    return map[country] || country;
+};
 
 const calendarDays = computed(() => {
     const baseDate = props.filters.date || today;

@@ -70,9 +70,15 @@ class DashboardController extends Controller
                 'league' => [
                     'name' => $match->league->name,
                     'logo_url' => $match->league->logo,
+                    'country' => $match->league->country_name,
+                    'country_code' => $match->league->country_code,
                 ]
             ];
-        })->groupBy(fn($game) => $game['league']['name']);
+        })->groupBy(function($game) {
+            $name = $game['league']['name'];
+            $country = $game['league']['country'];
+            return $country ? "{$name} ({$country})" : $name;
+        });
 
         // Danh sách các giải đấu có trận trong ngày (cho filter nhanh)
         $availableLeagues = $matches->map(fn($m) => [

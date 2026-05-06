@@ -4,6 +4,7 @@ import { Head, router, Link } from "@inertiajs/vue3";
 import MainLayout from "../../Layouts/MainLayout.vue";
 import dayjs from "dayjs";
 import StandingTable from "../../Components/StandingTable.vue";
+import MatchCard from "../../Components/MatchCard.vue";
 
 const props = defineProps({
     team: { type: Object, required: true },
@@ -15,15 +16,16 @@ const props = defineProps({
     lastLineup: { type: Object, default: null },
     coachHistory: { type: Array, default: () => [] },
     isFavorite: { type: Boolean, default: false },
+    lastMatch: { type: Object, default: null },
 });
 
 const activeTab = ref("overview");
+const showPitchModal = ref(false);
 const tabs = [
     { id: "overview", label: "Tổng quan" },
     { id: "standings", label: "BXH" },
     { id: "matches", label: "Trận đấu" },
     { id: "squad", label: "Đội hình" },
-    { id: "stats", label: "Thống kê" },
 ];
 
 const changeTab = (id) => {
@@ -100,6 +102,81 @@ const positionShort = {
     Attacker: "TĐ",
 };
 
+const countryTranslations = {
+    "England": { name: "Anh", code: "gb-eng" },
+    "France": { name: "Pháp", code: "fr" },
+    "Germany": { name: "Đức", code: "de" },
+    "Spain": { name: "Tây Ban Nha", code: "es" },
+    "Italy": { name: "Ý", code: "it" },
+    "Portugal": { name: "Bồ Đào Nha", code: "pt" },
+    "Netherlands": { name: "Hà Lan", code: "nl" },
+    "Belgium": { name: "Bỉ", code: "be" },
+    "Brazil": { name: "Brazil", code: "br" },
+    "Argentina": { name: "Argentina", code: "ar" },
+    "Uruguay": { name: "Uruguay", code: "uy" },
+    "Croatia": { name: "Croatia", code: "hr" },
+    "Denmark": { name: "Đan Mạch", code: "dk" },
+    "Switzerland": { name: "Thụy Sĩ", code: "ch" },
+    "Poland": { name: "Ba Lan", code: "pl" },
+    "Sweden": { name: "Thụy Điển", code: "se" },
+    "Norway": { name: "Na Uy", code: "no" },
+    "Austria": { name: "Áo", code: "at" },
+    "Scotland": { name: "Scotland", code: "gb-sct" },
+    "Wales": { name: "Wales", code: "gb-wls" },
+    "Turkey": { name: "Thổ Nhĩ Kỳ", code: "tr" },
+    "Türkiye": { name: "Thổ Nhĩ Kỳ", code: "tr" },
+    "Slovenia": { name: "Slovenia", code: "si" },
+    "Senegal": { name: "Senegal", code: "sn" },
+    "Morocco": { name: "Ma-rốc", code: "ma" },
+    "Japan": { name: "Nhật Bản", code: "jp" },
+    "South Korea": { name: "Hàn Quốc", code: "kr" },
+    "USA": { name: "Mỹ", code: "us" },
+    "Cameroon": { name: "Cameroon", code: "cm" },
+    "Ivory Coast": { name: "Bờ Biển Ngà", code: "ci" },
+    "Côte d'Ivoire": { name: "Bờ Biển Ngà", code: "ci" },
+    "Ghana": { name: "Ghana", code: "gh" },
+    "Nigeria": { name: "Nigeria", code: "ng" },
+    "Egypt": { name: "Ai Cập", code: "eg" },
+    "Algeria": { name: "Algeria", code: "dz" },
+    "Tunisia": { name: "Tunisia", code: "tn" },
+    "Chile": { name: "Chile", code: "cl" },
+    "Colombia": { name: "Colombia", code: "co" },
+    "Peru": { name: "Peru", code: "pe" },
+    "Mexico": { name: "Mexico", code: "mx" },
+    "Canada": { name: "Canada", code: "ca" },
+    "Australia": { name: "Úc", code: "au" },
+    "Ukraine": { name: "Ukraine", code: "ua" },
+    "Czech Republic": { name: "CH Séc", code: "cz" },
+    "Serbia": { name: "Serbia", code: "rs" },
+    "Slovakia": { name: "Slovakia", code: "sk" },
+    "Hungary": { name: "Hungary", code: "hu" },
+    "Romania": { name: "Romania", code: "ro" },
+    "Greece": { name: "Hy Lạp", code: "gr" },
+    "Ireland": { name: "Ireland", code: "ie" },
+    "Northern Ireland": { name: "Bắc Ireland", code: "gb-nir" },
+    "Finland": { name: "Phần Lan", code: "fi" },
+    "Israel": { name: "Israel", code: "il" },
+    "Russia": { name: "Nga", code: "ru" },
+    "Ecuador": { name: "Ecuador", code: "ec" },
+    "Paraguay": { name: "Paraguay", code: "py" },
+    "Venezuela": { name: "Venezuela", code: "ve" },
+    "Jamaica": { name: "Jamaica", code: "jm" },
+    "Costa Rica": { name: "Costa Rica", code: "cr" },
+    "Georgia": { name: "Georgia", code: "ge" },
+    "Iceland": { name: "Iceland", code: "is" },
+    "South Africa": { name: "Nam Phi", code: "za" },
+};
+
+const translateCountry = (name) => {
+    return countryTranslations[name]?.name || name;
+};
+
+const getCountryFlag = (name) => {
+    const code = countryTranslations[name]?.code;
+    if (!code) return null;
+    return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+};
+
 const showChart = ref(false);
 onMounted(() => {
     const params = new URLSearchParams(window.location.search);
@@ -113,21 +190,102 @@ onMounted(() => {
     }, 100);
 });
 
-// Cấu trúc Pitch dựa trên grid [hàng, cột]
-const getPitchPlayers = computed(() => {
+// Logic xử lý đội hình cho sân cỏ
+const getPlayerRating = (playerId) => {
+    if (!props.lastMatch?.players) return null;
+    for (const teamData of props.lastMatch.players) {
+        const playerData = teamData.players.find(p => p.player?.id == playerId);
+        if (playerData?.statistics?.[0]?.games?.rating) {
+            return playerData.statistics[0].games.rating;
+        }
+    }
+    return null;
+};
+
+const processedVerticalLineup = computed(() => {
     if (!props.lastLineup?.startXI) return [];
-    return props.lastLineup.startXI.map(xi => ({
-        ...xi,
-        gridPos: xi.player.grid ? xi.player.grid.split(':').map(Number) : [1, 1]
-    }));
+    
+    const lineupXI = props.lastLineup.startXI;
+    const rows = {};
+    
+    // Group players by grid row
+    lineupXI.forEach((p) => {
+        if (!p.player.grid) return;
+        const [row, col] = p.player.grid.split(":").map(Number);
+        if (!rows[row]) rows[row] = [];
+        rows[row].push(p);
+    });
+
+    const processed = [];
+    // Max rows from grid (usually 1 to 4 or 5)
+    const maxRow = Math.max(...Object.keys(rows).map(Number));
+
+    Object.entries(rows).forEach(([rowStr, playersInRow]) => {
+        const rowNum = parseInt(rowStr);
+        
+        // Sort by column (usually 1, 2, 3...)
+        playersInRow.sort((a, b) => {
+            const colA = parseInt(a.player.grid.split(":")[1]);
+            const colB = parseInt(b.player.grid.split(":")[1]);
+            return colA - colB;
+        });
+
+        const count = playersInRow.length;
+        playersInRow.forEach((p, index) => {
+            // Mapping for vertical pitch:
+            // Top: 90% (GK) to 10% (Attack)
+            // Left: distributed across 10% to 90%
+            
+            // Formula for top: Higher grid row = Lower top % (Attack is top)
+            // GK is grid row 1 -> top ~88%
+            // Attack is grid row 4 -> top ~13%
+            const top = 88 - (rowNum - 1) * (75 / (maxRow - 1 || 1));
+            
+            // Formula for left: centered distribution
+            const left = 50 + (index - (count - 1) / 2) * (80 / count);
+
+            processed.push({
+                ...p.player,
+                rating: getPlayerRating(p.player.id),
+                style: {
+                    top: `${top}%`,
+                    left: `${left}%`
+                },
+            });
+        });
+    });
+    return processed;
 });
+const formatSeason = (s, country = null) => {
+    if (!s) return '—';
+    if (s.includes('-') && s.length > 7) { // Likely a full date YYYY-MM-DD
+        return dayjs(s).format('DD.MM.YYYY');
+    }
+    const year = parseInt(s);
+    if (isNaN(year)) return s;
+
+    // Danh sách các quốc gia/giải đấu thường đá trong 1 năm dương lịch (Xuân-Thu)
+    const singleYearCountries = [
+        'Brazil', 'USA', 'Japan', 'South Korea', 'Norway', 'Sweden', 
+        'Finland', 'China', 'Iceland', 'Estonia', 'Latvia', 'Lithuania',
+        'Kazakhstan', 'Belarus', 'Republic of Ireland', 'Singapore'
+    ];
+
+    // Các giải đấu đặc biệt hoặc World Cup, Euro, Friendly cũng thường hiện 1 năm
+    if (country && (singleYearCountries.includes(country) || ['World', 'Europe'].includes(country))) {
+        return s.toString();
+    }
+
+    // Mặc định cho các giải Thu-Xuân (Châu Âu, Saudi, Việt Nam mới...)
+    return `${year}-${year + 1}`;
+};
 </script>
 
 <template>
     <Head :title="`${team.name} | AI Soccer`" />
 
     <MainLayout>
-        <div class="py-6 space-y-6">
+        <div class="pt-2 pb-6 space-y-6">
             <!-- Breadcrumbs -->
             <nav class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 <Link href="/" class="hover:text-emerald-500">Trang chủ</Link>
@@ -169,13 +327,15 @@ const getPitchPlayers = computed(() => {
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <div class="flex bg-white dark:bg-gray-800 p-1.5 rounded-2xl border border-gray-100 dark:border-gray-700 mb-6 inline-flex overflow-x-auto no-scrollbar max-w-full shadow-sm">
-                <button v-for="tab in tabs" :key="tab.id" @click="changeTab(tab.id)"
-                    class="px-5 py-2.5 text-[9px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap"
-                    :class="activeTab === tab.id ? 'bg-emerald-500 text-white shadow-md' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'">
-                    {{ tab.label }}
-                </button>
+            <!-- Tabs (Flashscore Style) -->
+            <div class="border-b border-gray-100 dark:border-gray-700 mb-6 relative">
+                <div class="flex gap-8 overflow-x-auto no-scrollbar whitespace-nowrap">
+                    <button v-for="tab in tabs" :key="tab.id" @click="changeTab(tab.id)"
+                        class="pb-4 px-1 text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap outline-none"
+                        :class="activeTab === tab.id ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'">
+                        {{ tab.label }}
+                    </button>
+                </div>
             </div>
 
             <!-- Content Area -->
@@ -264,12 +424,15 @@ const getPitchPlayers = computed(() => {
 
                                             <!-- Coach Avatar & Info -->
                                             <div class="absolute -bottom-16 flex flex-col items-center gap-1.5 w-full">
-                                                 <div class="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 shadow-sm overflow-hidden p-0.5">
-                                                      <img :src="coach.photo" class="w-full h-full object-cover rounded-full" />
-                                                 </div>
+                                                  <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 shadow-sm overflow-hidden p-0.5 flex items-center justify-center">
+                                                       <img v-if="coach.photo" :src="coach.photo" 
+                                                            @error="(e) => e.target.src = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'"
+                                                            class="w-full h-full object-cover rounded-full" />
+                                                       <div v-else class="text-[10px] font-bold text-gray-400">{{ coach.name?.charAt(0) }}</div>
+                                                  </div>
                                                  <div class="flex flex-col items-center leading-none">
                                                       <span class="text-[9px] font-bold text-gray-900 dark:text-white uppercase tracking-tight text-center">{{ coach.name }}</span>
-                                                      <span class="text-[8px] font-bold text-gray-400 text-center mt-0.5">{{ coach.season }}</span>
+                                                      <span class="text-[8px] font-bold text-gray-400 text-center mt-0.5">{{ formatSeason(coach.season) }}</span>
                                                  </div>
                                             </div>
                                        </div>
@@ -285,16 +448,7 @@ const getPitchPlayers = computed(() => {
                              </div>
                         </div>
 
-                        <!-- AI Summary -->
-                        <div class="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                             <div class="flex items-center gap-2 mb-4">
-                                  <div class="w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold">AI</div>
-                                  <h3 class="text-[10px] font-bold text-gray-900 dark:text-white uppercase tracking-widest">Tóm tắt hàng ngày</h3>
-                             </div>
-                             <div class="space-y-4 text-[12px] text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
-                                  <p><span class="text-gray-900 dark:text-white font-bold">{{ team.name }}</span> đang có phong độ ổn định. Phân tích AI dự đoán khả năng thắng trận tới là <span class="text-emerald-500 font-bold">68%</span>.</p>
-                             </div>
-                        </div>
+
 
                         <!-- Mini Standings -->
                         <div v-if="standings.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm relative">
@@ -378,32 +532,124 @@ const getPitchPlayers = computed(() => {
 
                     <!-- Right Column -->
                     <div class="lg:col-span-4 space-y-6">
-                         <!-- Đội hình ra sân trận gần nhất (Pitch) -->
+                         <!-- Đội hình ra sân trận gần nhất (Vertical Grass Pitch) -->
                          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm relative flex flex-col">
-                              <h3 class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-6">Đội hình ra sân gần nhất</h3>
-                              <div v-if="lastLineup" class="aspect-[3/4] bg-emerald-900/10 dark:bg-emerald-500/10 rounded-2xl relative p-4 overflow-hidden">
-                                   <!-- Pitch Lines -->
-                                   <div class="absolute inset-2 border border-emerald-500/10 rounded-xl"></div>
-                                   <div class="absolute inset-x-2 top-1/2 h-px bg-emerald-500/10"></div>
+                              <div class="flex items-center justify-between mb-6">
+                                   <h3 class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Đội hình ra sân gần nhất</h3>
+                                   <div v-if="lastLineup?.formation" class="px-2 py-0.5 bg-gray-50 dark:bg-gray-900 rounded text-[9px] font-bold text-gray-400 uppercase tracking-widest border border-gray-100 dark:border-gray-700">{{ lastLineup.formation }}</div>
+                              </div>
+                              
+                              <div v-if="lastLineup" class="aspect-[3/4] bg-[#1a3326] rounded-2xl relative overflow-hidden border border-gray-100 dark:border-gray-700 shadow-inner">
+                                   <!-- Expand Button -->
+                                   <button @click="showPitchModal = true" 
+                                        class="absolute top-3 right-3 z-50 p-2 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-xl border border-white/10 text-white transition-all shadow-xl active:scale-95 group"
+                                        title="Phóng to đội hình">
+                                        <svg class="w-4 h-4 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                                        </svg>
+                                   </button>
+                                   <!-- Grass Pattern (Vertical Stripes) -->
+                                   <div class="absolute inset-0 opacity-[0.08]"
+                                        style="background-image: repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(255, 255, 255, 0.05) 10%, rgba(255, 255, 255, 0.05) 20%);"></div>
                                    
-                                   <div v-for="xi in getPitchPlayers" :key="xi.player.id"
-                                        class="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5"
-                                        :style="{ left: `${xi.gridPos[1] * 20 - 10}%`, top: `${xi.gridPos[0] * 18}%` }">
-                                        <div class="w-7 h-7 rounded-full bg-white dark:bg-gray-900 border-2 border-white dark:border-gray-800 shadow-xl overflow-hidden">
-                                             <img v-if="xi.player.photo" :src="xi.player.photo" class="w-full h-full object-cover" />
-                                             <div v-else class="w-full h-full flex items-center justify-center text-[8px] font-bold text-gray-400">{{ xi.player.number }}</div>
+                                   <!-- Pitch Markings -->
+                                   <div class="absolute inset-4 border border-white/10 pointer-events-none"></div>
+                                   <div class="absolute inset-x-4 top-1/2 h-px bg-white/10"></div>
+                                   <div class="absolute top-1/2 left-1/2 w-20 h-20 border border-white/10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                                   
+                                   <!-- Goal Areas -->
+                                   <div class="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-12 border-x border-b border-white/10"></div>
+                                   <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-24 h-12 border-x border-t border-white/10"></div>
+
+                                   <!-- Players -->
+                                   <div v-for="p in processedVerticalLineup" :key="p.id"
+                                        class="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 transition-all duration-500"
+                                        :style="p.style">
+                                        <div class="relative group cursor-pointer" @click="viewPlayer(p.id)">
+                                             <div class="w-10 h-10 md:w-11 md:h-11 rounded-full border-2 border-white/20 bg-gray-900/50 shadow-xl overflow-hidden group-hover:scale-110 transition-transform">
+                                                  <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover" />
+                                                  <div v-else class="w-full h-full flex items-center justify-center text-[10px] font-bold text-white">{{ p.number }}</div>
+                                             </div>
+                                             <!-- Player Rating -->
+                                             <div v-if="p.rating" 
+                                                  class="absolute -top-1 -right-2 w-6 h-4 rounded-md text-[8px] font-black flex items-center justify-center shadow-lg border border-white/30 z-10"
+                                                  :class="getRatingClass(p.rating)">
+                                                  {{ p.rating }}
+                                             </div>
                                         </div>
-                                        <div class="px-1 py-0.5 bg-gray-950/80 dark:bg-white/80 rounded text-[6px] font-bold text-white dark:text-gray-950 uppercase whitespace-nowrap shadow-sm">
-                                             {{ xi.player.name.split(' ').pop() }}
+                                        <div class="flex flex-col items-center leading-none">
+                                             <div class="bg-black/40 px-2 py-0.5 rounded backdrop-blur-sm border border-white/5">
+                                                  <span class="text-[9px] font-bold text-white tracking-tight truncate max-w-[65px] block">{{ p.name.split(' ').pop() }}</span>
+                                             </div>
+                                             <span class="text-[8px] font-bold text-white/60 uppercase tracking-widest mt-0.5">{{ p.number }}</span>
                                         </div>
                                    </div>
-                                   
-                                   <div class="absolute bottom-2 right-4 text-[7px] font-bold text-gray-400 uppercase tracking-widest">{{ lastLineup.formation }}</div>
                               </div>
                               <div v-else class="aspect-[3/4] bg-gray-50 dark:bg-gray-900/50 rounded-2xl flex items-center justify-center text-[10px] font-bold text-gray-300 uppercase tracking-widest border border-dashed border-gray-200 dark:border-gray-800">
                                    Chưa có dữ liệu đội hình
                               </div>
                          </div>
+
+                         <!-- Pitch Fullscreen Modal -->
+                         <Teleport to="body">
+                              <Transition name="modal-fade">
+                                   <div v-if="showPitchModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                                        <div class="absolute inset-0 bg-black/80 backdrop-blur-md" @click="showPitchModal = false"></div>
+                                        
+                                        <div class="relative w-[95%] sm:max-w-2xl bg-[#1a3326] aspect-[3/4] rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/5">
+                                             <!-- Close Button -->
+                                             <button @click="showPitchModal = false" class="absolute top-4 right-4 sm:top-6 sm:right-6 z-[60] p-2 sm:p-3 bg-black/40 hover:bg-black/60 backdrop-blur-xl rounded-xl sm:rounded-2xl border border-white/10 text-white transition-all shadow-2xl active:scale-95">
+                                                  <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                                  </svg>
+                                             </button>
+
+                                             <!-- Grass Pattern -->
+                                             <div class="absolute inset-0 opacity-[0.1]"
+                                                  style="background-image: repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(255, 255, 255, 0.05) 10%, rgba(255, 255, 255, 0.05) 20%);"></div>
+                                             
+                                             <!-- Pitch Markings -->
+                                             <div class="absolute inset-4 sm:inset-8 border-2 border-white/10 pointer-events-none"></div>
+                                             <div class="absolute inset-x-4 sm:inset-x-8 top-1/2 h-px sm:h-0.5 bg-white/10"></div>
+                                             <div class="absolute top-1/2 left-1/2 w-24 h-24 sm:w-40 sm:h-40 border-2 border-white/10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+                                             
+                                             <!-- Goal Areas -->
+                                             <div class="absolute top-4 sm:top-8 left-1/2 -translate-x-1/2 w-32 sm:w-48 h-16 sm:h-24 border-x-2 border-b-2 border-white/10"></div>
+                                             <div class="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-32 sm:w-48 h-16 sm:h-24 border-x-2 border-t-2 border-white/10"></div>
+
+                                             <!-- Formation Title -->
+                                             <div class="absolute top-6 left-6 sm:top-10 sm:left-10 z-40">
+                                                  <div class="px-3 py-1 sm:px-4 sm:py-2 bg-black/40 backdrop-blur-md rounded-xl sm:rounded-2xl border border-white/10 shadow-2xl">
+                                                       <span class="text-[10px] sm:text-xs font-black text-white/40 uppercase tracking-[0.3em]">{{ lastLineup.formation }}</span>
+                                                  </div>
+                                             </div>
+
+                                             <!-- Players (Larger version) -->
+                                             <div v-for="p in processedVerticalLineup" :key="'modal-'+p.id"
+                                                  class="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 sm:gap-3 transition-all duration-700"
+                                                  :style="p.style">
+                                                  <div class="relative group cursor-pointer" @click="viewPlayer(p.id); showPitchModal = false">
+                                                       <div class="w-12 h-12 sm:w-20 sm:h-20 rounded-full border-2 sm:border-4 border-white/20 bg-gray-900/50 shadow-2xl overflow-hidden group-hover:scale-110 transition-transform">
+                                                            <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover" />
+                                                       </div>
+                                                       <!-- Player Rating -->
+                                                       <div v-if="p.rating" 
+                                                            class="absolute -top-1 -right-2 sm:-right-3 w-8 h-5 sm:w-10 sm:h-7 rounded-lg sm:rounded-xl text-[9px] sm:text-[12px] font-black flex items-center justify-center shadow-2xl border border-white/30 sm:border-2 z-10"
+                                                            :class="getRatingClass(p.rating)">
+                                                            {{ p.rating }}
+                                                       </div>
+                                                  </div>
+                                                  <div class="flex flex-col items-center">
+                                                       <div class="bg-black/60 px-2 py-0.5 sm:px-4 sm:py-1.5 rounded-lg sm:rounded-xl backdrop-blur-md border border-white/10 group-hover:bg-emerald-500 transition-colors">
+                                                            <span class="text-[10px] sm:text-sm font-bold text-white tracking-tight drop-shadow-xl">{{ p.name.split(' ').pop() }}</span>
+                                                       </div>
+                                                       <span class="text-[8px] sm:text-xs font-black text-white/50 uppercase tracking-widest mt-1 sm:mt-1.5">{{ p.number }}</span>
+                                                  </div>
+                                             </div>
+                                        </div>
+                                   </div>
+                              </Transition>
+                         </Teleport>
 
                          <!-- HLV -->
                          <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
@@ -430,6 +676,38 @@ const getPitchPlayers = computed(() => {
                 <!-- STANDINGS TAB -->
                 <div v-else-if="activeTab === 'standings'" class="space-y-6">
                     <StandingTable v-if="standings.length > 0" :standings="standings" :league-id="nextMatch?.league_id" />
+                    <div v-else class="py-20 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest border border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
+                        Không có dữ liệu bảng xếp hạng
+                    </div>
+                </div>
+
+                <!-- MATCHES TAB -->
+                <div v-else-if="activeTab === 'matches'" class="space-y-8">
+                    <!-- Upcoming Games -->
+                    <section v-if="upcomingGames.length > 0" class="space-y-4">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] px-2 flex items-center gap-3">
+                            Lịch thi đấu sắp tới
+                            <div class="h-px flex-1 bg-gray-100 dark:bg-gray-800"></div>
+                        </h3>
+                        <div class="grid grid-cols-1 gap-2">
+                            <MatchCard v-for="match in upcomingGames" :key="match.id" :game="match" />
+                        </div>
+                    </section>
+
+                    <!-- Recent Results -->
+                    <section v-if="recentGames.length > 0" class="space-y-4">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] px-2 flex items-center gap-3">
+                            Kết quả gần đây
+                            <div class="h-px flex-1 bg-gray-100 dark:bg-gray-800"></div>
+                        </h3>
+                        <div class="grid grid-cols-1 gap-2">
+                            <MatchCard v-for="match in recentGames" :key="match.id" :game="match" />
+                        </div>
+                    </section>
+
+                    <div v-if="upcomingGames.length === 0 && recentGames.length === 0" class="py-20 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest border border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
+                        Không có dữ liệu trận đấu
+                    </div>
                 </div>
 
                 <!-- SQUAD TAB (SINGLE TABLE) -->
@@ -460,8 +738,11 @@ const getPitchPlayers = computed(() => {
                                         <span class="text-[9px] font-bold text-gray-400 uppercase">{{ positionLabels[p.position] || p.position }}</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-[10px] font-bold text-gray-600 dark:text-gray-400">{{ p.nationality }}</span>
+                                        <div class="flex items-center gap-2.5">
+                                            <div v-if="getCountryFlag(p.nationality)" class="w-5 h-3.5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm border border-gray-100 dark:border-gray-700">
+                                                <img :src="getCountryFlag(p.nationality)" class="w-full h-full object-cover" />
+                                            </div>
+                                            <span class="text-[10px] font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight">{{ translateCountry(p.nationality) }}</span>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-center text-[11px] font-bold text-gray-900 dark:text-white">
@@ -478,6 +759,7 @@ const getPitchPlayers = computed(() => {
                         </table>
                     </div>
                 </div>
+
             </div>
         </div>
     </MainLayout>

@@ -857,6 +857,56 @@ class FootballApiService
         }
     }
 
+    /**
+     * Lấy toàn bộ cầu thủ và thống kê của một đội bóng trong một mùa giải
+     */
+    public function getPlayersByTeam($teamId, $season)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'players', [
+                    'team' => $teamId,
+                    'season' => $season
+                ]);
+
+            if ($response->successful()) {
+                $results = $response->json();
+                $data = $results['response'] ?? [];
+                $totalPages = $results['paging']['total'] ?? 1;
+
+                // Sync trang đầu
+                $this->syncPlayersByTeam($data, $season);
+
+                // Nếu có nhiều trang, lấy hết (API Sports trả về tối đa 20/trang)
+                for ($page = 2; $page <= $totalPages; $page++) {
+                    $res = Http::withHeaders($this->getHeaders())
+                        ->withoutVerifying()
+                        ->get($this->getBaseUrl() . 'players', [
+                            'team' => $teamId,
+                            'season' => $season,
+                            'page' => $page
+                        ]);
+                    if ($res->successful()) {
+                        $this->syncPlayersByTeam($res->json()['response'] ?? [], $season);
+                    }
+                }
+                return true;
+            }
+            return false;
+        } catch (\Exception $e) {
+            Log::error('API Exception (PlayersByTeam): ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function syncPlayersByTeam(array $players, $season)
+    {
+        foreach ($players as $item) {
+            $this->syncPlayerStats($item, $season);
+        }
+    }
+
     public function getOdds($fixtureId)
     {
         try {

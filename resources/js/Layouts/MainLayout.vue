@@ -23,6 +23,10 @@
                 :class="$page.url.startsWith('/predictions') ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'">
                 AI Dự Đoán
               </Link>
+              <Link href="/world-cup-2026" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors"
+                :class="$page.url.startsWith('/world-cup-2026') ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'">
+                FIFA World Cup 2026
+              </Link>
             </div>
           </div>
 
@@ -90,8 +94,9 @@
                       <span class="text-[9px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-3 py-2 block border-t border-gray-50 dark:border-gray-700 mt-2 pt-4">Cầu thủ</span>
                       <Link v-for="player in searchResults.players" :key="player.id" :href="`/players/${player.id}`" @click="showResults = false"
                             class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group">
-                        <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-emerald-500/50 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center border border-gray-100 dark:border-gray-600 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors overflow-hidden">
+                            <img v-if="player.photo" :src="player.photo" class="w-full h-full object-cover" />
+                            <svg v-else class="h-4 w-4 text-emerald-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
@@ -206,7 +211,7 @@
     <footer class="border-t mt-12 py-8 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 text-center">
         <p class="text-sm text-gray-400 dark:text-gray-500">
-          &copy; 2026 AI Soccer Predictions. All rights reserved. (FBref Data)
+          &copy; 2026 Dự đoán Bóng đá AI. Bảo lưu mọi quyền. (Dữ liệu từ FBref)
         </p>
       </div>
     </footer>

@@ -12,7 +12,7 @@
             <span class="font-bold text-xs sm:text-sm text-right truncate text-gray-700 dark:text-gray-100">{{ game.home_team?.name }}</span>
             <div class="w-8 h-8 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
               <img v-if="game.home_team?.logo_url" :src="game.home_team.logo_url" class="w-full h-full object-contain" />
-              <span v-else class="text-[10px] font-bold text-gray-400">{{ game.home_team?.short_name?.substring(0,2) || 'H' }}</span>
+              <span v-else class="text-[10px] font-bold text-gray-400">{{ game.home_team?.short_name?.substring(0,2) || 'N' }}</span>
             </div>
           </div>
 
@@ -32,7 +32,7 @@
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <div class="w-8 h-8 rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-1 shrink-0 shadow-sm overflow-hidden">
               <img v-if="game.away_team?.logo_url" :src="game.away_team.logo_url" class="w-full h-full object-contain" />
-              <span v-else class="text-[10px] font-bold text-gray-400">{{ game.away_team?.short_name?.substring(0,2) || 'A' }}</span>
+              <span v-else class="text-[10px] font-bold text-gray-400">{{ game.away_team?.short_name?.substring(0,2) || 'K' }}</span>
             </div>
             <span class="font-bold text-xs sm:text-sm truncate text-gray-700 dark:text-gray-100">{{ game.away_team?.name }}</span>
           </div>

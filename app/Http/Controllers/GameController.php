@@ -28,7 +28,7 @@ class GameController extends Controller
 
             if ($status === 'finished') {
                 // Đã xong: Chỉ call nếu thiếu 1 trong các dữ liệu cốt lõi
-                if (empty($match->lineups) || empty($match->events) || empty($match->statistics) || empty($match->injuries)) {
+                if (empty($match->lineups) || empty($match->events) || empty($match->statistics) || empty($match->injuries) || empty($match->predictions)) {
                     $needsUpdate = true;
                 }
             } elseif ($status === 'live') {
@@ -53,6 +53,7 @@ class GameController extends Controller
 
             if ($needsUpdate) {
                 $apiService->getFixtureDetails($id);
+                $apiService->getPredictions($id);
                 $match->refresh();
             }
 
@@ -308,6 +309,7 @@ class GameController extends Controller
 
         // 2. Ép buộc call API lấy chi tiết
         $apiService->getFixtureDetails($id);
+        $apiService->getPredictions($id);
 
         return back()->with('success', 'Dữ liệu đã được cập nhật!');
     }

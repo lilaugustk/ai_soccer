@@ -63,11 +63,11 @@
                   <div class="relative season-dropdown pb-4">
                         <button @click="isSeasonOpen = !isSeasonOpen" 
                                 class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Mùa giải: {{ season }}/{{ (parseInt(season) + 1).toString().slice(-2) }}
+                            Mùa giải: {{ formatSeason(season, league.country_name) }}
                             <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                         </button>
                         <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50">
-                            <button v-for="s in [2025, 2024, 2023, 2022]" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700" :class="s == season ? 'text-emerald-500' : 'text-gray-500'">{{ s }} / {{ s + 1 }}</button>
+                            <button v-for="s in [2025, 2024, 2023, 2022]" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700" :class="s == season ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, league.country_name) }}</button>
                         </div>
                   </div>
               </div>
@@ -90,16 +90,16 @@
                              @mouseup="onMouseUp"
                              @mousemove="onMouseMove"
                              class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 w-full min-w-0 whitespace-nowrap scroll-smooth cursor-grab active:cursor-grabbing select-none">
+                            <button @click="selectedRound = 'all'" 
+                                    :class="selectedRound === 'all' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700'" 
+                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest whitespace-nowrap shrink-0">
+                                Tất cả
+                            </button>
                             <button v-for="round in availableRounds" :key="round"
                                     @click="selectedRound = round"
                                     :class="selectedRound === round ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm'"
                                     class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0">
                                 {{ round }}
-                            </button>
-                            <button @click="selectedRound = 'all'" 
-                                    :class="selectedRound === 'all' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700'" 
-                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest whitespace-nowrap shrink-0">
-                                Tất cả
                             </button>
                         </div>
 
@@ -297,6 +297,26 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('click', handleOutsideClick);
 });
+const formatSeason = (s, country = null) => {
+    if (!s) return '—';
+    const year = parseInt(s);
+    if (isNaN(year)) return s;
+
+    // Danh sách các quốc gia/giải đấu thường đá trong 1 năm dương lịch (Xuân-Thu)
+    const singleYearCountries = [
+        'Brazil', 'USA', 'Japan', 'South Korea', 'Norway', 'Sweden', 
+        'Finland', 'China', 'Iceland', 'Estonia', 'Latvia', 'Lithuania',
+        'Kazakhstan', 'Belarus', 'Republic of Ireland', 'Singapore'
+    ];
+
+    // Các giải đấu đặc biệt hoặc World Cup, Euro, Friendly cũng thường hiện 1 năm
+    if (country && (singleYearCountries.includes(country) || ['World', 'Europe'].includes(country))) {
+        return s.toString();
+    }
+
+    // Mặc định cho các giải Thu-Xuân (Châu Âu, Saudi, Việt Nam mới...)
+    return `${year}-${year + 1}`;
+};
 </script>
 
 <style scoped>

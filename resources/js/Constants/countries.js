@@ -235,6 +235,5 @@ export const getCountryNames = (natString) => {
 
 export const getFullDisplay = (natString) => {
     const names = getCountryNames(natString);
-    if (names.vi === names.en) return names.vi;
-    return `${names.vi} (${names.en})`;
+    return names.vi;
 };

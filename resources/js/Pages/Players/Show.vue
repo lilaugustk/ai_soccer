@@ -108,6 +108,9 @@ const translateInjury = (type) => {
 
 const formatSeason = (s, country = null) => {
     if (!s) return '—';
+    if (String(s).includes('-') && String(s).length > 7) { // Likely a full date YYYY-MM-DD
+        return dayjs(s).format('DD.MM.YYYY');
+    }
     const year = parseInt(s);
     if (isNaN(year)) return s;
 
@@ -584,7 +587,7 @@ const positionCoords = computed(() => {
                                 
                                 <div class="flex items-center justify-center md:justify-start gap-5 mt-1">
                                     <div class="flex flex-col text-left">
-                                        <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Tuổi ({{ displayStat?.season || activeSeason }})</span>
+                                        <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Tuổi ({{ formatSeason(displayStat?.season || activeSeason, getCountryForSeason(activeSeason)) }})</span>
                                         <span class="text-sm font-bold text-gray-900 dark:text-white">{{ getAgeAtSeason(displayStat?.season || activeSeason) }}</span>
                                     </div>
                                     <div class="w-px h-6 bg-gray-100 dark:bg-gray-800"></div>
@@ -599,10 +602,10 @@ const positionCoords = computed(() => {
                                     </div>
                                 </div>
                             </div>
-
+ 
                             <!-- Current Season Stats -->
                             <div class="shrink-0 w-full md:w-64 bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700 hidden md:block">
-                                <h3 class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Mùa giải đang xem: {{ displayStat?.season }}</h3>
+                                <h3 class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Mùa giải đang xem: {{ formatSeason(displayStat?.season || activeSeason, getCountryForSeason(activeSeason)) }}</h3>
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="flex flex-col">
                                         <span class="text-3xl font-extrabold" :class="advancedStats?.rating >= 7.0 ? 'text-emerald-500' : 'text-gray-900 dark:text-white'">
@@ -628,7 +631,7 @@ const positionCoords = computed(() => {
                             </div>
                         </div>
                     </div>
-
+ 
                     <!-- Navigation Tabs & Season Dropdown -->
                     <div class="border-b border-gray-100 dark:border-gray-700 relative mb-6">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-8">
@@ -641,21 +644,21 @@ const positionCoords = computed(() => {
                                     {{ tab.label }}
                                 </button>
                             </div>
-
+ 
                             <!-- Season Dropdown -->
                             <div class="relative season-dropdown pb-4 hidden sm:block" v-if="availableSeasons.length > 0">
                                 <button @click="isSeasonOpen = !isSeasonOpen" 
                                         class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    Mùa giải: {{ activeSeason }}
+                                    Mùa giải: {{ formatSeason(activeSeason, getCountryForSeason(activeSeason)) }}
                                     <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
                                 <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50 max-h-64 overflow-y-auto no-scrollbar">
-                                    <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700" :class="s == activeSeason ? 'text-emerald-500' : 'text-gray-500'">{{ s }}</button>
+                                    <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700" :class="s == activeSeason ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, getCountryForSeason(s)) }}</button>
                                 </div>
                             </div>
                         </div>
                     </div>
-
+ 
                 <!-- ── TAB: SUMMARY (OVERVIEW) ───────────────────────────── -->
                 <div v-if="activeTab === 'summary'">
                     <!-- Alert: Season Data Missing -->
@@ -665,7 +668,7 @@ const positionCoords = computed(() => {
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                             </div>
                             <div class="flex-1">
-                                <h4 class="text-sm font-bold text-amber-800 dark:text-amber-300">Dữ liệu mùa giải {{ activeSeason }} chưa có sẵn</h4>
+                                <h4 class="text-sm font-bold text-amber-800 dark:text-amber-300">Dữ liệu mùa giải {{ formatSeason(activeSeason, getCountryForSeason(activeSeason)) }} chưa có sẵn</h4>
                                 <p class="text-xs text-amber-700/80 dark:text-amber-400/70 mt-1 leading-relaxed">
                                     Rất tiếc, hệ thống chưa có dữ liệu chi tiết cho mùa giải này.
                                 </p>
@@ -715,7 +718,7 @@ const positionCoords = computed(() => {
                                                     <span class="text-[9px] font-bold text-gray-400 w-10 shrink-0">{{ dayjs(stat.match?.match_at).format('DD.MM') }}</span>
                                                     <div class="flex items-center gap-2">
                                                         <span :class="['text-[11px] font-bold truncate w-24 text-right', stat.match?.home_team_id === stat.team_id ? 'text-gray-900 dark:text-white' : 'text-gray-500']">{{ stat.match?.home_team?.name }}</span>
-                                                        <div class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-black tracking-widest flex items-center justify-center text-gray-800 dark:text-gray-200">
+                                                        <div class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-bold tracking-widest flex items-center justify-center text-gray-800 dark:text-gray-200">
                                                             {{ stat.match?.home_score }} - {{ stat.match?.away_score }}
                                                         </div>
                                                         <span :class="['text-[11px] font-bold truncate w-24', stat.match?.away_team_id === stat.team_id ? 'text-gray-900 dark:text-white' : 'text-gray-500']">{{ stat.match?.away_team?.name }}</span>
@@ -723,7 +726,7 @@ const positionCoords = computed(() => {
                                                 </div>
                                             </td>
                                             <td class="px-2 py-3 text-center">
-                                                <div :class="[matchResult(stat).cls, 'w-5 h-5 rounded flex items-center justify-center text-[9px] font-black shadow-sm mx-auto']">
+                                                <div :class="[matchResult(stat).cls, 'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold shadow-sm mx-auto']">
                                                     {{ matchResult(stat).label }}
                                                 </div>
                                             </td>
@@ -752,12 +755,12 @@ const positionCoords = computed(() => {
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="text-left border-b border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Mùa giải / Giải đấu</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Câu lạc bộ</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Trận</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">G</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">A</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Rating</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mùa giải / Giải đấu</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Câu lạc bộ</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Trận</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">G</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">A</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Rating</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
@@ -765,7 +768,7 @@ const positionCoords = computed(() => {
                                         class="hover:bg-gray-50/50 dark:hover:bg-gray-700/10 transition-colors group">
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
-                                                <span class="text-xs font-black text-gray-900 dark:text-white tabular-nums">{{ formatSeason(stat.season, stat.league?.country_name) }}</span>
+                                                <span class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ formatSeason(stat.season, stat.league?.country_name) }}</span>
                                                 <div class="flex items-center gap-2">
                                                     <img v-if="stat.league?.logo" :src="stat.league.logo" class="w-4 h-4 object-contain opacity-60" />
                                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate max-w-[120px]">{{ stat.league?.name }}</span>
@@ -779,11 +782,11 @@ const positionCoords = computed(() => {
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 text-center text-xs font-bold text-gray-500 tabular-nums">{{ stat.games }}</td>
-                                        <td class="px-6 py-4 text-center text-xs font-black text-emerald-500 tabular-nums">{{ stat.goals }}</td>
-                                        <td class="px-6 py-4 text-center text-xs font-black text-emerald-500 tabular-nums">{{ stat.assists }}</td>
+                                        <td class="px-6 py-4 text-center text-xs font-bold text-emerald-500 tabular-nums">{{ stat.goals }}</td>
+                                        <td class="px-6 py-4 text-center text-xs font-bold text-emerald-500 tabular-nums">{{ stat.assists }}</td>
                                         <td class="px-6 py-4 text-center">
                                             <span v-if="stat.detailed_stats?.games?.rating" 
-                                                  :class="[getRatingColor(stat.detailed_stats.games.rating), 'px-2 py-0.5 rounded text-[10px] font-black text-white shadow-sm inline-block min-w-[32px]']">
+                                                  :class="[getRatingColor(stat.detailed_stats.games.rating), 'px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-sm inline-block min-w-[32px]']">
                                                 {{ parseFloat(stat.detailed_stats.games.rating).toFixed(1) }}
                                             </span>
                                             <span v-else class="text-gray-300">—</span>
@@ -802,17 +805,17 @@ const positionCoords = computed(() => {
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="text-left border-b border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Ngày</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Từ câu lạc bộ</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Đến câu lạc bộ</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Giá trị phí</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ngày</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Từ câu lạc bộ</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Đến câu lạc bộ</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Giá trị phí</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
                                     <tr v-for="(t, i) in player.transfers" :key="i" 
                                         class="hover:bg-gray-50/50 dark:hover:bg-gray-700/10 transition-colors group">
                                         <td class="px-6 py-4">
-                                            <span class="text-xs font-black text-gray-900 dark:text-white tabular-nums">{{ dayjs(t.date).format('DD/MM/YYYY') }}</span>
+                                            <span class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ dayjs(t.date).format('DD/MM/YYYY') }}</span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-2">
@@ -823,12 +826,12 @@ const positionCoords = computed(() => {
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-2">
                                                 <img v-if="t.teams?.in?.logo" :src="t.teams.in.logo" class="w-4 h-4 object-contain" />
-                                                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">{{ t.teams?.in?.name || '—' }}</span>
+                                                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ t.teams?.in?.name || '—' }}</span>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <div class="flex flex-col items-end">
-                                                <span class="text-xs font-black text-gray-900 dark:text-white">{{ t.fee }}</span>
+                                                <span class="text-xs font-bold text-gray-900 dark:text-white">{{ t.fee }}</span>
                                                 <span class="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{{ 
                                                     t.type?.toLowerCase().includes('loan') ? 'Cho mượn' : 
                                                     t.type?.toLowerCase().includes('free') ? 'Tự do' : 
@@ -854,17 +857,17 @@ const positionCoords = computed(() => {
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="text-left border-b border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Mùa giải</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Giải đấu</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Quốc gia</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Thứ hạng</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mùa giải</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Giải đấu</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Quốc gia</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Thứ hạng</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
                                     <tr v-for="(t, i) in [...(player.trophies || [])].sort((a,b) => String(b.season || '').localeCompare(String(a.season || '')))" :key="i" 
                                         class="hover:bg-gray-50/50 dark:hover:bg-gray-700/10 transition-colors group">
                                         <td class="px-6 py-4">
-                                            <span class="text-xs font-black text-gray-900 dark:text-white">{{ t.season || '—' }}</span>
+                                            <span class="text-xs font-bold text-gray-900 dark:text-white">{{ formatSeason(t.season) }}</span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
@@ -879,7 +882,7 @@ const positionCoords = computed(() => {
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <span :class="[
-                                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider',
+                                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider',
                                                 t.place?.toLowerCase().includes('winner')
                                                     ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400'
                                                     : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
@@ -904,17 +907,17 @@ const positionCoords = computed(() => {
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="text-left border-b border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/30">
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Mùa giải</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Loại chấn thương</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Thời gian</th>
-                                        <th class="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Tình trạng</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mùa giải</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Loại chấn thương</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Thời gian</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Tình trạng</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-50 dark:divide-gray-700/50">
                                     <tr v-for="(s, i) in [...(player.sidelined_history || [])].sort((a,b) => new Date(b.start) - new Date(a.start))" :key="i" 
                                         class="hover:bg-gray-50/50 dark:hover:bg-gray-700/10 transition-colors group">
                                         <td class="px-6 py-4">
-                                            <span class="text-xs font-black text-gray-900 dark:text-white tabular-nums">{{ formatSeason(s.start) }}</span>
+                                            <span class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ formatSeason(s.start) }}</span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-3">
@@ -927,7 +930,7 @@ const positionCoords = computed(() => {
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <span :class="[
-                                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider',
+                                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider',
                                                 s.end ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400'
                                             ]">
                                                 {{ s.end ? 'Đã bình phục' : 'Đang điều trị' }}

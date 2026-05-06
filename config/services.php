@@ -47,4 +47,7 @@ return [
     'groq' => [
         'key' => env('GROQ_API_KEY'),
     ],
+    'wc2026_api' => [
+        'key' => env('WC2026_API_KEY'),
+    ],
 ];
