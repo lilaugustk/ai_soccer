@@ -14,14 +14,23 @@ class DashboardController extends Controller
     {
         $dateStr = $request->input('date', \Carbon\Carbon::today()->toDateString());
         $leagueId = $request->input('league_id');
+        $statusFilter = strtoupper($request->input('status', 'ALL'));
 
         // 1. Tính toán dải thời gian (Start - End) theo GMT+7 để truy vấn DB (UTC)
-        // Ví dụ: Ngày 21/04 VN bắt đầu từ 20/04 17:00 UTC
         $startOfDay = \Carbon\Carbon::parse($dateStr, 'Asia/Ho_Chi_Minh')->startOfDay()->setTimezone('UTC');
         $endOfDay = \Carbon\Carbon::parse($dateStr, 'Asia/Ho_Chi_Minh')->endOfDay()->setTimezone('UTC');
 
         $matchesQuery = FootballMatch::with(['league', 'homeTeam', 'awayTeam'])
             ->whereBetween('match_at', [$startOfDay, $endOfDay]);
+
+        // Lọc theo trạng thái
+        if ($statusFilter === 'LIVE') {
+            $matchesQuery->whereIn('status', ['1H', 'HT', '2H', 'ET', 'P', 'LIVE']);
+        } elseif ($statusFilter === 'FINISHED') {
+            $matchesQuery->whereIn('status', ['FT', 'AET', 'PEN']);
+        } elseif ($statusFilter === 'SCHEDULED') {
+            $matchesQuery->where('status', 'NS');
+        }
 
         if ($leagueId) {
             $matchesQuery->where('league_id', $leagueId);
@@ -29,15 +38,29 @@ class DashboardController extends Controller
 
         $matches = $matchesQuery->get();
 
-        // 2. Tự động đồng bộ nếu:
-        // - Chưa có trận đấu nào trong DB cho ngày này
-        // - HOẶC còn trận đấu ở trạng thái 'NS' (chưa đá) mặc dù đã qua ngày
-        // Thêm cơ chế Cache để tránh spam API (chỉ đồng bộ lại sau mỗi 60 phút)
-        $hasPendingMatches = $matches->whereIn('status', ['NS', 'TBD'])->count() > 0;
-        $isPastDate = \Carbon\Carbon::parse($dateStr)->isPast();
-        $cacheKey = "sync_fixtures_{$dateStr}";
+        // 2. Logic Automation Thông Minh (Quy tắc 1, 2, 3)
+        $shouldSync = false;
+        $cacheKey = "last_sync_v2_{$dateStr}";
+        $lastSync = cache()->get($cacheKey);
 
-        if (($matches->isEmpty() || ($isPastDate && $hasPendingMatches)) && !cache()->has($cacheKey)) {
+        if ($matches->isEmpty()) {
+            $shouldSync = true; // Rule 1: Chưa có tí dữ liệu nào
+        } else {
+            $hasMissingScores = $matches->whereIn('status', ['FT', 'AET', 'PEN', '1H', '2H', 'HT'])->whereNull('home_score')->count() > 0;
+            $hasPendingMatches = $matches->whereIn('status', ['NS', 'TBD'])->count() > 0;
+            $isPastDate = \Carbon\Carbon::parse($dateStr)->isPast();
+            $isToday = \Carbon\Carbon::parse($dateStr)->isToday();
+
+            if ($hasMissingScores) {
+                $shouldSync = true; // Rule 3: Thiếu thông tin tỉ số dù trạng thái đã thay đổi
+            } elseif ($isToday && !$lastSync) {
+                $shouldSync = true; // Rule 2: Ngày hôm nay, cập nhật định kỳ (theo cooldown 2 phút)
+            } elseif ($isPastDate && $hasPendingMatches && !$lastSync) {
+                $shouldSync = true; // Rule 2: Trận cũ nhưng chưa có kết quả (cần so sánh/cập nhật, cooldown 10 phút)
+            }
+        }
+
+        if ($shouldSync) {
             // Nạp dữ liệu ngày hiện tại
             $apiService->getFixturesByDate($dateStr); 
             
@@ -45,9 +68,11 @@ class DashboardController extends Controller
             $yesterdayUTC = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
             $apiService->getFixturesByDate($yesterdayUTC);
 
-            // Đánh dấu đã đồng bộ ngày này, chờ 60 phút sau mới cho phép đồng bộ lại
-            cache()->put($cacheKey, true, now()->addMinutes(60));
+            // Thiết lập cooldown để bảo vệ API Key Free
+            $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
+            cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
 
+            // Reload dữ liệu mới nhất từ DB
             $matches = $matchesQuery->get();
         }
 
@@ -92,6 +117,7 @@ class DashboardController extends Controller
             'filters' => [
                 'date' => $dateStr,
                 'league_id' => $leagueId,
+                'status' => $statusFilter,
             ],
             'availableLeagues' => $availableLeagues,
         ]);

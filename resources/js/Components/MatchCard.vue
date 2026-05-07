@@ -38,6 +38,19 @@
           </div>
         </div>
       </div>
+
+      <!-- Notification Toggle -->
+      <div @click.stop class="ml-4 shrink-0 relative z-10">
+        <button @click="toggleFollow(game.id)"
+                class="p-2.5 rounded-xl transition-all duration-300 border"
+                :class="isFollowed(game.id) 
+                    ? 'bg-emerald-50/50 dark:bg-emerald-500/10 text-emerald-500 border-emerald-500/40 shadow-lg shadow-emerald-500/5 scale-110' 
+                    : 'bg-gray-50/30 dark:bg-gray-700/30 text-gray-400 border-gray-100 dark:border-gray-700 hover:text-emerald-500 hover:border-emerald-200'">
+            <svg class="w-4 h-4" :class="{ 'animate-swing text-emerald-500': isFollowed(game.id) }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -63,4 +76,44 @@ const getMatchStatus = (game) => {
   
   return isToday ? matchDate.format("HH:mm") : matchDate.format("DD/MM HH:mm");
 };
+
+// --- Logic Notification (Follow) ---
+import { ref, onMounted } from 'vue';
+const followedMatches = ref([]);
+
+onMounted(() => {
+    const stored = localStorage.getItem('followed_matches');
+    if (stored) {
+        followedMatches.value = JSON.parse(stored);
+    }
+});
+
+const isFollowed = (id) => followedMatches.value.includes(id);
+
+const toggleFollow = (id) => {
+    if (isFollowed(id)) {
+        followedMatches.value = followedMatches.value.filter(m => m !== id);
+    } else {
+        followedMatches.value.push(id);
+    }
+    localStorage.setItem('followed_matches', JSON.stringify(followedMatches.value));
+    
+    // Phát ra sự kiện global để Toast Notification có thể lắng nghe nếu cần
+    window.dispatchEvent(new CustomEvent('followed-matches-updated', { detail: followedMatches.value }));
+};
 </script>
+
+<style scoped>
+@keyframes swing {
+  0% { transform: rotate(0deg); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-10deg); }
+  60% { transform: rotate(5deg); }
+  80% { transform: rotate(-5deg); }
+  100% { transform: rotate(0deg); }
+}
+.animate-swing {
+  animation: swing 0.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+</style>

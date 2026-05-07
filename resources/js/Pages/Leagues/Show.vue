@@ -53,9 +53,13 @@
                   <div class="flex gap-8 overflow-x-auto no-scrollbar whitespace-nowrap">
                       <button v-for="tab in tabs" :key="tab.id"
                               @click="switchTab(tab.id)"
-                              :class="activeTab === tab.id ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'"
-                              class="pb-4 px-1 text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap outline-none">
+                              :class="activeTab === tab.id ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'"
+                              class="relative pb-4 px-1 text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap outline-none">
                           {{ tab.name }}
+                          <!-- Active Underline Indicator -->
+                          <div v-if="activeTab === tab.id" 
+                               class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full animate-in fade-in slide-in-from-left-1">
+                          </div>
                       </button>
                   </div>
 

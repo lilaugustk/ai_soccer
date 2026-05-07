@@ -17,45 +17,38 @@ class GameController extends Controller
 {
     public function show($id, FootballApiService $apiService, StatisticalModelService $statService, AiAnalysisService $aiService, MomentumService $momentumService)
     {
-        // 1. Dùng Cache (15 phút)
-        $data = \Illuminate\Support\Facades\Cache::remember("match_data_v17_{$id}", 900, function () use ($id, $apiService, $statService, $aiService, $momentumService) {
+        // 1. Tự động đồng bộ (Automation) - Không chặn hiển thị
+        $match = FootballMatch::with(['league', 'homeTeam', 'awayTeam'])->find($id);
+        if (!$match) abort(404);
+
+        $status = $this->mapStatus($match->status);
+        $syncCacheKey = "auto_sync_lock_{$id}";
+        
+        // Kiểm tra xem trận đấu có cần được "bù đắp" dữ liệu không
+        $isMissingData = empty($match->lineups) || empty($match->statistics);
+        $isLive = $status === 'live';
+        $isUpcoming = $status === 'scheduled' && $match->match_at && $match->match_at->diffInMinutes(now(), false) > -60;
+
+        // Nếu thiếu dữ liệu hoặc đang đá, tự động kích hoạt đồng bộ từ API
+        if (!cache()->has($syncCacheKey) && ($isMissingData || $isLive || $isUpcoming)) {
+            // Gọi API đồng bộ âm thầm
+            $apiService->getFixtureDetails($id);
+            $apiService->getPredictions($id);
+            
+            // Thiết lập cooldown để bảo vệ API key: Live thì 2 phút, đã xong thì 30 phút
+            $cooldown = $isLive ? 2 : 30;
+            cache()->put($syncCacheKey, true, now()->addMinutes($cooldown));
+            
+            // Làm mới dữ liệu sau khi đồng bộ
+            $match->refresh();
+        }
+
+        // 2. Trả dữ liệu về View (Sử dụng cache hiển thị ngắn hạn)
+        $displayCacheKey = "match_display_v21_{$id}";
+        $data = \Illuminate\Support\Facades\Cache::remember($displayCacheKey, 60, function () use ($match, $apiService, $statService, $aiService, $momentumService) {
+            // Lấy lại match từ closure để đảm bảo dữ liệu mới nhất
+            $id = $match->id;
             $match = FootballMatch::with(['league', 'homeTeam', 'awayTeam'])->find($id);
-
-            if (!$match) abort(404);
-
-            $status = $this->mapStatus($match->status);
-            $needsUpdate = false;
-
-            if ($status === 'finished') {
-                // Đã xong: Chỉ call nếu thiếu 1 trong các dữ liệu cốt lõi
-                if (empty($match->lineups) || empty($match->events) || empty($match->statistics) || empty($match->injuries) || empty($match->predictions)) {
-                    $needsUpdate = true;
-                }
-            } elseif ($status === 'live') {
-                // Đang đá: Luôn ưu tiên lấy dữ liệu mới nhất
-                $needsUpdate = true; 
-            } elseif ($status === 'scheduled') {
-                // Chưa đá:
-                // 1. Nếu hoàn toàn chưa có gì (mới import từ lịch thi đấu)
-                if (empty($match->lineups) && empty($match->predictions)) {
-                    $needsUpdate = true;
-                }
-                // 2. Nếu sắp bắt đầu (trong vòng 60p) mà chưa có đội hình
-                $isStartingSoon = $match->match_at && $match->match_at->diffInMinutes(now(), false) > -60;
-                if (empty($match->lineups) && $isStartingSoon) {
-                    $needsUpdate = true;
-                }
-                // 3. Luôn lấy chấn thương cho trận sắp đá nếu chưa có
-                if (empty($match->injuries)) {
-                    $needsUpdate = true;
-                }
-            }
-
-            if ($needsUpdate) {
-                $apiService->getFixtureDetails($id);
-                $apiService->getPredictions($id);
-                $match->refresh();
-            }
 
             // Map data an toàn
             $mappedGame = [
@@ -305,7 +298,7 @@ class GameController extends Controller
     public function sync($id, FootballApiService $apiService)
     {
         // 1. Xóa cache
-        \Illuminate\Support\Facades\Cache::forget("match_data_v17_{$id}");
+        \Illuminate\Support\Facades\Cache::forget("match_data_v18_{$id}");
 
         // 2. Ép buộc call API lấy chi tiết
         $apiService->getFixtureDetails($id);

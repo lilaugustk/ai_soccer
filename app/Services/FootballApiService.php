@@ -208,6 +208,9 @@ class FootballApiService
 
                     // Lấy thông tin chấn thương/vắng mặt
                     $this->getFixtureInjuries($id);
+
+                    // Lấy thông tin đội hình (Lineups) chuyên biệt
+                    $this->getFixtureLineups($id);
                 }
                 return $data;
             }
@@ -217,6 +220,31 @@ class FootballApiService
         } catch (\Exception $e) {
             Log::error('API Exception (FixtureDetails): ' . $e->getMessage());
             return null;
+        }
+    }
+
+    public function getFixtureLineups($fixtureId)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'fixtures/lineups', [
+                    'fixture' => $fixtureId
+                ]);
+
+            if ($response->successful()) {
+                $lineups = $response->json()['response'] ?? [];
+                if (!empty($lineups)) {
+                    FootballMatch::where('id', $fixtureId)->update([
+                        'lineups' => $lineups
+                    ]);
+                }
+                return $lineups;
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (Lineups): ' . $e->getMessage());
+            return [];
         }
     }
 

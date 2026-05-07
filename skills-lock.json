@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "skills": {
+    "algorithmic-color-palette": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/algorithmic-color-palette/SKILL.md",
+      "computedHash": "e04b1957e6450688f7e2b28b72b89080dc81e481b56277ad876cf41cebc9cf54"
+    },
+    "brand-visual-language": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/brand-visual-language/SKILL.md",
+      "computedHash": "74d875edd23695310c8fb4e74ed1d68b21efa921f12fa7804f419a6669db6f75"
+    },
+    "button-states": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/button-states/SKILL.md",
+      "computedHash": "a75175cf6602f5e6e29765736dc04c6e25127f3787bf2466c8a17658c31bf69a"
+    },
+    "color-mode-and-theme": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/color-mode-and-theme/SKILL.md",
+      "computedHash": "0e8168c2967ea1dfd42e3e81f1d28534b1d1460eb7f23db48fdfc8bab6fbf5af"
+    },
+    "component-family-consistency": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/component-family-consistency/SKILL.md",
+      "computedHash": "4005839a6c03aa58ea9b0ed05c4b1b79216e779e47ae2cda3762dd064e6d46cc"
+    },
+    "data-display-and-selection": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/data-display-and-selection/SKILL.md",
+      "computedHash": "41cbdad6a99379ffd0b4d2a38164720a4a1a5f6c45c50491aaaec4aec6a803aa"
+    },
+    "elevation-and-depth": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/elevation-and-depth/SKILL.md",
+      "computedHash": "480c5f9e4029b8a7c6d8f0f0f03fdcfa8ce382ab62c2f54d09410d652b1f83e7"
+    },
+    "form-design": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/form-design/SKILL.md",
+      "computedHash": "1599591564370af1268d7322cd3cc4cd99607d708f207306692c7e7a35783419"
+    },
+    "generate-ui-from-brand": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/generate-ui-from-brand/SKILL.md",
+      "computedHash": "2389d2a72946c38de3aa9065d061e7d25311116b4871f5f3064ca6631484b4a9"
+    },
+    "gestalt-ui-organisation": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gestalt-ui-organisation/SKILL.md",
+      "computedHash": "534a6bc5c36106b4ca794adaf21df6409ea9dbe394906a731a49b7add7c3a623"
+    },
+    "global-toolbar-controls": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/global-toolbar-controls/SKILL.md",
+      "computedHash": "9243d46d69fd0c3460d8a5edefe8859ef50b5c26a0f9781a8a871ac5eb78dbe9"
+    },
+    "information-architecture": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/information-architecture/SKILL.md",
+      "computedHash": "f69303d6f3033b61d73ae8c2b5426396067c2543a01699b37dde6db1b684b532"
+    },
+    "loading-states-and-perceived-performance": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/loading-states-and-perceived-performance/SKILL.md",
+      "computedHash": "16a5d520739960c5e0533fb1ca4af6d7589d9aaaf4f22913b1a36c7aa5557fb6"
+    },
+    "micro-interactions": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/micro-interactions/SKILL.md",
+      "computedHash": "030343a52af717d581e8b24ac941e118cb5a4e9d45159748d61edb31a7adcee2"
+    },
+    "modular-scale-typography": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/modular-scale-typography/SKILL.md",
+      "computedHash": "df245a5839636a641ff7e2f14ac422ca5ffaf1d4a005bac6a4a5473393f850be"
+    },
+    "motion-and-storytelling": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/motion-and-storytelling/SKILL.md",
+      "computedHash": "98b63e910b36e7be266345e93b760ffb353bac39c34a20021a2ec00ee3f17b1d"
+    },
+    "nielsen-usability-heuristics": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nielsen-usability-heuristics/SKILL.md",
+      "computedHash": "ecb1580cb9c72202b843b5b33ee495f677717208ba66ca9affd6e034f8552ecc"
+    },
+    "notifications-and-recovery": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/notifications-and-recovery/SKILL.md",
+      "computedHash": "828c91d613598e41b8b21a5361069cebfd45a2744819a65a9b2d916cc13c0733"
+    },
+    "performance-and-web-vitals": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/performance-and-web-vitals/SKILL.md",
+      "computedHash": "2cf5e775b4b225c2cbbcb8dd2ac4e3767d35eea3e22bce102ccfeb4e27c51b8d"
+    },
+    "real-world-metaphors": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/real-world-metaphors/SKILL.md",
+      "computedHash": "2a41eaee9fa51a64ec5356e0c0d258884f6d3f115a10f321d8b47d5e86bde7ee"
+    },
+    "responsive-paradigms": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/responsive-paradigms/SKILL.md",
+      "computedHash": "69e193e3af7e7ca79cc6cb1e5b717ea6c6bd4e0017ac6c527ff5af0620254cf7"
+    },
+    "scroll-areas": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scroll-areas/SKILL.md",
+      "computedHash": "8522584653c8aaa7a78b84c05f10218634636d1036b6aeda3ad383eb8f9d3422"
+    },
+    "semantic-html-and-seo": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/semantic-html-and-seo/SKILL.md",
+      "computedHash": "e3b53eb76a4188d382dc5d44d6514ca10539784dccd018d4234e7de789c63ad5"
+    },
+    "status-colors-and-errors": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/status-colors-and-errors/SKILL.md",
+      "computedHash": "d81686100c6aabbac1b664783602e01c526126c94ea93307f8dbbee8fad10473"
+    },
+    "sticky-and-fixed-elements": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/sticky-and-fixed-elements/SKILL.md",
+      "computedHash": "e603d0699ab359d51aa670c28e3d120e18bfd74360d00208b54413281f91b191"
+    },
+    "ui-context-and-scope": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-context-and-scope/SKILL.md",
+      "computedHash": "302d78d981e2bb5c86031cc7c7c05b1c15b4ded8bd62f30d8828c3e7655152a1"
+    },
+    "ui-density": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ui-density/SKILL.md",
+      "computedHash": "2ad88de460c957c21e1f9a259ec2a9ca0ff7e917bc1fa7d841c952b4fb88f44d"
+    },
+    "user-flows-and-guided-paths": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/user-flows-and-guided-paths/SKILL.md",
+      "computedHash": "73854f0b09b37a738a182c9751f536a16e5d75305714db3eda0e88788db225ad"
+    },
+    "visual-emphasis-and-hierarchy": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/visual-emphasis-and-hierarchy/SKILL.md",
+      "computedHash": "b99fb4226ec2bcf7fda01d1efe434b5a85663ad104ad8346a6e4cfa2c0d17d49"
+    },
+    "wcag-accessibility": {
+      "source": "dembrandt/dembrandt-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wcag-accessibility/SKILL.md",
+      "computedHash": "753c1343df44c05cc2cc8ab5e32a341d312dee1dbce535d419be941a99cd7766"
+    }
+  }
+}

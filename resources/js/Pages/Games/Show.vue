@@ -235,20 +235,24 @@
                 </div>
             </div>
 
-            <!-- Tabs Navigation -->
-            <div class="flex flex-wrap items-center justify-center gap-3 mb-4">
+            <!-- Tabs Navigation (Synced Underline Style) -->
+            <div class="flex items-center justify-center gap-8 border-b border-gray-100 dark:border-gray-800 mb-6 overflow-x-auto no-scrollbar">
                 <button
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click="setActiveTab(tab.id)"
-                    class="px-6 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-[0.2em] transition-all relative overflow-hidden group shadow-md"
+                    class="relative py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 whitespace-nowrap"
                     :class="
                         activeTab === tab.id
-                            ? 'bg-emerald-500 text-white shadow-emerald-500/25 scale-105'
-                            : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                            ? 'text-emerald-500'
+                            : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     "
                 >
                     {{ tab.label }}
+                    <!-- Active Underline Indicator -->
+                    <div v-if="activeTab === tab.id" 
+                         class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full animate-in fade-in slide-in-from-left-1">
+                    </div>
                 </button>
             </div>
 
@@ -464,15 +468,8 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                     </div>
-                                    <h4 class="text-base font-bold text-gray-900 dark:text-white mb-2">Chưa có dữ liệu đội hình</h4>
-                                    <p class="text-[11px] text-gray-400 mb-6 font-medium leading-relaxed">Dữ liệu chi tiết trận đấu đang được cập nhật hoặc không khả dụng cho trận đấu này.</p>
-                                    <button 
-                                        @click="refreshMatchData"
-                                        :disabled="isRefreshing"
-                                        class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/25"
-                                    >
-                                        {{ isRefreshing ? 'Đang cập nhật...' : 'Cập nhật ngay' }}
-                                    </button>
+                                    <h4 class="text-base font-bold text-gray-900 dark:text-white mb-2">Đội hình chưa khả dụng</h4>
+                                    <p class="text-[11px] text-gray-400 font-medium leading-relaxed">Dữ liệu đội hình cho trận đấu này đang được hệ thống cập nhật tự động hoặc không được ban tổ chức cung cấp.</p>
                                 </div>
                             </div>
                         </div>

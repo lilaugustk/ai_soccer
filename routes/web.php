@@ -20,6 +20,11 @@ Route::get('/matches/{id}', [GameController::class, 'show'])->name('games.show')
 Route::post('/matches/{id}/sync', [GameController::class, 'sync'])->name('games.sync');
 Route::get('/predictions', [GameController::class, 'predictions'])->name('predictions.index');
 
+use App\Http\Controllers\WorldCupController;
+Route::get('/world-cup-2026', [WorldCupController::class, 'index'])->name('world-cup.index');
+Route::get('/api/wc2026/live', [WorldCupController::class, 'getLiveMatch'])->name('api.wc2026.live');
+Route::get('/api/wc2026/matches', [WorldCupController::class, 'getMatches'])->name('api.wc2026.matches');
+
 Route::get('/leagues', function () {
     return redirect()->route('dashboard');
 });

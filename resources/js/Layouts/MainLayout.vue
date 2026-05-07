@@ -211,7 +211,7 @@
     <footer class="border-t mt-12 py-8 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 text-center">
         <p class="text-sm text-gray-400 dark:text-gray-500">
-          &copy; 2026 Dự đoán Bóng đá AI. Bảo lưu mọi quyền. (Dữ liệu từ FBref)
+          &copy; 2026 Dự đoán Bóng đá AI.
         </p>
       </div>
     </footer>
@@ -232,6 +232,8 @@
         </svg>
       </button>
     </transition>
+    <!-- Global Notification System -->
+    <NotificationManager />
   </div>
 </template>
 
@@ -242,6 +244,7 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
+import NotificationManager from '@/Components/NotificationManager.vue';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
