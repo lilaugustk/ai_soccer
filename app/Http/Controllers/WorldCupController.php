@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Services\WorldCupService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class WorldCupController extends Controller
 {
@@ -17,12 +19,44 @@ class WorldCupController extends Controller
 
     public function index()
     {
-        // Lấy toàn bộ dữ liệu cần thiết cho trang tổng quan
+        // 1. Fetch Teams and group them by group_name
+        $teams = DB::table('wc2026_teams')->get();
+        $groups = [];
+        foreach ($teams as $team) {
+            $groups[$team->group_name][] = [
+                'name' => $team->name,
+                'flag' => $team->flag,
+                'code' => $team->code
+            ];
+        }
+
+        // 2. Fetch Stadiums
+        $stadiums = DB::table('wc2026_stadiums')->get()->keyBy('id');
+
+        // 3. Fetch Matches and format for frontend
+        $rawMatches = DB::table('wc2026_matches')->get();
+        $matches = $rawMatches->map(function ($m) use ($stadiums) {
+            $stadium = $stadiums->get($m->stadium_id);
+            return [
+                'id' => $m->id,
+                'home' => $m->home_team_name,
+                'homeFlag' => DB::table('wc2026_teams')->where('id', $m->home_team_id)->value('flag'),
+                'away' => $m->away_team_name,
+                'awayFlag' => DB::table('wc2026_teams')->where('id', $m->away_team_id)->value('flag'),
+                'date' => $m->kickoff_at ? Carbon::parse($m->kickoff_at)->format('d/m') : 'TBD',
+                'time' => $m->kickoff_at ? Carbon::parse($m->kickoff_at)->format('H:i') : '00:00',
+                'stadium' => $stadium ? $stadium->name : 'TBD',
+                'group' => $m->group_name,
+                'round' => $m->round,
+                'status' => $m->status
+            ];
+        });
+
         $data = [
-            'teams' => $this->wcService->getTeams(),
-            'groups' => $this->wcService->getGroups(),
-            'matches' => $this->wcService->getMatches(),
-            'stadiums' => $this->wcService->getStadiums(),
+            'teams' => $teams,
+            'groups' => $groups,
+            'matches' => $matches,
+            'stadiums' => $stadiums->values(),
             'liveTest' => $this->wcService->getLiveSandbox(),
         ];
 
@@ -38,11 +72,11 @@ class WorldCupController extends Controller
     }
 
     /**
-     * API lấy danh sách trận đấu theo bộ lọc (Ajax/Inertia Partial)
+     * API lấy danh sách trận đấu từ Database
      */
     public function getMatches(Request $request)
     {
-        $params = $request->only(['group', 'round', 'status', 'team']);
-        return response()->json($this->wcService->getMatches($params));
+        $matches = DB::table('wc2026_matches')->get();
+        return response()->json($matches);
     }
 }

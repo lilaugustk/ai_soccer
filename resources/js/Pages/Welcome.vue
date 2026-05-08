@@ -24,33 +24,16 @@
                 />
             </div>
 
-            <!-- Row 2: League Filter Slider -->
-            <div v-if="availableLeagues.length > 0" 
-                 ref="leagueSliderRef"
-                 @mousedown="leagueDrag.onMouseDown"
-                 @mouseleave="leagueDrag.onMouseLeave"
-                 @mouseup="leagueDrag.onMouseUp"
-                 @mousemove="leagueDrag.onMouseMove"
-                 class="flex flex-nowrap overflow-x-auto custom-scrollbar w-full pb-3 relative cursor-grab active:cursor-grabbing select-none z-10">
-                <!-- Sticky "All" Button -->
-                <div class="sticky left-0 z-10 pr-4 bg-gradient-to-r from-white dark:from-gray-900 via-white/95 dark:via-gray-900/95 to-transparent shrink-0">
-                    <button @click="changeLeague(null)"
-                            class="px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all border whitespace-nowrap"
-                            :class="!filters.league_id ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-950 border-gray-950 dark:border-white shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 text-gray-400 border-gray-100 dark:border-gray-700'">
-                        Tất cả
-                    </button>
-                </div>
-                
-                <!-- Scrolling Leagues -->
-                <div class="flex gap-1.5 flex-nowrap">
-                    <button v-for="league in availableLeagues" :key="league.id" @click="changeLeague(league.id)"
-                            class="px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                            :class="filters.league_id == league.id ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg' : 'bg-white/50 dark:bg-gray-800/50 text-gray-400 border-gray-100 dark:border-gray-700'">
-                        <img v-if="league.logo_url" :src="league.logo_url" class="w-3 h-3 object-contain" />
-                        {{ league.name }}
-                    </button>
-                </div>
-            </div>
+            <!-- Row 2: League Filter Slider (Reusable Component) -->
+            <TabSlider 
+                v-if="availableLeagues.length > 0"
+                v-model="filters.league_id"
+                :items="availableLeagues"
+                show-all
+                all-label="TẤT CẢ"
+                @change="changeLeague"
+                class="z-10"
+            />
 
             <!-- Match Navigation & List Container -->
             <div class="flex items-start transition-all duration-500" :class="isLeagueIndexVisible ? 'gap-8' : 'gap-0'">
@@ -145,6 +128,7 @@ import MainLayout from '../Layouts/MainLayout.vue';
 import MatchCard from '@/Components/MatchCard.vue';
 import LeagueSidebar from '@/Components/LeagueSidebar.vue';
 import GamesFilter from '@/Components/GamesFilter.vue';
+import TabSlider from '@/Components/TabSlider.vue';
 import dayjs from "dayjs";
 
 const props = defineProps({
@@ -172,44 +156,6 @@ const isLeagueIndexVisible = ref(true);
 
 // Lấy thông tin user để lưu ghim riêng biệt cho từng tài khoản
 const user = computed(() => usePage().props.auth.user);
-
-const leagueSliderRef = ref(null);
-
-// --- Drag-to-scroll logic factory ---
-const setupDragScroll = (containerRef) => {
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-
-    return {
-        onMouseDown: (e) => {
-            if (!containerRef.value) return;
-            isDown = true;
-            containerRef.value.classList.add('cursor-grabbing');
-            startX = e.pageX - containerRef.value.offsetLeft;
-            scrollLeft = containerRef.value.scrollLeft;
-        },
-        onMouseLeave: () => {
-            if (!containerRef.value) return;
-            isDown = false;
-            containerRef.value.classList.remove('cursor-grabbing');
-        },
-        onMouseUp: () => {
-            if (!containerRef.value) return;
-            isDown = false;
-            containerRef.value.classList.remove('cursor-grabbing');
-        },
-        onMouseMove: (e) => {
-            if (!isDown || !containerRef.value) return;
-            e.preventDefault();
-            const x = e.pageX - containerRef.value.offsetLeft;
-            const walk = (x - startX) * 2;
-            containerRef.value.scrollLeft = scrollLeft - walk;
-        }
-    };
-};
-
-const leagueDrag = setupDragScroll(leagueSliderRef);
 
 const translateCountry = (country) => {
     const map = {
