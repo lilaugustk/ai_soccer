@@ -29,7 +29,7 @@ class PlayerMatchStat extends Model
 
     public function player()
     {
-        return $this->belongsTo(Player::class, 'player_id');
+        return $this->belongsTo(FootballPlayer::class, 'player_id');
     }
 
     public function team()

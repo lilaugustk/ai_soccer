@@ -30,7 +30,7 @@ class SyncWorldCupData extends Command
             'QAT' => 'qa', 'ROU' => 'ro', 'RUS' => 'ru', 'RWA' => 'rw', 'KNA' => 'kn', 'LCA' => 'lc', 'VCG' => 'vc', 'WSM' => 'ws', 'SMR' => 'sm', 'STP' => 'st', 'SAU' => 'sa', 'KSA' => 'sa', 'SEN' => 'sn', 'SRB' => 'rs', 'SYC' => 'sc', 'SLE' => 'sl', 'SGP' => 'sg', 'SVK' => 'sk', 'SVN' => 'si', 'SLB' => 'sb', 'SOM' => 'so', 'ZAF' => 'za', 'RSA' => 'za', 'ESP' => 'es', 'LKA' => 'lk', 'SDN' => 'sd', 'SUR' => 'sr', 'SWZ' => 'sz', 'SWE' => 'se', 'CHE' => 'ch', 'SUI' => 'ch', 'SYR' => 'sy',
             'TWN' => 'tw', 'TJK' => 'tj', 'TZA' => 'tz', 'THA' => 'th', 'TLS' => 'tl', 'TGO' => 'tg', 'TON' => 'to', 'TTO' => 'tt', 'TUN' => 'tn', 'TUR' => 'tr', 'TKM' => 'tm', 'TUV' => 'tv',
             'UGA' => 'ug', 'UKR' => 'ua', 'ARE' => 'ae', 'GBR' => 'gb', 'USA' => 'us', 'URY' => 'uy', 'URU' => 'uy', 'UZB' => 'uz', 'VUT' => 'vu', 'VEN' => 've', 'VNM' => 'vn', 'YEM' => 'ye', 'ZMB' => 'zm', 'ZWE' => 'zw',
-            'ENG' => 'gb-eng', 'WAL' => 'gb-wls', 'SCO' => 'gb-sct', 'NIR' => 'gb-nir', 'CUR' => 'cw', 'CUW' => 'cw',
+            'ENG' => 'gb-eng', 'WAL' => 'gb-wls', 'SCO' => 'gb-sct', 'NIR' => 'gb-nir', 'CUR' => 'cw', 'CUW' => 'cw', 'ALG' => 'dz', 'DZA' => 'dz',
         ];
 
         $code = strtoupper($code);
@@ -104,17 +104,22 @@ class SyncWorldCupData extends Command
             );
         }
 
-        // 2. Sync Stadiums (to get full details including capacity)
-        $this->info('Syncing stadiums details (capacity, city, etc.)...');
-        $stadiums = $service->getStadiums();
-        foreach ($stadiums as $stadium) {
-            DB::table('wc2026_stadiums')->updateOrInsert(
-                ['id' => $stadium['id']],
+        // 3. Sync Standings
+        $this->info('Syncing standings...');
+        $standings = $service->getStandings();
+        foreach ($standings as $standing) {
+            DB::table('wc2026_standings')->updateOrInsert(
+                ['group_letter' => $standing['group'], 'team_name' => $standing['team']],
                 [
-                    'name' => $stadium['name'],
-                    'city' => $stadium['city'] ?? null,
-                    'country' => $stadium['country'] ?? null,
-                    'capacity' => $stadium['capacity'] ?? null,
+                    'team_flag' => $this->getFlagUrl($standing['team_code'] ?? '', $standing['flag'] ?? null),
+                    'played' => $standing['played'] ?? 0,
+                    'won' => $standing['won'] ?? 0,
+                    'drawn' => $standing['drawn'] ?? 0,
+                    'lost' => $standing['lost'] ?? 0,
+                    'gf' => $standing['gf'] ?? 0,
+                    'ga' => $standing['ga'] ?? 0,
+                    'gd' => $standing['gd'] ?? 0,
+                    'pts' => $standing['pts'] ?? 0,
                     'updated_at' => now(),
                 ]
             );

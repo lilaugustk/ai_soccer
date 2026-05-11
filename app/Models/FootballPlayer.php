@@ -4,7 +4,30 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Player extends Model
+/**
+ * @property int $id
+ * @property string $name
+ * @property string|null $firstname
+ * @property string|null $lastname
+ * @property string|null $nationality
+ * @property string|null $position
+ * @property int|null $birth_year
+ * @property string|null $birth_date
+ * @property string|null $birth_place
+ * @property string|null $birth_country
+ * @property string|null $height
+ * @property string|null $weight
+ * @property bool $injured
+ * @property int|null $number
+ * @property int|null $current_team_id
+ * @property string|null $photo
+ * @property array|null $transfers
+ * @property array|null $trophies
+ * @property array|null $sidelined_history
+ * @property array|null $available_seasons
+ * @property-read FootballTeam|null $team
+ */
+class FootballPlayer extends Model
 {
     protected $table = 'football_players';
     public $incrementing = false;
@@ -48,16 +71,16 @@ class Player extends Model
 
     public function matchStats()
     {
-        return $this->hasMany(PlayerMatchStat::class);
+        return $this->hasMany(PlayerMatchStat::class, 'player_id');
     }
     
     public function seasonStats()
     {
-        return $this->hasMany(PlayerSeasonStat::class);
+        return $this->hasMany(PlayerSeasonStat::class, 'player_id');
     }
     
     public function latestSeasonStat()
     {
-        return $this->hasOne(PlayerSeasonStat::class)->latestOfMany();
+        return $this->hasOne(PlayerSeasonStat::class, 'player_id')->latestOfMany();
     }
 }

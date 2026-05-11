@@ -32,7 +32,7 @@ class SocialAuthController extends Controller
                 ->stateless()
                 ->user();
             
-            $user = User::where('google_id', $googleUser->id)
+            $user = User::query()->where('google_id', $googleUser->id)
                         ->orWhere('email', $googleUser->email)
                         ->first();
 
@@ -46,7 +46,7 @@ class SocialAuthController extends Controller
                 }
             } else {
                 // Create new user
-                $user = User::create([
+                $user = User::query()->create([
                     'name' => $googleUser->name,
                     'email' => $googleUser->email,
                     'google_id' => $googleUser->id,

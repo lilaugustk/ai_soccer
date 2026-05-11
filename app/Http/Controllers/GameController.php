@@ -3,19 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\FootballMatch;
-use App\Models\FootballLeague;
-use App\Models\FootballTeam;
+use App\Models\FootballStanding;
 use App\Services\StatisticalModelService;
-use App\Services\AiAnalysisService;
-use App\Services\MomentumService;
 use App\Services\FootballApiService;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Inertia\Inertia;
+
 
 class GameController extends Controller
 {
-    public function show($id, FootballApiService $apiService, StatisticalModelService $statService, AiAnalysisService $aiService, MomentumService $momentumService)
+    public function show($id, FootballApiService $apiService, StatisticalModelService $statService)
     {
         // 1. Tự động đồng bộ (Automation) - Không chặn hiển thị
         $match = FootballMatch::with(['league', 'homeTeam', 'awayTeam'])->find($id);
@@ -41,11 +40,14 @@ class GameController extends Controller
             
             // Làm mới dữ liệu sau khi đồng bộ
             $match->refresh();
+            
+            // Xóa cache hiển thị để đảm bảo dữ liệu mới được nạp vào ở bước sau
+            Cache::forget("match_display_v21_{$id}");
         }
 
         // 2. Trả dữ liệu về View (Sử dụng cache hiển thị ngắn hạn)
         $displayCacheKey = "match_display_v21_{$id}";
-        $data = \Illuminate\Support\Facades\Cache::remember($displayCacheKey, 60, function () use ($match, $apiService, $statService, $aiService, $momentumService) {
+        $data = Cache::remember($displayCacheKey, 60, function () use ($match, $apiService, $statService) {
             // Lấy lại match từ closure để đảm bảo dữ liệu mới nhất
             $id = $match->id;
             $match = FootballMatch::with(['league', 'homeTeam', 'awayTeam'])->find($id);
@@ -105,7 +107,7 @@ class GameController extends Controller
             // 2. Head to Head (Sync from API then get from DB for consistency)
             $apiService->getH2H($homeId, $awayId);
             
-            $h2h = \App\Models\FootballMatch::with(['homeTeam', 'awayTeam'])
+            $h2h = FootballMatch::with(['homeTeam', 'awayTeam'])
                 ->where(function($q) use ($homeId, $awayId) {
                     $q->where('home_team_id', $homeId)->where('away_team_id', $awayId);
                 })
@@ -143,13 +145,13 @@ class GameController extends Controller
                     ];
                 });
             
-            \Illuminate\Support\Facades\Log::info("H2H Matches for {$homeId} vs {$awayId}: " . $h2h->count());
+            Log::info("H2H Matches for {$homeId} vs {$awayId}: " . $h2h->count());
 
             // 3. Standings (Dùng season của trận đấu)
             $season = $match->season;
             $leagueId = (int)$mappedGame['league']['id'];
 
-            $standingsQuery = \App\Models\FootballStanding::with('team')
+            $standingsQuery = FootballStanding::with('team')
                 ->where('league_id', $leagueId)
                 ->where('season', $season)
                 ->orderBy('rank', 'asc');
@@ -164,7 +166,7 @@ class GameController extends Controller
                 // Fallback cho Free Plan: Nếu 2025 không có quyền truy cập, thử lấy 2024
                 if ($standings->isEmpty() && $season == 2025) {
                     $apiService->getStandings($leagueId, 2024);
-                    $standings = \App\Models\FootballStanding::with('team')
+                    $standings = FootballStanding::with('team')
                         ->where('league_id', $leagueId)
                         ->where('season', 2024)
                         ->orderBy('rank', 'asc')
@@ -174,7 +176,7 @@ class GameController extends Controller
 
             // 3.1 Lấy 5 trận gần nhất của giải đấu này cho mỗi đội để hiển thị chi tiết trong tooltip
             $teamIds = $standings->pluck('team_id');
-            $allMatches = \App\Models\FootballMatch::where('league_id', $leagueId)
+            $allMatches = FootballMatch::query()->where('league_id', $leagueId)
                 ->where('season', $season)
                 ->where(function($q) use ($teamIds) {
                     $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
@@ -198,7 +200,7 @@ class GameController extends Controller
                             }
 
                             $matchesByTeam[$tId][] = [
-                                'date' => \Illuminate\Support\Carbon::parse($m->match_at)->format('d/m'),
+                                'date' => Carbon::parse($m->match_at)->format('d/m'),
                                 'home' => $m->homeTeam?->name,
                                 'away' => $m->awayTeam?->name,
                                 'score' => "{$m->home_score} - {$m->away_score}",
@@ -240,26 +242,7 @@ class GameController extends Controller
                 if (!empty($odds)) {
                     $valueBets = $statService->calculateValueBets($poissonData, $odds);
                 }
-            }
-
-            // 5. Momentum Engine
-            $momentum = null;
-            if (in_array($match->status, ['1H', '2H', 'HT', 'FT'])) {
-                $elapsed = $match->statistics[0]['time']['elapsed'] ?? 90;
-                $momentum = $momentumService->getMatchMomentum($match->events ?? [], $match->home_team_id, $match->away_team_id, $elapsed);
-            }
-
-            // 6. Groq AI Tactical Insights
-            $aiInsights = null;
-            if ($match->status === 'NS') {
-                $aiInsights = $aiService->getTacticalInsights([
-                    'home_team' => $mappedGame['home_team'],
-                    'away_team' => $mappedGame['away_team'],
-                    'league' => $mappedGame['league'],
-                    'statistics' => $mappedGame['statistics'],
-                    'h2h' => $h2h
-                ]);
-            }
+            };
 
             return [
                 'game' => $mappedGame,
@@ -267,18 +250,10 @@ class GameController extends Controller
                 'standings' => $standings->values()->all(),
                 'poisson' => $poissonData,
                 'valueBets' => $valueBets,
-                'momentum' => $momentum,
-                'aiInsights' => $aiService->getTacticalInsights([
-                    'home_team' => $mappedGame['home_team'],
-                    'away_team' => $mappedGame['away_team'],
-                    'league' => $mappedGame['league'],
-                    'statistics' => $mappedGame['statistics'],
-                    'h2h' => $h2h
-                ]),
             ];
         });
 
-        return \Inertia\Inertia::render('Games/Show', $data);
+        return Inertia::render('Games/Show', $data);
     }
 
     private function mapStatus($status)
@@ -298,7 +273,7 @@ class GameController extends Controller
     public function sync($id, FootballApiService $apiService)
     {
         // 1. Xóa cache
-        \Illuminate\Support\Facades\Cache::forget("match_data_v18_{$id}");
+        Cache::forget("match_display_v21_{$id}");
 
         // 2. Ép buộc call API lấy chi tiết
         $apiService->getFixtureDetails($id);

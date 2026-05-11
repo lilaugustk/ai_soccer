@@ -16,4 +16,10 @@ class FootballLeague extends Model
     {
         return $this->hasMany(FootballMatch::class, 'league_id');
     }
+
+    public function standings()
+    {
+        return $this->hasMany(FootballStanding::class, 'league_id');
+    }
 }
+

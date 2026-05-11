@@ -40,7 +40,7 @@
       </div>
 
       <!-- Notification Toggle -->
-      <div @click.stop class="ml-4 shrink-0 relative z-10">
+      <div v-if="!isFinished" @click.stop class="ml-4 shrink-0 relative z-10">
         <button @click="toggleFollow(game.id)"
                 class="p-2.5 rounded-xl transition-all duration-300 border"
                 :class="isFollowed(game.id) 
@@ -56,6 +56,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -76,6 +77,11 @@ const getMatchStatus = (game) => {
   
   return isToday ? matchDate.format("HH:mm") : matchDate.format("DD/MM HH:mm");
 };
+
+const isFinished = computed(() => {
+  const finishedStatuses = ['FT', 'AET', 'PEN', 'finished'];
+  return finishedStatuses.includes(props.game.status);
+});
 
 // --- Logic Notification (Follow) ---
 import { ref, onMounted } from 'vue';

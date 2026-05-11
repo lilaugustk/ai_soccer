@@ -33,6 +33,7 @@ class User extends Authenticatable
 
     public function favoriteTeams()
     {
-        return $this->belongsToMany(Team::class, 'favorite_teams', 'user_id', 'team_id')->withTimestamps();
+        return $this->belongsToMany(FootballTeam::class, 'favorite_teams', 'user_id', 'team_id')->withTimestamps();
     }
 }
+

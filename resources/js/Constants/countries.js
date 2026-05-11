@@ -221,15 +221,24 @@ export const COUNTRY_MAP = {
 export const getCountryNames = (natString) => {
     if (!natString) return { vi: 'N/A', en: 'N/A' };
     
-    // Format is usually "xx XXX" (e.g. "vn VNM")
-    const code = natString.split(' ')[0].toLowerCase();
+    const input = natString.toLowerCase();
     
-    if (COUNTRY_MAP[code]) {
-        return COUNTRY_MAP[code];
+    // 1. Kiểm tra trực tiếp theo mã (ví dụ: 'vn', 'en', 'eng')
+    if (COUNTRY_MAP[input]) {
+        return COUNTRY_MAP[input];
     }
     
-    // If not in map, return the raw code uppercase
-    const raw = code.toUpperCase();
+    // 2. Kiểm tra theo tên tiếng Anh (ví dụ: 'England', 'Germany')
+    const foundByEn = Object.values(COUNTRY_MAP).find(
+        c => c.en.toLowerCase() === input
+    );
+    
+    if (foundByEn) {
+        return foundByEn;
+    }
+    
+    // 3. Nếu không tìm thấy, trả về giá trị gốc viết hoa
+    const raw = natString.toUpperCase();
     return { vi: raw, en: raw };
 };
 

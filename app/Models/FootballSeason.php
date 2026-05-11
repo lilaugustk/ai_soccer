@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Season extends Model
+class FootballSeason extends Model
 {
     protected $fillable = [
         'league_id', 
@@ -19,6 +19,6 @@ class Season extends Model
 
     public function games()
     {
-        return $this->hasMany(Game::class);
+        return $this->hasMany(FootballMatch::class);
     }
 }

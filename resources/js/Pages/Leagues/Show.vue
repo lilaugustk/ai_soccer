@@ -70,8 +70,8 @@
                             Mùa giải: {{ formatSeason(season, league.country_name) }}
                             <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                         </button>
-                        <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50">
-                            <button v-for="s in [2025, 2024, 2023, 2022]" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700" :class="s == season ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, league.country_name) }}</button>
+                        <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 min-w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50 max-h-60 overflow-y-auto custom-scrollbar">
+                            <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap" :class="s == season ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, league.country_name) }}</button>
                         </div>
                   </div>
               </div>
@@ -168,7 +168,8 @@ const props = defineProps({
   topYellowCards: Array,
   topRedCards: Array,
   matches: Array,
-  season: [Number, String]
+  season: [Number, String],
+  availableSeasons: Array
 });
 
 const activeTab = ref(new URLSearchParams(window.location.search).get('tab') || 'standings');
@@ -326,10 +327,10 @@ const formatSeason = (s, country = null) => {
 <style scoped>
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.custom-scrollbar::-webkit-scrollbar { height: 4px; }
+.custom-scrollbar::-webkit-scrollbar { width: 3px; height: 3px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); border-radius: 10px; }
-.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.2); }
-.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.4); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.1); border-radius: 20px; }
+.custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); }
+.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); }
 </style>

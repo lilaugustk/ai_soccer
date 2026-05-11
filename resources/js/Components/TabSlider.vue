@@ -14,7 +14,7 @@
                 <div class="absolute inset-y-0 -left-20 w-20 bg-white dark:bg-gray-900"></div>
                 
                 <button @click="select(null)"
-                        class="px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all border whitespace-nowrap min-w-[80px]"
+                        class="px-4 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all border whitespace-nowrap min-w-[80px]"
                         :class="!modelValue ? activeClass : inactiveClass">
                     {{ allLabel }}
                 </button>
@@ -24,7 +24,7 @@
                     :key="item.id"
                     :id="idPrefix + item.id"
                     @click="select(item.id)"
-                    class="px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                    class="px-4 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all border flex items-center gap-1.5 whitespace-nowrap shrink-0"
                     :class="[
                         modelValue === item.id ? activeClass + ' scale-105' : inactiveClass,
                         itemClass
@@ -47,7 +47,7 @@ const props = defineProps({
     allLabel: { type: String, default: 'TẤT CẢ' },
     activeClass: { 
         type: String, 
-        default: 'bg-gray-950 dark:bg-white text-white dark:text-gray-950 border-gray-950 dark:border-white shadow-lg' 
+        default: 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20' 
     },
     inactiveClass: { 
         type: String, 

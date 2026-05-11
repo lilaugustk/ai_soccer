@@ -51,12 +51,12 @@
                             </div>
                         </div>
                         <h2
-                            class="text-base md:text-lg font-bold text-gray-950 dark:text-white mb-1 leading-tight"
+                            class="text-base md:text-lg font-semibold text-gray-950 dark:text-white mb-1 leading-tight"
                         >
                             {{ game.home_team?.name }}
                         </h2>
                         <span
-                            class="text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-500 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full"
+                            class="text-[9px] font-semibold uppercase tracking-[0.2em] text-emerald-500 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 rounded-full"
                             >Chủ nhà</span
                         >
                     </div>
@@ -123,7 +123,7 @@
                             </div>
                         </div>
                         <h2
-                            class="text-base md:text-lg font-bold text-gray-950 dark:text-white mb-1 leading-tight"
+                            class="text-base md:text-lg font-semibold text-gray-950 dark:text-white mb-1 leading-tight"
                         >
                             {{ game.away_team?.name }}
                         </h2>
@@ -241,10 +241,10 @@
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click="setActiveTab(tab.id)"
-                    class="relative py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 whitespace-nowrap"
+                    class="relative py-4 text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 whitespace-nowrap"
                     :class="
                         activeTab === tab.id
-                            ? 'text-emerald-500'
+                            ? 'text-emerald-600 dark:text-emerald-400'
                             : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     "
                 >
@@ -380,7 +380,7 @@
                                             <!-- Rating (Top Right) -->
                                             <div
                                                 v-if="p.rating"
-                                                class="absolute -top-1.5 -right-3 w-7 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-30"
+                                                class="absolute -top-1.5 -right-3 w-7 h-5 rounded-lg text-[9px] font-bold flex items-center justify-center shadow-xl border-2 border-white/20 z-30"
                                                 :class="getRatingClass(p.rating)"
                                             >
                                                 {{ p.rating }}
@@ -400,7 +400,7 @@
                                             <span
                                                 class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
                                                 >{{ p.number }}</span>
-                                            <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-black text-emerald-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
+                                            <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-bold text-emerald-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
                                         </div>
                                     </div>
                                 </div>
@@ -431,7 +431,7 @@
                                             <!-- Rating (Top Left for Away) -->
                                             <div
                                                 v-if="p.rating"
-                                                class="absolute -top-1.5 -left-2 w-7 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-40"
+                                                class="absolute -top-1.5 -left-2 w-7 h-5 rounded-lg text-[9px] font-bold flex items-center justify-center shadow-xl border-2 border-white/20 z-40"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -453,7 +453,7 @@
                                             <span
                                                 class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
                                                 >{{ p.number }}</span>
-                                            <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-black text-blue-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
+                                            <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-bold text-blue-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1633,7 +1633,7 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
     });
 
     const processed = [];
-    const verticalGap = 21; // Dãn cách dọc rộng hơn
+    const verticalGap = 21; // Dãn cách dọc mặc định
     const horizontalStep = 8.5; // Dãn cách ngang hẹp hơn để tránh va chạm ở giữa sân
 
     Object.keys(rows).forEach((rowNum) => {
@@ -1647,6 +1647,10 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
         });
 
         const count = playersInRow.length;
+        
+        // Điều chỉnh dãn cách dọc linh hoạt dựa trên số lượng cầu thủ trong hàng
+        // Nếu hàng có 5 người thì thu hẹp khoảng cách để không bị tràn biên
+        const dynamicGap = count > 4 ? 17 : (count > 3 ? 19 : 21);
 
         playersInRow.forEach((p, index) => {
             const [row, col] = p.player.grid.split(":").map(Number);
@@ -1659,8 +1663,8 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
                 left = (row - 1) * horizontalStep + 6;
             }
 
-            // Tính Top (dọc)
-            const top = 50 + (index - (count - 1) / 2) * verticalGap;
+            // Tính Top (dọc) sử dụng dynamicGap
+            const top = 50 + (index - (count - 1) / 2) * dynamicGap;
 
             processed.push({
                 ...p.player,

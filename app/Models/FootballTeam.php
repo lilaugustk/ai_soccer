@@ -26,4 +26,20 @@ class FootballTeam extends Model
     {
         return $this->hasMany(FootballMatch::class, 'away_team_id');
     }
+
+    public function homeGames()
+    {
+        return $this->homeMatches();
+    }
+
+    public function awayGames()
+    {
+        return $this->awayMatches();
+    }
+
+    public function standings()
+    {
+        return $this->hasMany(FootballStanding::class, 'team_id');
+    }
 }
+

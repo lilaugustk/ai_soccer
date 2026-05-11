@@ -204,8 +204,12 @@ const currentStat = computed(() => {
     return props.seasonStats.find(s => s.season === activeSeason.value);
 });
 
+const hasDataForSeason = (s) => {
+    return props.seasonStats.some(st => st.season === s);
+};
+
 const isSeasonDataMissing = computed(() => {
-    return activeSeason.value && !currentStat.value;
+    return activeSeason.value && !hasDataForSeason(activeSeason.value);
 });
 
 const displayStat = computed(() => {
@@ -652,8 +656,17 @@ const positionCoords = computed(() => {
                                     Mùa giải: {{ formatSeason(activeSeason, getCountryForSeason(activeSeason)) }}
                                     <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
-                                <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50 max-h-64 overflow-y-auto no-scrollbar">
-                                    <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700" :class="s == activeSeason ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, getCountryForSeason(s)) }}</button>
+                                <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50 max-h-64 overflow-y-auto no-scrollbar">
+                                    <div class="px-4 py-2 border-b border-gray-50 dark:border-gray-700/50 mb-1">
+                                        <span class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Chọn mùa giải</span>
+                                    </div>
+                                    <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" 
+                                            class="w-full text-left px-4 py-2.5 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between group" 
+                                            :class="s == activeSeason ? 'text-emerald-500 bg-emerald-50/30 dark:bg-emerald-500/5' : 'text-gray-500'">
+                                        <span>{{ formatSeason(s, getCountryForSeason(s)) }}</span>
+                                        <div v-if="hasDataForSeason(s)" class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                                        <span v-else class="text-[8px] opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 font-medium">Sync on click</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FootballMatch;
 use App\Models\FootballStanding;
-use App\Models\Player;
+use App\Models\FootballPlayer;
 use App\Models\PlayerSeasonStat;
 use App\Models\FootballTeam;
 use Illuminate\Http\Request;
@@ -20,7 +20,7 @@ class TeamController extends Controller
         $season = $request->input('season', 2024);
         $now = Carbon::now();
 
-        $recentGames = FootballMatch::where(function($query) use ($id) {
+        $recentGames = FootballMatch::query()->where(function($query) use ($id) {
             $query->where('home_team_id', $id)
                   ->orWhere('away_team_id', $id);
         })
@@ -37,7 +37,7 @@ class TeamController extends Controller
             $apiService->getFixturesByTeam($id, $season);
             
             // Lấy lại sau khi đồng bộ
-            $recentGames = FootballMatch::where(function($query) use ($id) {
+            $recentGames = FootballMatch::query()->where(function($query) use ($id) {
                 $query->where('home_team_id', $id)
                       ->orWhere('away_team_id', $id);
             })
@@ -56,7 +56,7 @@ class TeamController extends Controller
         });
 
         // 1.1 Lấy đội hình trận gần nhất có dữ liệu (Ưu tiên lineups & players cho sơ đồ chiến thuật)
-        $lastMatchWithLineup = FootballMatch::where(function($query) use ($id) {
+        $lastMatchWithLineup = FootballMatch::query()->where(function($query) use ($id) {
             $query->where('home_team_id', $id)
                   ->orWhere('away_team_id', $id);
         })
@@ -76,7 +76,7 @@ class TeamController extends Controller
         }
 
         // 2. Lấy trận đấu sắp tới
-        $upcomingGames = FootballMatch::where(function($query) use ($id) {
+        $upcomingGames = FootballMatch::query()->where(function($query) use ($id) {
             $query->where('home_team_id', $id)
                   ->orWhere('away_team_id', $id);
         })
@@ -93,12 +93,12 @@ class TeamController extends Controller
         });
 
         // 3. Lấy danh sách cầu thủ (Squad)
-        $players = Player::where('current_team_id', $id)
+        $players = FootballPlayer::query()->where('current_team_id', $id)
             ->with('latestSeasonStat')
             ->get();
         
         // Nếu đội hình quá ít (ví dụ dưới 10 người) hoặc thiếu chỉ số mùa giải, tự động đồng bộ từ API
-        $hasStats = PlayerSeasonStat::where('team_id', $id)->where('season', $season)->exists();
+        $hasStats = PlayerSeasonStat::query()->where('team_id', $id)->where('season', $season)->exists();
 
         if ($players->count() < 10 || !$hasStats) {
             $apiService = new FootballApiService();
@@ -106,7 +106,7 @@ class TeamController extends Controller
             $apiService->getPlayersByTeam($id, $season);
             
             // Lấy lại danh sách sau khi đồng bộ
-            $players = Player::where('current_team_id', $id)
+            $players = FootballPlayer::query()->where('current_team_id', $id)
                 ->with('latestSeasonStat')
                 ->get();
         }
@@ -129,7 +129,7 @@ class TeamController extends Controller
                 $apiService->getPlayerStats($p->id, $season);
             }
             // Lấy lại sau khi đồng bộ sâu
-            $players = Player::where('current_team_id', $id)->with('latestSeasonStat')->get();
+            $players = FootballPlayer::query()->where('current_team_id', $id)->with('latestSeasonStat')->get();
             $squad = $players->map(function($p) {
                 $pos = strtoupper($p->position);
                 if (in_array($pos, ['ATTACKER', 'FORWARD', 'TIỀN ĐẠO'])) $p->position = 'Attacker';
@@ -146,22 +146,21 @@ class TeamController extends Controller
         
         // Nếu không tìm thấy League ID từ trận đấu, thử lấy từ BXH đã lưu
         if (!$leagueId) {
-            $leagueId = FootballStanding::where('team_id', $id)->orderBy('rank', 'asc')->value('league_id');
+            $leagueId = FootballStanding::query()->where('team_id', $id)->orderBy('rank', 'asc')->value('league_id');
         }
 
         if ($leagueId) {
-            $standings = FootballStanding::where('league_id', $leagueId)
+            $standings = FootballStanding::query()->where('league_id', $leagueId)
                 ->where('season', $season)
                 ->with('team')
                 ->orderBy('rank', 'asc')
                 ->get();
             
-            // Nếu BXH trống, đồng bộ từ API
             if ($standings->isEmpty()) {
                 $apiService = new FootballApiService();
                 $apiService->getStandings($leagueId, $season);
                 
-                $standings = FootballStanding::where('league_id', $leagueId)
+                $standings = FootballStanding::query()->where('league_id', $leagueId)
                     ->where('season', $season)
                     ->with('team')
                     ->orderBy('rank', 'asc')
@@ -177,7 +176,7 @@ class TeamController extends Controller
         }
 
         // 5. Thống kê cầu thủ mùa giải
-        $seasonStats = PlayerSeasonStat::where('team_id', $id)
+        $seasonStats = PlayerSeasonStat::query()->where('team_id', $id)
             ->where('season', $season)
             ->with('player')
             ->get();

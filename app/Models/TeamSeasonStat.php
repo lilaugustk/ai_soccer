@@ -38,16 +38,16 @@ class TeamSeasonStat extends Model
 
     public function team()
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsTo(FootballTeam::class);
     }
 
     public function league()
     {
-        return $this->belongsTo(League::class);
+        return $this->belongsTo(FootballLeague::class);
     }
 
     public function season()
     {
-        return $this->belongsTo(Season::class);
+        return $this->belongsTo(FootballSeason::class);
     }
 }

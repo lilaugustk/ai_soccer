@@ -61,6 +61,15 @@ class WorldCupService
         });
     }
 
+    public function getStandings()
+    {
+        return Cache::remember('wc2026_standings_final', 3600, function () {
+            $response = Http::withHeaders($this->getHeaders())->withoutVerifying()->get("{$this->baseUrl}/standings")->json();
+            if (isset($response['error'])) return [];
+            return is_array($response) ? $response : ($response['data'] ?? []);
+        });
+    }
+
     public function getLiveSandbox()
     {
         $response = Http::withHeaders($this->getHeaders())->withoutVerifying()->get("{$this->baseUrl}/test/match")->json();

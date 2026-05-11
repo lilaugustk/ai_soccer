@@ -22,9 +22,9 @@
             <div class="flex items-center gap-6 shrink-0">
                 <button v-for="tab in tabs" :key="tab.id"
                         @click="$emit('update:activeTab', tab.id)"
-                        class="relative py-2 text-[11px] font-bold tracking-widest transition-all duration-300 uppercase whitespace-nowrap"
+                        class="relative py-2 text-[11px] font-semibold tracking-widest transition-all duration-300 uppercase whitespace-nowrap"
                         :class="activeTab === tab.id 
-                            ? 'text-emerald-500' 
+                            ? 'text-emerald-600 dark:text-emerald-400' 
                             : 'text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'">
                     {{ tab.name || tab.label }}
                     <div v-if="activeTab === tab.id" 
@@ -91,7 +91,7 @@
                 <div class="flex flex-nowrap gap-1 flex-1 select-none">
                     <button v-for="btn in dateSlider" :key="btn.date" 
                             @click="$emit('update:selectedDate', btn.date)"
-                            class="px-3 py-2 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap min-w-[42px] text-center shrink-0"
+                            class="px-3 py-2 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap min-w-[42px] text-center shrink-0"
                             :class="selectedDate === btn.date ? 'bg-gray-950 dark:bg-white text-white dark:text-gray-900 shadow-sm' : 'text-gray-400 hover:text-emerald-500'">
                         {{ btn.dayNum }}/{{ dayjs(btn.date).format('MM') }}
                     </button>

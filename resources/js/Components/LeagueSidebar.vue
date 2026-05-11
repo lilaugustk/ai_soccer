@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-12 shrink-0 w-full lg:w-72">
+    <div class="space-y-6 shrink-0 w-full lg:w-72">
         <!-- Favorite Teams Section -->
         <div v-if="($page.props.globalFavoriteTeams || []).length > 0">
             <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-gray-900 dark:text-white uppercase tracking-tight">

@@ -7,8 +7,12 @@ use Illuminate\Support\Facades\Log;
 use App\Models\FootballLeague;
 use App\Models\FootballTeam;
 use App\Models\FootballMatch;
-use App\Models\Player;
+use App\Models\FootballPlayer;
 use App\Models\PlayerMatchStat;
+use App\Models\FootballScorer;
+use App\Models\PlayerSeasonStat;
+use App\Models\FootballStanding;
+use Illuminate\Support\Carbon;
 
 class FootballApiService
 {
@@ -63,7 +67,7 @@ class FootballApiService
                 'league_id' => $leagueData['id'],
                 'home_team_id' => $item['teams']['home']['id'],
                 'away_team_id' => $item['teams']['away']['id'],
-                'match_at' => \Illuminate\Support\Carbon::parse($fixtureData['date'])->setTimezone('UTC')->toDateTimeString(),
+                'match_at' => Carbon::parse($fixtureData['date'])->setTimezone('UTC')->toDateTimeString(),
                 'status' => $fixtureData['status']['short'] ?? 'NS',
                 'round' => $leagueData['round'] ?? null,
                 'referee' => $fixtureData['referee'] ?? null,
@@ -72,7 +76,7 @@ class FootballApiService
                 'attendance' => $fixtureData['attendance'] ?? null,
                 'home_score' => $goalsData['home'] ?? null,
                 'away_score' => $goalsData['away'] ?? null,
-                'season' => $leagueData['season'] ?? ((\Illuminate\Support\Carbon::parse($fixtureData['date'])->month >= 7) ? \Illuminate\Support\Carbon::parse($fixtureData['date'])->year : \Illuminate\Support\Carbon::parse($fixtureData['date'])->year - 1),
+                'season' => $leagueData['season'] ?? ((Carbon::parse($fixtureData['date'])->month >= 7) ? Carbon::parse($fixtureData['date'])->year : \Illuminate\Support\Carbon::parse($fixtureData['date'])->year - 1),
             ];
 
             // Chỉ cập nhật các trường chi tiết nếu có dữ liệu từ API
@@ -95,7 +99,7 @@ class FootballApiService
                         $stats = $playerData['statistics'][0] ?? [];
 
                         // Cập nhật hồ sơ cầu thủ
-                        Player::updateOrCreate(
+                        FootballPlayer::updateOrCreate(
                             ['id' => $p['id']],
                             [
                                 'name' => $p['name'],
@@ -128,7 +132,7 @@ class FootballApiService
                     $allPlayers = array_merge($lineup['startXI'] ?? [], $lineup['substitutes'] ?? []);
                     foreach ($allPlayers as $pData) {
                         $p = $pData['player'];
-                        Player::updateOrCreate(
+                        FootballPlayer::updateOrCreate(
                             ['id' => $p['id']],
                             [
                                 'name' => $p['name'],
@@ -179,6 +183,29 @@ class FootballApiService
             return [];
         } catch (\Exception $e) {
             Log::error('API Exception (Leagues): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getLeagueSeasons($id)
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->withoutVerifying()
+                ->get($this->getBaseUrl() . 'leagues', [
+                    'id' => $id
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json()['response'][0] ?? null;
+                if ($data && isset($data['seasons'])) {
+                    // Trả về danh sách năm (ví dụ: [2024, 2023, 2022...])
+                    return collect($data['seasons'])->pluck('year')->reverse()->values()->all();
+                }
+            }
+            return [];
+        } catch (\Exception $e) {
+            Log::error('API Exception (LeagueSeasons): ' . $e->getMessage());
             return [];
         }
     }
@@ -235,7 +262,7 @@ class FootballApiService
             if ($response->successful()) {
                 $lineups = $response->json()['response'] ?? [];
                 if (!empty($lineups)) {
-                    FootballMatch::where('id', $fixtureId)->update([
+                    FootballMatch::query()->where('id', $fixtureId)->update([
                         'lineups' => $lineups
                     ]);
                 }
@@ -261,7 +288,7 @@ class FootballApiService
                 $injuries = $response->json()['response'] ?? [];
                 
                 // Cập nhật trực tiếp vào match
-                $match = FootballMatch::find($fixtureId);
+                $match = FootballMatch::query()->find($fixtureId);
                 if ($match) {
                     $match->update(['injuries' => $injuries]);
                 }
@@ -289,7 +316,7 @@ class FootballApiService
                 $stats = $response->json()['response'] ?? [];
                 if (!empty($stats)) {
                     $column = $period === '1st' ? 'stats_1h' : ($period === '2nd' ? 'stats_2h' : 'statistics');
-                    FootballMatch::where('id', $fixtureId)->update([
+                    FootballMatch::query()->where('id', $fixtureId)->update([
                         $column => $stats
                     ]);
                 }
@@ -338,7 +365,7 @@ class FootballApiService
                 $data = $response->json()['response'][0] ?? null;
                 if ($data) {
                     // Cập nhật predictions vào bảng matches
-                    FootballMatch::where('id', $fixtureId)->update([
+                    FootballMatch::query()->where('id', $fixtureId)->update([
                         'predictions' => $data
                     ]);
                 }
@@ -451,7 +478,7 @@ class FootballApiService
 
             if ($response->successful()) {
                 $json = $response->json();
-                \Illuminate\Support\Facades\Log::info("API Standings Response for league={$leagueId} season={$season}: " . json_encode($json));
+                Log::info("API Standings Response for league={$leagueId} season={$season}: " . json_encode($json));
                 $standings = $json['response'][0]['league']['standings'][0] ?? [];
                 if (!empty($standings)) {
                     $this->syncStandings($standings, $leagueId, $season);
@@ -470,7 +497,7 @@ class FootballApiService
         foreach ($standings as $item) {
             // Đồng bộ Team trước
             $teamData = $item['team'];
-            \App\Models\FootballTeam::updateOrCreate(
+            FootballTeam::updateOrCreate(
                 ['id' => $teamData['id']],
                 [
                     'name' => $teamData['name'],
@@ -478,7 +505,7 @@ class FootballApiService
                 ]
             );
 
-            \App\Models\FootballStanding::updateOrCreate(
+            FootballStanding::updateOrCreate(
                 [
                     'league_id' => $leagueId,
                     'team_id' => $item['team']['id'],
@@ -607,7 +634,7 @@ class FootballApiService
             $stats = $item['statistics'][0];
 
             // 1. Đồng bộ vào bảng football_players (Hồ sơ cầu thủ)
-            \App\Models\Player::updateOrCreate(
+            FootballPlayer::updateOrCreate(
                 ['id' => $playerData['id']],
                 [
                     'name' => $playerData['name'],
@@ -620,7 +647,7 @@ class FootballApiService
             );
 
             // 2. Đồng bộ vào bảng football_scorers (Bảng xếp hạng ghi bàn)
-            \App\Models\FootballScorer::updateOrCreate(
+            FootballScorer::updateOrCreate(
                 [
                     'player_id' => $playerData['id'],
                     'league_id' => $leagueId,
@@ -642,7 +669,7 @@ class FootballApiService
     /**
      * Lấy thông tin chi tiết và thống kê mùa giải của cầu thủ
      */
-    public function getPlayerStats($playerId, $season = 2024)
+    public function getPlayerStats($playerId, $season)
     {
         try {
             $response = Http::withHeaders($this->getHeaders())
@@ -678,7 +705,7 @@ class FootballApiService
             if ($response->successful()) {
                 $seasons = $response->json()['response'] ?? [];
                 if (!empty($seasons)) {
-                    \App\Models\Player::updateOrCreate(
+                    FootballPlayer::updateOrCreate(
                         ['id' => $playerId],
                         ['available_seasons' => $seasons]
                     );
@@ -702,7 +729,7 @@ class FootballApiService
 
             if ($response->successful()) {
                 $data = $response->json()['response'][0]['transfers'] ?? [];
-                $player = \App\Models\Player::find($playerId);
+                $player = FootballPlayer::query()->find($playerId);
                 if ($player) {
                     $player->transfers = $data;
                     $player->save();
@@ -728,7 +755,7 @@ class FootballApiService
             if ($response->successful()) {
                 $data = $response->json()['response'] ?? [];
                 Log::info("Trophies for player {$playerId}: " . count($data) . " items found.");
-                $player = \App\Models\Player::find($playerId);
+                $player = FootballPlayer::query()->find($playerId);
                 if ($player) {
                     $player->trophies = $data;
                     $player->save();
@@ -755,7 +782,7 @@ class FootballApiService
             if ($response->successful()) {
                 $data = $response->json()['response'] ?? [];
                 Log::info("Sidelined history for player {$playerId}: " . count($data) . " items found.");
-                $player = \App\Models\Player::find($playerId);
+                $player = FootballPlayer::query()->find($playerId);
                 if ($player) {
                     $player->sidelined_history = $data;
                     $player->save();
@@ -775,7 +802,7 @@ class FootballApiService
         $p = $data['player'];
         
         // 1. Cập nhật Profile cầu thủ
-        \App\Models\Player::updateOrCreate(
+        FootballPlayer::updateOrCreate(
             ['id' => $p['id']],
             [
                 'name' => $p['name'],
@@ -801,7 +828,7 @@ class FootballApiService
             $teamId = $stat['team']['id'];
 
             if ($leagueId) {
-                \App\Models\FootballLeague::updateOrCreate(
+                FootballLeague::updateOrCreate(
                     ['id' => $leagueId],
                     [
                         'name' => $stat['league']['name'] ?? 'Unknown',
@@ -812,7 +839,7 @@ class FootballApiService
             }
 
             if ($teamId) {
-                \App\Models\FootballTeam::updateOrCreate(
+                FootballTeam::updateOrCreate(
                     ['id' => $teamId],
                     [
                         'name' => $stat['team']['name'] ?? 'Unknown',
@@ -822,7 +849,7 @@ class FootballApiService
             }
 
             if ($leagueId && $teamId) {
-                \App\Models\PlayerSeasonStat::updateOrCreate(
+                PlayerSeasonStat::updateOrCreate(
                     [
                         'player_id' => $p['id'],
                         'league_id' => $leagueId,
@@ -872,7 +899,7 @@ class FootballApiService
     private function syncSquad(array $players, $teamId)
     {
         foreach ($players as $p) {
-            Player::updateOrCreate(
+            FootballPlayer::updateOrCreate(
                 ['id' => $p['id']],
                 [
                     'name' => $p['name'],

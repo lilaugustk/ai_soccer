@@ -2,20 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Player;
+use App\Models\FootballPlayer;
 use App\Models\PlayerMatchStat;
 use App\Models\PlayerSeasonStat;
-use App\Models\Team;
+use App\Models\FootballTeam;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Services\FootballApiService;
 
 class PlayerController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Player::query()->with(['team', 'latestSeasonStat.league']);
+        $query = FootballPlayer::query()->with(['team', 'latestSeasonStat.league']);
 
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
@@ -36,8 +37,7 @@ class PlayerController extends Controller
         $players = $query->paginate(24)->withQueryString();
 
         $nationalities = Cache::remember('player_nationalities', 3600, function () {
-            return Player::query()
-                ->whereNotNull('nationality')
+            return FootballPlayer::query()
                 ->where('nationality', '!=', '')
                 ->distinct()
                 ->orderBy('nationality')
@@ -58,7 +58,7 @@ class PlayerController extends Controller
 
     protected $apiService;
 
-    public function __construct(\App\Services\FootballApiService $apiService)
+    public function __construct(FootballApiService $apiService)
     {
         $this->apiService = $apiService;
     }
@@ -66,12 +66,12 @@ class PlayerController extends Controller
     public function show(Request $request, $id)
     {
         // Try to find the player, if not found, fetch from API
-        $player = Player::find($id);
+        $player = FootballPlayer::query()->find($id);
 
         if (!$player) {
             // Player doesn't exist, fetch their latest season profile
             $this->apiService->syncPlayerIfNotFound($id);
-            $player = Player::findOrFail($id); // If still fails, it throws 404
+            $player = FootballPlayer::findOrFail($id); // If still fails, it throws 404
         }
 
         // Fetch seasons list if available_seasons is null or profile is incomplete
@@ -85,7 +85,7 @@ class PlayerController extends Controller
         $requestedSeason = $request->input('season', (!empty($availableSeasons) ? max($availableSeasons) : 2024));
 
         // Check if we need to sync from API for the requested season
-        $hasStatForSeason = PlayerSeasonStat::where('player_id', $id)
+        $hasStatForSeason = PlayerSeasonStat::query()->where('player_id', $id)
             ->where('season', $requestedSeason)
             ->whereNotNull('detailed_stats')
             ->exists();
@@ -104,7 +104,7 @@ class PlayerController extends Controller
             ->get();
 
         // Match history — last 30 games
-        $matchHistory = PlayerMatchStat::where('player_id', $id)
+        $matchHistory = PlayerMatchStat::query()->where('player_id', $id)
             ->with([
                 'match.homeTeam',
                 'match.awayTeam',
@@ -145,13 +145,33 @@ class PlayerController extends Controller
             'total_reds'    => $seasonStats->sum('cards_red'),
         ];
 
+        // Derive available seasons from synced stats + player profile
+        $syncedSeasons = $seasonStats->pluck('season')->unique()->toArray();
+        $apiAvailableSeasons = $player->available_seasons ?: [];
+        
+        // Filter: Only include seasons where we have stats OR which are part of the player's recorded career
+        // If apiAvailableSeasons looks generic (long list), we might want to be careful.
+        // For now, let's merge synced ones with api ones, but we can filter by birth year if available.
+        $finalSeasons = array_unique(array_merge($syncedSeasons, $apiAvailableSeasons));
+        
+        // If we have birth year, filter out impossible seasons (before age 15)
+        if ($player->birth_year) {
+            $finalSeasons = array_filter($finalSeasons, fn($s) => $s >= ($player->birth_year + 15));
+        } elseif ($player->birth_date) {
+            $birthYear = \Illuminate\Support\Carbon::parse($player->birth_date)->year;
+            $finalSeasons = array_filter($finalSeasons, fn($s) => $s >= ($birthYear + 15));
+        }
+
+        sort($finalSeasons);
+        $finalSeasons = array_reverse(array_values($finalSeasons));
+
         return Inertia::render('Players/Show', [
             'player'          => $player,
             'seasonStats'     => $seasonStats,
             'latestStat'      => $latestStat,
             'matchHistory'    => $matchHistory,
             'careerTotals'    => $careerTotals,
-            'availableSeasons' => $player->available_seasons ?: [],
+            'availableSeasons' => $finalSeasons,
             'currentSeason'   => (int)$requestedSeason,
         ]);
     }

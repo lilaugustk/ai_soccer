@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\FootballLeague;
 use App\Models\FootballMatch;
 use App\Models\FootballTeam;
+use App\Models\FootballStanding;
+use App\Models\FootballScorer;
 use App\Models\PlayerMatchStat;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 
 use App\Services\FootballApiService;
 
@@ -24,21 +28,20 @@ class LeagueController extends Controller
 
     public function show(Request $request, $id)
     {
-        $league = \App\Models\FootballLeague::find($id);
-
+        $league = FootballLeague::query()->find($id);
         if (!$league) {
             // Nếu không có trong DB, thử lấy từ API
             $leagues = $this->apiService->getLeagues();
             $apiLeague = collect($leagues)->firstWhere('league.id', (int)$id);
             
             if ($apiLeague) {
-                $league = \App\Models\FootballLeague::create([
+                $league = FootballLeague::query()->create([
                     'id' => $apiLeague['league']['id'],
                     'name' => $apiLeague['league']['name'],
                     'type' => $apiLeague['league']['type'] ?? null,
                     'logo' => $apiLeague['league']['logo'] ?? null,
                     'country_name' => $apiLeague['country']['name'] ?? null,
-                    'country_code' => $apiLeague['country']['flag'] ?? null,
+                    'country_code' => $apiLeague['country']['flag'] ?? null
                 ]);
             } else {
                 return redirect()->route('dashboard')->with('error', 'Không tìm thấy giải đấu này.');
@@ -46,16 +49,25 @@ class LeagueController extends Controller
         }
         $season = $request->input('season', 2024); 
 
-        // 1. Bảng xếp hạng với logo_url
-        $standings = \App\Models\FootballStanding::with('team')
+        $standings = FootballStanding::with('team')
             ->where('league_id', $id)
             ->where('season', $season)
             ->orderBy('rank', 'asc')
             ->get();
 
+        // 1.0 Tự động đồng bộ Bảng xếp hạng nếu trống
+        if ($standings->isEmpty()) {
+            $this->apiService->getStandings($id, $season);
+            $standings = FootballStanding::with('team')
+                ->where('league_id', $id)
+                ->where('season', $season)
+                ->orderBy('rank', 'asc')
+                ->get();
+        }
+
         // 1.1 Lấy 5 trận gần nhất của giải đấu này cho mỗi đội để hiển thị chi tiết trong tooltip
         $teamIds = $standings->pluck('team_id');
-        $allMatches = \App\Models\FootballMatch::where('league_id', $id)
+        $allMatches = FootballMatch::query()->where('league_id', $id)
             ->where('season', $season)
             ->where(function($q) use ($teamIds) {
                 $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
@@ -80,7 +92,7 @@ class LeagueController extends Controller
                         }
 
                         $matchesByTeam[$tId][] = [
-                            'date' => \Illuminate\Support\Carbon::parse($m->match_at)->format('d/m'),
+                            'date' => Carbon::parse($m->match_at)->format('d/m'),
                             'home' => $m->homeTeam->name,
                             'away' => $m->awayTeam->name,
                             'score' => "{$m->home_score} - {$m->away_score}",
@@ -101,7 +113,7 @@ class LeagueController extends Controller
         });
 
         // 2. Vua phá lưới và các top khác
-        $topScorers = \App\Models\FootballScorer::with('team')
+        $topScorers = FootballScorer::with('team')
             ->where('league_id', $id)
             ->where('season', $season)
             ->where('goals', '>', 0)
@@ -111,7 +123,7 @@ class LeagueController extends Controller
 
         if ($topScorers->isEmpty()) {
             $this->apiService->getTopScorers($id, $season);
-            $topScorers = \App\Models\FootballScorer::with('team')
+            $topScorers = FootballScorer::with('team')
                 ->where('league_id', $id)
                 ->where('season', $season)
                 ->where('goals', '>', 0)
@@ -120,7 +132,7 @@ class LeagueController extends Controller
                 ->get();
         }
 
-        $topAssists = \App\Models\FootballScorer::with('team')
+        $topAssists = FootballScorer::with('team')
             ->where('league_id', $id)
             ->where('season', $season)
             ->where('assists', '>', 0)
@@ -130,7 +142,7 @@ class LeagueController extends Controller
 
         if ($topAssists->isEmpty()) {
             $this->apiService->getTopAssists($id, $season);
-            $topAssists = \App\Models\FootballScorer::with('team')
+            $topAssists = FootballScorer::with('team')
                 ->where('league_id', $id)
                 ->where('season', $season)
                 ->where('assists', '>', 0)
@@ -139,7 +151,7 @@ class LeagueController extends Controller
                 ->get();
         }
 
-        $topYellowCards = \App\Models\FootballScorer::with('team')
+        $topYellowCards = FootballScorer::with('team')
             ->where('league_id', $id)
             ->where('season', $season)
             ->where('yellow_cards', '>', 0)
@@ -149,7 +161,7 @@ class LeagueController extends Controller
 
         if ($topYellowCards->isEmpty()) {
             $this->apiService->getTopYellowCards($id, $season);
-            $topYellowCards = \App\Models\FootballScorer::with('team')
+            $topYellowCards = FootballScorer::with('team')
                 ->where('league_id', $id)
                 ->where('season', $season)
                 ->where('yellow_cards', '>', 0)
@@ -158,7 +170,7 @@ class LeagueController extends Controller
                 ->get();
         }
 
-        $topRedCards = \App\Models\FootballScorer::with('team')
+        $topRedCards = FootballScorer::with('team')
             ->where('league_id', $id)
             ->where('season', $season)
             ->where('red_cards', '>', 0)
@@ -168,7 +180,7 @@ class LeagueController extends Controller
 
         if ($topRedCards->isEmpty()) {
             $this->apiService->getTopRedCards($id, $season);
-            $topRedCards = \App\Models\FootballScorer::with('team')
+            $topRedCards = FootballScorer::with('team')
                 ->where('league_id', $id)
                 ->where('season', $season)
                 ->where('red_cards', '>', 0)
@@ -178,12 +190,24 @@ class LeagueController extends Controller
         }
 
         // 3. Trận đấu với logo_url và sắp xếp - LỌC THEO MÙA GIẢI
-        $matches = \App\Models\FootballMatch::with(['homeTeam', 'awayTeam'])
+        $matchesQuery = FootballMatch::with(['homeTeam', 'awayTeam'])
             ->where('league_id', $id)
             ->where('season', $season)
-            ->orderBy('match_at', 'desc')
-            ->get()
-            ->map(function($m) {
+            ->orderBy('match_at', 'desc');
+
+        $matches = $matchesQuery->get();
+
+        // 3.1 Tự động đồng bộ Trận đấu nếu trống
+        if ($matches->isEmpty()) {
+            $this->apiService->getFixturesByLeagueSeason($id, $season);
+            $matches = FootballMatch::with(['homeTeam', 'awayTeam'])
+                ->where('league_id', $id)
+                ->where('season', $season)
+                ->orderBy('match_at', 'desc')
+                ->get();
+        }
+
+        $matches = $matches->map(function($m) {
                 if ($m->homeTeam) {
                     $m->homeTeam->logo_url = $m->homeTeam->logo ?: 'https://via.placeholder.com/150?text=' . urlencode($m->homeTeam->name);
                 }
@@ -193,6 +217,13 @@ class LeagueController extends Controller
                 return $m;
             });
 
+        // 4. Lấy danh sách mùa giải có sẵn (Cache 24h)
+        $availableSeasons = Cache::remember("league_seasons_{$id}", 86400, function() use ($id) {
+            $seasons = $this->apiService->getLeagueSeasons($id);
+            // Fallback nếu API lỗi
+            return !empty($seasons) ? $seasons : [2025, 2024, 2023, 2022];
+        });
+
         return Inertia::render('Leagues/Show', [
             'league' => $league,
             'standings' => $standings,
@@ -201,7 +232,8 @@ class LeagueController extends Controller
             'topYellowCards' => $topYellowCards,
             'topRedCards' => $topRedCards,
             'matches' => $matches,
-            'season' => $season
+            'season' => $season,
+            'availableSeasons' => $availableSeasons
         ]);
     }
 }

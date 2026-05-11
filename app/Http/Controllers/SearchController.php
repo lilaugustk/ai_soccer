@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\FootballTeam;
-use App\Models\Player;
-use App\Models\League;
+use App\Models\FootballPlayer;
+use App\Models\FootballLeague;
+
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 class SearchController extends Controller
@@ -22,18 +24,19 @@ class SearchController extends Controller
         }
 
         Log::info("Search query: " . $query);
-        $teams = FootballTeam::where('name', 'LIKE', "%{$query}%")
+        $teams = FootballTeam::query()->where('name', 'LIKE', "%{$query}%")
             ->orWhere('code', 'LIKE', "%{$query}%")
             ->limit(5)
             ->get();
 
-        $players = Player::where('name', 'LIKE', "%{$query}%")
+        $players = FootballPlayer::query()->where('name', 'LIKE', "%{$query}%")
             ->limit(5)
             ->get();
 
-        $leagues = League::where('name', 'LIKE', "%{$query}%")
+        $leagues = FootballLeague::query()->where('name', 'LIKE', "%{$query}%")
             ->limit(5)
             ->get();
+
 
         return response()->json([
             'teams' => $teams,
