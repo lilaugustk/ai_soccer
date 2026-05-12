@@ -50,4 +50,8 @@ return [
     'wc2026_api' => [
         'key' => env('WC2026_API_KEY'),
     ],
+    'bsd_sports_api' => [
+        'token' => env('BSD_API_TOKEN'),
+        'base_url' => env('BSD_API_URL', 'https://sports.bzzoiro.com/api/v2/'),
+    ],
 ];

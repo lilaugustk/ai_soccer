@@ -6,40 +6,46 @@ use Illuminate\Database\Eloquent\Model;
 
 class FootballTeam extends Model
 {
-    protected $fillable = [
-        'id', 'name', 'code', 'logo', 'country', 'coach_history', 'coach_history_last_sync'
-    ];
+    protected $table = 'teams';
+    public $incrementing = false;
+    public $timestamps = true;
+    const UPDATED_AT = null;
 
-    protected $casts = [
-        'coach_history' => 'array',
-        'coach_history_last_sync' => 'datetime',
-    ];
+    protected $fillable = ['id', 'name', 'short_name', 'country', 'country_code', 'venue_id', 'is_women', 'logo_url'];
 
-    public $incrementing = false; // Dùng ID từ API
+    // Khai báo các thuộc tính ảo gửi lên Frontend
+    protected $appends = ['logo', 'logo_url'];
 
-    public function homeMatches()
+    /**
+     * Thuộc tính ảo: logo_url (Tự động sinh từ ID BSD)
+     */
+    public function getLogoUrlAttribute()
     {
-        return $this->hasMany(FootballMatch::class, 'home_team_id');
+        return "https://sports.bzzoiro.com/img/team/{$this->id}/";
     }
 
-    public function awayMatches()
+    public function getLogoAttribute()
     {
-        return $this->hasMany(FootballMatch::class, 'away_team_id');
+        return $this->logo_url;
     }
 
-    public function homeGames()
+    public function venue()
     {
-        return $this->homeMatches();
-    }
-
-    public function awayGames()
-    {
-        return $this->awayMatches();
+        return $this->belongsTo(FootballVenue::class, 'venue_id');
     }
 
     public function standings()
     {
         return $this->hasMany(FootballStanding::class, 'team_id');
     }
-}
 
+    public function players()
+    {
+        return $this->hasMany(FootballPlayer::class, 'current_team_id');
+    }
+
+    public function managerCareers()
+    {
+        return $this->hasMany(FootballManagerCareer::class, 'team_id');
+    }
+}

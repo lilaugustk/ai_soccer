@@ -6,11 +6,11 @@ use App\Models\FootballMatch;
 use App\Models\FootballLeague;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Services\FootballApiService;
+use App\Services\BsdSportsApiService;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, FootballApiService $apiService)
+    public function index(Request $request, BsdSportsApiService $apiService)
     {
         $dateStr = $request->input('date', \Carbon\Carbon::today()->toDateString());
         $leagueId = $request->input('league_id');
@@ -21,15 +21,15 @@ class DashboardController extends Controller
         $endOfDay = \Carbon\Carbon::parse($dateStr, 'Asia/Ho_Chi_Minh')->endOfDay()->setTimezone('UTC');
 
         $matchesQuery = FootballMatch::with(['league', 'homeTeam', 'awayTeam'])
-            ->whereBetween('match_at', [$startOfDay, $endOfDay]);
+            ->whereBetween('event_date', [$startOfDay, $endOfDay]);
 
         // Lọc theo trạng thái
         if ($statusFilter === 'LIVE') {
-            $matchesQuery->whereIn('status', ['1H', 'HT', '2H', 'ET', 'P', 'LIVE']);
+            $matchesQuery->whereIn('status', ['inprogress', 'penalties']);
         } elseif ($statusFilter === 'FINISHED') {
-            $matchesQuery->whereIn('status', ['FT', 'AET', 'PEN']);
+            $matchesQuery->where('status', 'finished');
         } elseif ($statusFilter === 'SCHEDULED') {
-            $matchesQuery->where('status', 'NS');
+            $matchesQuery->where('status', 'notstarted');
         }
 
         if ($leagueId) {
@@ -46,29 +46,27 @@ class DashboardController extends Controller
         if ($matches->isEmpty()) {
             $shouldSync = true; // Rule 1: Chưa có tí dữ liệu nào
         } else {
-            $hasMissingScores = $matches->whereIn('status', ['FT', 'AET', 'PEN', '1H', '2H', 'HT'])->whereNull('home_score')->count() > 0;
-            $hasPendingMatches = $matches->whereIn('status', ['NS', 'TBD'])->count() > 0;
+            $hasMissingScores = $matches->whereIn('status', ['finished', 'inprogress', 'penalties'])->whereNull('home_score')->count() > 0;
+            $hasPendingMatches = $matches->where('status', 'notstarted')->count() > 0;
             $isPastDate = \Carbon\Carbon::parse($dateStr)->isPast();
             $isToday = \Carbon\Carbon::parse($dateStr)->isToday();
 
             if ($hasMissingScores) {
-                $shouldSync = true; // Rule 3: Thiếu thông tin tỉ số dù trạng thái đã thay đổi
+                $shouldSync = true; 
             } elseif ($isToday && !$lastSync) {
-                $shouldSync = true; // Rule 2: Ngày hôm nay, cập nhật định kỳ (theo cooldown 2 phút)
+                $shouldSync = true; 
             } elseif ($isPastDate && $hasPendingMatches && !$lastSync) {
-                $shouldSync = true; // Rule 2: Trận cũ nhưng chưa có kết quả (cần so sánh/cập nhật, cooldown 10 phút)
+                $shouldSync = true; 
             }
         }
 
         if ($shouldSync) {
             // Nạp dữ liệu ngày hiện tại
-            $apiService->getFixturesByDate($dateStr); 
+            $apiService->syncMatchesByDate($dateStr); 
             
-            // Nạp thêm dữ liệu ngày hôm trước (UTC) để xử lý các trận rạng sáng (GMT+7)
-            $yesterdayUTC = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
-            $apiService->getFixturesByDate($yesterdayUTC);
+            // BSD v2 lấy theo UTC nên có thể cần lấy thêm ngày hôm sau/trước tùy múi giờ
+            // $apiService->syncMatchesByDate($nextDay);
 
-            // Thiết lập cooldown để bảo vệ API Key Free
             $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
             cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
 
@@ -80,22 +78,22 @@ class DashboardController extends Controller
         $groupedGames = $matches->map(function ($match) {
             return [
                 'id' => $match->id,
-                'match_datetime' => $match->match_at->toIso8601ZuluString(),
+                'match_datetime' => $match->event_date->toIso8601ZuluString(),
                 'status' => $this->mapStatus($match->status),
                 'home_team' => [
                     'name' => $match->homeTeam->name,
-                    'logo_url' => $match->homeTeam->logo,
+                    'logo_url' => $match->homeTeam->logo_url,
                 ],
                 'away_team' => [
                     'name' => $match->awayTeam->name,
-                    'logo_url' => $match->awayTeam->logo,
+                    'logo_url' => $match->awayTeam->logo_url,
                 ],
                 'home_score' => $match->home_score,
                 'away_score' => $match->away_score,
                 'league' => [
                     'name' => $match->league->name,
-                    'logo_url' => $match->league->logo,
-                    'country' => $match->league->country_name,
+                    'logo_url' => $match->league->logo_url,
+                    'country' => $match->league->country,
                     'country_code' => $match->league->country_code,
                 ]
             ];
@@ -109,7 +107,7 @@ class DashboardController extends Controller
         $availableLeagues = $matches->map(fn($m) => [
             'id' => $m->league->id,
             'name' => $m->league->name,
-            'logo_url' => $m->league->logo,
+            'logo_url' => $m->league->logo_url,
         ])->unique('id')->values();
 
         return Inertia::render('Welcome', [
@@ -126,8 +124,8 @@ class DashboardController extends Controller
     private function mapStatus($status)
     {
         return match ($status) {
-            'FT', 'AET', 'PEN' => 'finished',
-            '1H', '2H', 'HT', 'ET', 'P', 'LIVE' => 'live',
+            'finished' => 'finished',
+            'inprogress', 'penalties' => 'live',
             default => 'scheduled',
         };
     }

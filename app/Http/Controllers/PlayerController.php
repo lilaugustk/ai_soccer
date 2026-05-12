@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\FootballPlayer;
-use App\Models\PlayerMatchStat;
-use App\Models\PlayerSeasonStat;
+use App\Models\FootballPlayerMatchStat;
+use App\Models\FootballPlayerCareerStat;
 use App\Models\FootballTeam;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -85,9 +85,8 @@ class PlayerController extends Controller
         $requestedSeason = $request->input('season', (!empty($availableSeasons) ? max($availableSeasons) : 2024));
 
         // Check if we need to sync from API for the requested season
-        $hasStatForSeason = PlayerSeasonStat::query()->where('player_id', $id)
-            ->where('season', $requestedSeason)
-            ->whereNotNull('detailed_stats')
+        $hasStatForSeason = FootballPlayerCareerStat::query()->where('player_id', $id)
+            ->where('season_id', $requestedSeason)
             ->exists();
 
         if (!$hasStatForSeason) {
@@ -104,16 +103,16 @@ class PlayerController extends Controller
             ->get();
 
         // Match history — last 30 games
-        $matchHistory = PlayerMatchStat::query()->where('player_id', $id)
+        $matchHistory = FootballPlayerMatchStat::query()->where('player_id', $id)
             ->with([
                 'match.homeTeam',
                 'match.awayTeam',
                 'match.league',
                 'team',
             ])
-            ->join('football_matches', 'football_player_match_stats.match_id', '=', 'football_matches.id')
-            ->orderBy('football_matches.match_at', 'desc')
-            ->select('football_player_match_stats.*')
+            ->join('events', 'player_match_stats.event_id', '=', 'events.id')
+            ->orderBy('events.event_date', 'desc')
+            ->select('player_match_stats.*')
             ->limit(30)
             ->get();
 
@@ -136,17 +135,17 @@ class PlayerController extends Controller
 
         // Aggregate career totals across all seasons
         $careerTotals = [
-            'total_games'   => $seasonStats->sum('games'),
-            'total_starts'  => $seasonStats->sum('games_starts'),
+            'total_games'   => $seasonStats->sum('matches'),
+            'total_starts'  => 0, // Need to add this field to table if needed
             'total_minutes' => $seasonStats->sum('minutes'),
             'total_goals'   => $seasonStats->sum('goals'),
             'total_assists' => $seasonStats->sum('assists'),
-            'total_yellows' => $seasonStats->sum('cards_yellow'),
-            'total_reds'    => $seasonStats->sum('cards_red'),
+            'total_yellows' => 0,
+            'total_reds'    => 0,
         ];
 
         // Derive available seasons from synced stats + player profile
-        $syncedSeasons = $seasonStats->pluck('season')->unique()->toArray();
+        $syncedSeasons = $seasonStats->pluck('season_id')->unique()->toArray();
         $apiAvailableSeasons = $player->available_seasons ?: [];
         
         // Filter: Only include seasons where we have stats OR which are part of the player's recorded career

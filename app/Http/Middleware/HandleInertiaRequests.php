@@ -35,12 +35,25 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $sharedLeagues = [];
-        $sidebarPath = storage_path('app/public/leagues_sidebar.json');
-        
-        if (file_exists($sidebarPath)) {
-            $sharedLeagues = json_decode(file_get_contents($sidebarPath), true);
-        }
+        $sharedLeagues = \App\Models\FootballLeague::query()
+            ->where('is_active', true)
+            ->orderBy('country')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('country')
+            ->map(function ($leagues, $countryName) {
+                return [
+                    'country_name' => $countryName,
+                    'country_code' => $leagues->first()->country_code,
+                    'leagues' => $leagues->map(function ($l) {
+                        return [
+                            'id' => $l->id,
+                            'name' => $l->name,
+                            'logo_url' => $l->logo_url,
+                        ];
+                    })->values(),
+                ];
+            })->values()->toArray();
 
         return [
             ...parent::share($request),

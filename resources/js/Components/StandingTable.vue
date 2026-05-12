@@ -34,7 +34,7 @@
                     <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
                 </div>
             </th>
-            <th class="px-2 py-3 text-center w-16 hidden md:table-cell cursor-pointer group relative">
+            <th class="px-2 py-3 text-center w-16 hidden lg:table-cell cursor-pointer group relative">
                 BT/BB
                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
                     Bàn thắng / Bàn bại
@@ -45,6 +45,27 @@
                 HS
                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
                     Hiệu số bàn thắng bại
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-14 hidden xl:table-cell cursor-pointer group relative">
+                xGF
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Bàn thắng kỳ vọng (xGF)
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-14 hidden xl:table-cell cursor-pointer group relative">
+                xGA
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Bàn thua kỳ vọng (xGA)
+                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                </div>
+            </th>
+            <th class="px-2 py-3 text-center w-14 hidden xl:table-cell cursor-pointer group relative">
+                xGD
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-[9px] font-bold rounded shadow-xl z-[100] pointer-events-none">
+                    Hiệu số xG (xGD)
                     <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
                 </div>
             </th>
@@ -71,8 +92,8 @@
                   {{ team.description }}
                 </div>
               </div>
-              {{ team.rank }}
-            </td>
+              {{ team.position ?? team.rank }}
+            </td> 
             <td class="px-2 py-3">
               <Link :href="`/teams/${team.team_id}?season=${season}`" class="flex items-center gap-2 hover:text-emerald-500 transition-colors cursor-pointer group/team">
                 <img v-if="team.team?.logo_url" :src="team.team.logo_url" class="w-5 h-5 object-contain" />
@@ -80,16 +101,25 @@
               </Link>
             </td>
             <td class="px-2 py-3 text-[11px] text-center font-medium">{{ team.played || 0 }}</td>
-            <td class="px-2 py-3 text-[11px] text-center">{{ team.win || 0 }}</td>
-            <td class="px-2 py-3 text-[11px] text-center">{{ team.draw || 0 }}</td>
-            <td class="px-2 py-3 text-[11px] text-center">{{ team.lose || 0 }}</td>
-            <td class="px-2 py-3 text-[10px] text-center text-gray-400 hidden md:table-cell">
-              {{ team.goals_for || 0 }}:{{ team.goals_against || 0 }}
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.won ?? team.win ?? 0 }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.drawn ?? team.draw ?? 0 }}</td>
+            <td class="px-2 py-3 text-[11px] text-center">{{ team.lost ?? team.lose ?? 0 }}</td>
+            <td class="px-2 py-3 text-[10px] text-center text-gray-400 hidden lg:table-cell">
+              {{ team.gf ?? team.goals_for ?? 0 }}:{{ team.ga ?? team.goals_against ?? 0 }}
             </td>
-            <td class="px-2 py-3 text-[11px] text-center font-bold" :class="((team.goals_for || 0) - (team.goals_against || 0)) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
-              {{ (team.goals_for || 0) - (team.goals_against || 0) }}
+            <td class="px-2 py-3 text-[11px] text-center font-bold" :class="((team.gf ?? team.goals_for ?? 0) - (team.ga ?? team.goals_against ?? 0)) >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+              {{ (team.gf ?? team.goals_for ?? 0) - (team.ga ?? team.goals_against ?? 0) }}
             </td>
-            <td class="px-2 py-3 text-[11px] text-center font-bold text-emerald-600 dark:text-emerald-400">{{ team.points || 0 }}</td>
+            <td class="px-2 py-3 text-[10px] text-center text-gray-500 hidden xl:table-cell font-medium">
+              {{ team.xgf || 0 }}
+            </td>
+            <td class="px-2 py-3 text-[10px] text-center text-gray-500 hidden xl:table-cell font-medium">
+              {{ team.xga || 0 }}
+            </td>
+            <td class="px-2 py-3 text-[10px] text-center hidden xl:table-cell font-bold" :class="(team.xgd || 0) >= 0 ? 'text-emerald-500/70' : 'text-rose-500/70'">
+              {{ team.xgd || 0 }}
+            </td>
+            <td class="px-2 py-3 text-[11px] text-center font-bold text-emerald-600 dark:text-emerald-400">{{ team.pts ?? team.points ?? 0 }}</td>
             <td class="px-4 py-3">
               <div class="flex justify-center gap-0.5">
                 <div v-for="(item, idx) in getDisplayForm(team)" :key="idx"

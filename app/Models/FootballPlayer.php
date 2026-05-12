@@ -4,83 +4,48 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * @property int $id
- * @property string $name
- * @property string|null $firstname
- * @property string|null $lastname
- * @property string|null $nationality
- * @property string|null $position
- * @property int|null $birth_year
- * @property string|null $birth_date
- * @property string|null $birth_place
- * @property string|null $birth_country
- * @property string|null $height
- * @property string|null $weight
- * @property bool $injured
- * @property int|null $number
- * @property int|null $current_team_id
- * @property string|null $photo
- * @property array|null $transfers
- * @property array|null $trophies
- * @property array|null $sidelined_history
- * @property array|null $available_seasons
- * @property-read FootballTeam|null $team
- */
 class FootballPlayer extends Model
 {
-    protected $table = 'football_players';
+    protected $table = 'players';
     public $incrementing = false;
-    protected $keyType = 'int';
 
     protected $fillable = [
-        'id',
-        'name',
-        'firstname',
-        'lastname',
-        'nationality',
-        'position',
-        'birth_year',
-        'birth_date',
-        'birth_place',
-        'birth_country',
-        'height',
-        'weight',
-        'injured',
-        'number',
-        'current_team_id',
-        'photo',
-        'transfers',
-        'trophies',
-        'sidelined_history',
-        'available_seasons',
+        'id', 'name', 'short_name', 'position', 'specific_position',
+        'jersey_number', 'date_of_birth', 'height_cm', 'weight_kg',
+        'preferred_foot', 'nationality', 'nationality_code',
+        'current_team_id', 'national_team_id', 'market_value_eur',
+        'contract_until', 'availability'
     ];
 
-    protected $casts = [
-        'transfers'         => 'array',
-        'trophies'          => 'array',
-        'sidelined_history' => 'array',
-        'available_seasons' => 'array',
-        'injured'           => 'boolean',
-    ];
+    protected $appends = ['photo'];
 
-    public function team()
+    public function getPhotoAttribute()
+    {
+        return "https://sports.bzzoiro.com/img/player/{$this->id}/";
+    }
+
+    public function currentTeam()
     {
         return $this->belongsTo(FootballTeam::class, 'current_team_id');
     }
 
-    public function matchStats()
+    public function team()
     {
-        return $this->hasMany(PlayerMatchStat::class, 'player_id');
+        return $this->currentTeam();
     }
-    
-    public function seasonStats()
-    {
-        return $this->hasMany(PlayerSeasonStat::class, 'player_id');
-    }
-    
+
     public function latestSeasonStat()
     {
-        return $this->hasOne(PlayerSeasonStat::class, 'player_id')->latestOfMany();
+        return $this->hasOne(FootballPlayerCareerStat::class, 'player_id')->latestOfMany();
+    }
+
+    public function careerStats()
+    {
+        return $this->hasMany(FootballPlayerCareerStat::class, 'player_id');
+    }
+
+    public function seasonStats()
+    {
+        return $this->careerStats();
     }
 }

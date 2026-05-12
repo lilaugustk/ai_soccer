@@ -41,7 +41,7 @@ class FootballApiService
                 [
                     'name' => $leagueData['name'],
                     'type' => $leagueData['type'] ?? null,
-                    'logo' => $leagueData['logo'] ?? null,
+                    'logo_url' => $leagueData['logo'] ?? null,
                     'country_name' => $item['league']['country'] ?? null,
                     'country_code' => $item['league']['flag'] ?? null,
                 ]
@@ -54,7 +54,7 @@ class FootballApiService
                     ['id' => $teamData['id']],
                     [
                         'name' => $teamData['name'],
-                        'logo' => $teamData['logo'] ?? null,
+                        'logo_url' => $teamData['logo'] ?? null,
                     ]
                 );
             }
@@ -67,7 +67,7 @@ class FootballApiService
                 'league_id' => $leagueData['id'],
                 'home_team_id' => $item['teams']['home']['id'],
                 'away_team_id' => $item['teams']['away']['id'],
-                'match_at' => Carbon::parse($fixtureData['date'])->setTimezone('UTC')->toDateTimeString(),
+                'event_date' => Carbon::parse($fixtureData['date'])->setTimezone('UTC')->toDateTimeString(),
                 'status' => $fixtureData['status']['short'] ?? 'NS',
                 'round' => $leagueData['round'] ?? null,
                 'referee' => $fixtureData['referee'] ?? null,
@@ -501,7 +501,7 @@ class FootballApiService
                 ['id' => $teamData['id']],
                 [
                     'name' => $teamData['name'],
-                    'logo' => $teamData['logo'] ?? null,
+                    'logo_url' => $teamData['logo'] ?? null,
                 ]
             );
 
@@ -832,7 +832,7 @@ class FootballApiService
                     ['id' => $leagueId],
                     [
                         'name' => $stat['league']['name'] ?? 'Unknown',
-                        'logo' => $stat['league']['logo'] ?? null,
+                        'logo_url' => $stat['league']['logo'] ?? null,
                         'country_name' => $stat['league']['country'] ?? null,
                     ]
                 );
@@ -843,7 +843,7 @@ class FootballApiService
                     ['id' => $teamId],
                     [
                         'name' => $stat['team']['name'] ?? 'Unknown',
-                        'logo' => $stat['team']['logo'] ?? null,
+                        'logo_url' => $stat['team']['logo'] ?? null,
                     ]
                 );
             }

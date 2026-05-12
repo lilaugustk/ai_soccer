@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('favorite_teams', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('team_id')->constrained('football_teams')->onDelete('cascade');
+            $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
             $table->timestamps();
 
             $table->unique(['user_id', 'team_id']);

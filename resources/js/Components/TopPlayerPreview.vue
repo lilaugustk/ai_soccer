@@ -4,9 +4,9 @@
     <div v-if="players && players.length > 0" class="space-y-3">
         <div v-for="(player, idx) in players.slice(0, 5)" :key="player.player_id" class="flex items-center gap-3">
             <span class="text-[10px] font-bold text-gray-300 w-4">{{ idx + 1 }}</span>
-            <img :src="player.photo" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700" />
+            <img :src="player.player?.photo_url" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700" />
             <div class="min-w-0 flex-1">
-                <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">{{ player.player_name }}</p>
+                <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">{{ player.player?.name || 'Cầu thủ' }}</p>
                 <p class="text-[9px] text-gray-400 truncate">{{ player[statKey] }} {{ statLabel }}</p>
             </div>
         </div>

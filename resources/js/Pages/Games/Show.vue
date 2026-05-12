@@ -373,7 +373,7 @@
                                             >
                                                 <img
                                                     v-if="p.id"
-                                                    :src="`https://media.api-sports.io/football/players/${p.id}.png`"
+                                                    :src="`https://sports.bzzoiro.com/img/player/${p.id}/`"
                                                     class="w-full h-full object-cover rounded-full"
                                                 />
                                             </div>
@@ -393,7 +393,7 @@
                                                 <span
                                                     class="text-[10px] md:text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[80px] block"
                                                     >{{
-                                                        p.name.split(" ").pop()
+                                                        p.name?.split(' ')?.pop() ?? '?'
                                                     }}</span
                                                 >
                                             </div>
@@ -424,7 +424,7 @@
                                             >
                                                 <img
                                                     v-if="p.id"
-                                                    :src="`https://media.api-sports.io/football/players/${p.id}.png`"
+                                                    :src="`https://sports.bzzoiro.com/img/player/${p.id}/`"
                                                     class="w-full h-full object-cover rounded-full"
                                                 />
                                             </div>
@@ -446,7 +446,7 @@
                                                 <span
                                                     class="text-[10px] md:text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[80px] block"
                                                     >{{
-                                                        p.name.split(" ").pop()
+                                                        p.name?.split(' ')?.pop() ?? '?'
                                                     }}</span
                                                 >
                                             </div>
@@ -556,12 +556,12 @@
                                             <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="router.visit(`/players/${p.id}`); showPitchModal = false">
                                                 <div class="relative">
                                                     <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
-                                                        <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover rounded-full" />
+                                                        <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover rounded-full" />
                                                     </div>
                                                     <div v-if="p.rating" class="absolute -top-1.5 -right-3 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-30" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
                                                 </div>
                                                 <div class="bg-black/50 px-2.5 py-1 rounded backdrop-blur-sm border border-white/10">
-                                                    <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name.split(' ').pop() }}</span>
+                                                    <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name?.split(' ')?.pop() ?? '?' }}</span>
                                                 </div>
                                                 <span class="text-[9px] font-bold text-white/75 uppercase tracking-widest drop-shadow-md">{{ p.number }}</span>
                                             </div>
@@ -571,12 +571,12 @@
                                             <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="router.visit(`/players/${p.id}`); showPitchModal = false">
                                                 <div class="relative">
                                                     <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
-                                                        <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover rounded-full" />
+                                                        <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover rounded-full" />
                                                     </div>
                                                     <div v-if="p.rating" class="absolute -top-1.5 -left-2 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-40" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
                                                 </div>
                                                 <div class="bg-black/50 px-2.5 py-1 rounded backdrop-blur-sm border border-white/10">
-                                                    <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name.split(' ').pop() }}</span>
+                                                    <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name?.split(' ')?.pop() ?? '?' }}</span>
                                                 </div>
                                                 <span class="text-[9px] font-bold text-white/75 uppercase tracking-widest drop-shadow-md">{{ p.number }}</span>
                                             </div>
@@ -619,7 +619,7 @@
                                             >
                                                 <img
                                                     v-if="p.id"
-                                                    :src="`https://media.api-sports.io/football/players/${p.id}.png`"
+                                                    :src="`https://sports.bzzoiro.com/img/player/${p.id}/`"
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -680,7 +680,7 @@
                                             >
                                                 <img
                                                     v-if="p.id"
-                                                    :src="`https://media.api-sports.io/football/players/${p.id}.png`"
+                                                    :src="`https://sports.bzzoiro.com/img/player/${p.id}/`"
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -758,7 +758,7 @@
                                             >
                                                 <img
                                                     v-if="p.id"
-                                                    :src="`https://media.api-sports.io/football/players/${p.id}.png`"
+                                                    :src="`https://sports.bzzoiro.com/img/player/${p.id}/`"
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -819,7 +819,7 @@
                                             >
                                                 <img
                                                     v-if="p.id"
-                                                    :src="`https://media.api-sports.io/football/players/${p.id}.png`"
+                                                    :src="`https://sports.bzzoiro.com/img/player/${p.id}/`"
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
@@ -942,6 +942,15 @@
 
                 <!-- Match Stats Tab -->
                 <div v-else-if="activeTab === 'stats'" class="py-4 space-y-6">
+                    <!-- Momentum Chart (BSD v2 Exclusive) -->
+                    <MomentumChart v-if="momentum && momentum.length" :momentum="momentum" class="mb-6" />
+
+                    <!-- Shotmap & Heatmap (BSD v2 Exclusive) -->
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <ShotMap :shots="shotmap" />
+                        <HeatMap :points="heatmap" />
+                    </div>
+
                     <!-- Detailed Comparison Stats (Moved from Analysis) -->
                     <div v-if="prediction && prediction.comparison" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
                         <div class="flex items-center justify-between mb-6">
@@ -1191,8 +1200,8 @@
                                             {{ m.teams?.home?.name }}
                                         </span>
                                         <img
-                                            v-if="m.teams?.home?.logo"
-                                            :src="m.teams.home.logo"
+                                            v-if="m.teams?.home?.logo_url"
+                                            :src="m.teams.home.logo_url"
                                             class="w-6 h-6 object-contain"
                                         />
                                     </div>
@@ -1209,8 +1218,8 @@
                                         class="flex items-center gap-3 flex-1 justify-start"
                                     >
                                         <img
-                                            v-if="m.teams?.away?.logo"
-                                            :src="m.teams.away.logo"
+                                            v-if="m.teams?.away?.logo_url"
+                                            :src="m.teams.away.logo_url"
                                             class="w-6 h-6 object-contain"
                                         />
                                         <span
@@ -1522,6 +1531,9 @@ import utc from "dayjs/plugin/utc";
 import StandingTable from "../../Components/StandingTable.vue";
 import LeagueSidebar from "../../Components/LeagueSidebar.vue";
 import RadarChart from "../../Components/RadarChart.vue";
+import MomentumChart from "../../Components/MomentumChart.vue";
+import ShotMap from "../../Components/ShotMap.vue";
+import HeatMap from "../../Components/HeatMap.vue";
 
 dayjs.extend(utc);
 
@@ -1535,6 +1547,9 @@ const props = defineProps({
     h2hMatches: { type: Array, default: () => [] },
     standings: { type: Array, default: () => [] },
     aiInsights: { type: String, default: null },
+    momentum: { type: Array, default: () => [] },
+    shotmap: { type: Array, default: () => [] },
+    heatmap: { type: Array, default: () => [] },
 });
 
 const activeTab = ref("lineups");
@@ -1559,6 +1574,12 @@ onMounted(() => {
     if (hash && tabs.some((t) => t.id === hash)) {
         activeTab.value = hash;
     }
+    console.log("LINEUPS DATA:", props.game.lineups);
+    console.log("HOME TEAM ID:", props.game.home_team?.id);
+    // Debug grid
+    const homeLineup = props.game.lineups?.find((l) => l.team?.id == props.game.home_team?.id);
+    console.log("HOME startXI:", homeLineup?.startXI);
+    console.log("First player grid:", homeLineup?.startXI?.[0]?.player?.grid);
 });
 
 const isRefreshing = ref(false);
@@ -1574,17 +1595,10 @@ const refreshMatchData = () => {
 
 // Helper lấy rating của cầu thủ từ dữ liệu statistics
 const getPlayerRating = (playerId) => {
-    if (!props.game.players || !props.game.players.length) return null;
-    for (const teamData of props.game.players) {
-        if (!teamData.players) continue;
-        const playerData = teamData.players.find(
-            (p) => p.player.id == playerId,
-        );
-        if (playerData) {
-            return playerData.statistics[0]?.games?.rating || null;
-        }
-    }
-    return null;
+    // BSD v2 lưu per-player match stats trong game.player_stats
+    if (!props.game.player_stats) return null;
+    const playerStat = props.game.player_stats.find(p => p.id == playerId);
+    return playerStat?.rating || null;
 };
 
 const getRatingClass = (rating) => {
@@ -1598,7 +1612,9 @@ const getRatingClass = (rating) => {
 
 // Helper lấy các sự kiện của một cầu thủ
 const getPlayerEvents = (playerId) => {
-    return (props.game.events || []).filter(
+    const events = props.game.events;
+    const eventsArray = Array.isArray(events) ? events : (events ? Object.values(events) : []);
+    return eventsArray.filter(
         (e) => e.player?.id === playerId || e.assist?.id === playerId,
     );
 };
@@ -1623,60 +1639,81 @@ const awayAverageRating = computed(() => {
 const getLineupWithPositions = (lineupXI, isAway = false) => {
     if (!lineupXI) return [];
 
-    // Nhóm cầu thủ theo hàng (row)
-    const rows = {};
-    lineupXI.forEach((p) => {
-        if (!p.player?.grid) return;
-        const [row, col] = p.player.grid.split(":").map(Number);
-        if (!rows[row]) rows[row] = [];
-        rows[row].push(p);
-    });
+    const players = Array.isArray(lineupXI) ? lineupXI : Object.values(lineupXI);
+    if (!players.length) return [];
 
-    const processed = [];
-    const verticalGap = 21; // Dãn cách dọc mặc định
-    const horizontalStep = 8.5; // Dãn cách ngang hẹp hơn để tránh va chạm ở giữa sân
+    const horizontalStep = 8.5;
 
-    Object.keys(rows).forEach((rowNum) => {
-        let playersInRow = rows[rowNum];
+    // Kiểm tra có player nào có grid không
+    const hasGrid = players.some((p) => p.player?.grid);
 
-        // Sắp xếp theo cột để đảm bảo vị trí trái/phải
-        playersInRow.sort((a, b) => {
-            const colA = parseInt(a.player.grid.split(":")[1]);
-            const colB = parseInt(b.player.grid.split(":")[1]);
-            return isAway ? colB - colA : colA - colB;
+    if (hasGrid) {
+        // --- Chế độ grid: dùng p.player.grid để tính vị trí ---
+        const rows = {};
+        players.forEach((p) => {
+            if (!p.player?.grid) return;
+            const [row] = p.player.grid.split(":").map(Number);
+            if (!rows[row]) rows[row] = [];
+            rows[row].push(p);
         });
 
-        const count = playersInRow.length;
-        
-        // Điều chỉnh dãn cách dọc linh hoạt dựa trên số lượng cầu thủ trong hàng
-        // Nếu hàng có 5 người thì thu hẹp khoảng cách để không bị tràn biên
-        const dynamicGap = count > 4 ? 17 : (count > 3 ? 19 : 21);
+        const processed = [];
+        Object.keys(rows).sort((a, b) => Number(a) - Number(b)).forEach((rowNum) => {
+            const playersInRow = [...rows[rowNum]];
+            playersInRow.sort((a, b) => {
+                const colA = parseInt(a.player.grid.split(":")[1]);
+                const colB = parseInt(b.player.grid.split(":")[1]);
+                return isAway ? colB - colA : colA - colB;
+            });
+            const count = playersInRow.length;
+            const dynamicGap = count > 4 ? 17 : count > 3 ? 19 : 21;
 
-        playersInRow.forEach((p, index) => {
-            const [row, col] = p.player.grid.split(":").map(Number);
-
-            // Tính Left (ngang)
-            let left = 0;
-            if (isAway) {
-                left = 100 - ((row - 1) * horizontalStep + 6);
-            } else {
-                left = (row - 1) * horizontalStep + 6;
-            }
-
-            // Tính Top (dọc) sử dụng dynamicGap
-            const top = 50 + (index - (count - 1) / 2) * dynamicGap;
-
-            processed.push({
-                ...p.player,
-                rating: getPlayerRating(p.player.id),
-                events: getPlayerEvents(p.player.id),
-                style: {
-                    left: `${left}%`,
-                    top: `${top}%`,
-                    transform: "translate(-50%, -50%)",
-                },
+            playersInRow.forEach((p, index) => {
+                const [row] = p.player.grid.split(":").map(Number);
+                const left = isAway
+                    ? 100 - ((row - 1) * horizontalStep + 6)
+                    : (row - 1) * horizontalStep + 6;
+                const top = 50 + (index - (count - 1) / 2) * dynamicGap;
+                processed.push({
+                    ...(p.player || {}),
+                    name: p.player?.name ?? 'Unknown',
+                    rating: getPlayerRating(p.player?.id),
+                    events: getPlayerEvents(p.player?.id),
+                    style: { left: `${left}%`, top: `${top}%`, transform: "translate(-50%, -50%)" },
+                });
             });
         });
+        return processed;
+    }
+
+    // --- Fallback: không có grid → tự phân bổ theo hàng (GK + hàng còn lại) ---
+    // Mặc định formation 1-4-3-3 (11 người)
+    const rowSizes = players.length === 11 ? [1, 4, 3, 3] : [1, Math.ceil((players.length - 1) / 3), Math.floor((players.length - 1) / 3), players.length - 1 - Math.ceil((players.length - 1) / 3) - Math.floor((players.length - 1) / 3)];
+    const processed = [];
+    let rowIdx = 0;
+    let colIdx = 0;
+
+    players.forEach((p) => {
+        while (rowIdx < rowSizes.length && colIdx >= rowSizes[rowIdx]) {
+            rowIdx++;
+            colIdx = 0;
+        }
+        const rowNum = rowIdx + 1;
+        const currentRowSize = rowSizes[rowIdx] ?? 1;
+        const left = isAway
+            ? 100 - ((rowNum - 1) * horizontalStep + 6)
+            : (rowNum - 1) * horizontalStep + 6;
+        const dynamicGap = currentRowSize > 4 ? 17 : currentRowSize > 3 ? 19 : 21;
+        const top = 50 + (colIdx - (currentRowSize - 1) / 2) * dynamicGap;
+
+        processed.push({
+            ...(p.player || {}),
+            name: p.player?.name ?? 'Unknown',
+            rating: getPlayerRating(p.player?.id),
+            events: getPlayerEvents(p.player?.id),
+            style: { left: `${left}%`, top: `${top}%`, transform: "translate(-50%, -50%)" },
+        });
+        colIdx++;
     });
 
     return processed;
@@ -1685,14 +1722,14 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
 // Mapping Đội hình (API Football trả về mảng 2 đội)
 const homeLineupData = computed(() => {
     const lineup = props.game.lineups?.find(
-        (l) => l.team?.id === props.game.home_team?.id,
+        (l) => l.team?.id == props.game.home_team?.id,
     );
     return lineup || null;
 });
 
 const awayLineupData = computed(() => {
     const lineup = props.game.lineups?.find(
-        (l) => l.team?.id === props.game.away_team?.id,
+        (l) => l.team?.id == props.game.away_team?.id,
     );
     return lineup || null;
 });
@@ -1706,7 +1743,8 @@ const getCurrentXI = (lineupXI, teamId) => {
     // API-Football substitution event:
     // e.player = cầu thủ RA SÂN (đang trong startXI)
     // e.assist = cầu thủ VÀO SÂN (trong danh sách substitutes)
-    const substEvents = (props.game.events || []).filter(
+    const events = props.game.events;
+    const substEvents = (Array.isArray(events) ? events : (events ? Object.values(events) : [])).filter(
         (e) => e.team?.id == teamId && e.type?.toLowerCase() === "subst"
     );
 
@@ -1756,16 +1794,20 @@ const processedAwayLineup = computed(() => {
 });
 
 const homeSubstitutes = computed(() => {
-    return (homeLineupData.value?.substitutes || []).map((p) => ({
-        ...p.player,
-        rating: getPlayerRating(p.player.id),
+    const subs = homeLineupData.value?.substitutes || [];
+    const subsArray = Array.isArray(subs) ? subs : Object.values(subs);
+    return subsArray.map((p) => ({
+        ...(p.player || {}),
+        rating: getPlayerRating(p.player?.id),
     }));
 });
 
 const awaySubstitutes = computed(() => {
-    return (awayLineupData.value?.substitutes || []).map((p) => ({
-        ...p.player,
-        rating: getPlayerRating(p.player.id),
+    const subs = awayLineupData.value?.substitutes || [];
+    const subsArray = Array.isArray(subs) ? subs : Object.values(subs);
+    return subsArray.map((p) => ({
+        ...(p.player || {}),
+        rating: getPlayerRating(p.player?.id),
     }));
 });
 
@@ -1931,7 +1973,8 @@ const getSofaIcon = (type) => {
 
 // Mapping Diễn biến
 const processedEvents = computed(() => {
-    const rawEvents = props.game.events || [];
+    const rawEventsData = props.game.events || [];
+    const rawEvents = Array.isArray(rawEventsData) ? rawEventsData : Object.values(rawEventsData);
     const events = [];
 
     // Header Hiệp 1
@@ -1958,23 +2001,37 @@ const processedEvents = computed(() => {
 
         const side = e.team?.id === props.game.home_team?.id ? "home" : "away";
 
-        events.push({
-            displayTime:
-                minute !== undefined && minute !== null
-                    ? extra
-                        ? `${minute}+${extra}`
-                        : String(minute)
-                    : "0",
-            side: side,
-            type: finalType,
-            player: e.player?.name || "Unknown",
-            playerId: e.player?.id,
-            playerOut: e.assist?.name,
-            playerOutId: e.assist?.id,
-            detail: e.detail,
-            isSubstitution: type === "subst",
-            eventScore: type === "goal" ? `${e.comments || ""}` : null,
-        });
+        const isSubstitution = type === "subst";
+        
+        // Handle name display for unknown players
+        const playerName = isSubstitution 
+            ? (e.subst?.playerIn?.name || "Cầu thủ vào sân")
+            : (e.player?.name || "Cầu thủ không rõ");
+            
+        const playerOutName = isSubstitution
+            ? (e.subst?.playerOut?.name || "Cầu thủ ra sân")
+            : (e.assist?.name || "");
+
+        // Only push if it's a valid event we want to show
+        if (type && type !== 'unknown') {
+            events.push({
+                displayTime:
+                    minute !== undefined && minute !== null
+                        ? extra
+                            ? `${minute}+${extra}`
+                            : String(minute)
+                        : "0",
+                side: side,
+                type: finalType,
+                player: playerName,
+                playerId: isSubstitution ? e.subst?.playerIn?.id : e.player?.id,
+                playerOut: playerOutName,
+                playerOutId: isSubstitution ? e.subst?.playerOut?.id : e.assist?.id,
+                detail: e.detail,
+                isSubstitution: isSubstitution,
+                eventScore: type === "goal" ? `${e.comments || ""}` : null,
+            });
+        }
     });
 
     return events;

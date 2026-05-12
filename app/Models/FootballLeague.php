@@ -6,15 +6,50 @@ use Illuminate\Database\Eloquent\Model;
 
 class FootballLeague extends Model
 {
-    protected $fillable = [
-        'id', 'name', 'type', 'logo', 'country_name', 'country_code'
-    ];
+    protected $table = 'leagues';
+    public $incrementing = false;
+    public $timestamps = true;
+    const UPDATED_AT = null;
 
-    public $incrementing = false; // Dùng ID từ API
+    // Chỉ giữ lại các cột thực tế trong DB
+    protected $fillable = ['id', 'name', 'country', 'is_women', 'is_active'];
 
-    public function matches()
+    // Khai báo các thuộc tính ảo muốn gửi lên Frontend
+    protected $appends = ['logo', 'logo_url', 'country_code'];
+
+    /**
+     * Thuộc tính ảo: logo_url (Tự động sinh từ ID BSD)
+     */
+    public function getLogoUrlAttribute()
     {
-        return $this->hasMany(FootballMatch::class, 'league_id');
+        return "https://sports.bzzoiro.com/img/league/{$this->id}/";
+    }
+
+    public function getLogoAttribute()
+    {
+        return $this->logo_url;
+    }
+
+    /**
+     * Thuộc tính ảo: country_code (Ánh xạ từ tên quốc gia để hiển thị cờ)
+     */
+    public function getCountryCodeAttribute()
+    {
+        $map = [
+            'England' => 'gb-eng', 'Spain' => 'es', 'Italy' => 'it', 'Germany' => 'de',
+            'France' => 'fr', 'Portugal' => 'pt', 'Brazil' => 'br', 'Netherlands' => 'nl',
+            'Turkey' => 'tr', 'Scotland' => 'gb-sct', 'Belgium' => 'be', 'Switzerland' => 'ch',
+            'Saudi Arabia' => 'sa', 'USA' => 'us', 'Mexico' => 'mx', 'Vietnam' => 'vn',
+            'Poland' => 'pl', 'Sweden' => 'se', 'Norway' => 'no', 'Finland' => 'fi',
+            'Nigeria' => 'ng', 'International' => 'un', 'World' => 'un', 'Europe' => 'un'
+        ];
+
+        return $map[$this->country] ?? 'un';
+    }
+
+    public function seasons()
+    {
+        return $this->hasMany(FootballSeason::class, 'league_id');
     }
 
     public function standings()
@@ -22,4 +57,3 @@ class FootballLeague extends Model
         return $this->hasMany(FootballStanding::class, 'league_id');
     }
 }
-

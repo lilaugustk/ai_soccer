@@ -299,7 +299,7 @@ const formatSeason = (s, country = null) => {
             <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 border border-gray-100 dark:border-gray-700 shadow-sm relative overflow-hidden">
                 <div class="flex flex-col md:flex-row items-center gap-6 relative z-10">
                     <div class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center p-4 shadow-inner">
-                        <img v-if="team.logo" :src="team.logo" class="w-full h-full object-contain filter drop-shadow-md" />
+                        <img v-if="team.logo_url" :src="team.logo_url" class="w-full h-full object-contain filter drop-shadow-md" />
                     </div>
 
                     <div class="flex-1 text-center md:text-left">
@@ -360,7 +360,7 @@ const formatSeason = (s, country = null) => {
                                         </div>
                                         <span class="text-[8px] font-bold text-gray-400 tabular-nums">{{ game.home_score }}-{{ game.away_score }}</span>
                                         <div class="w-8 h-8 flex items-center justify-center mt-1 border-t border-gray-50 dark:border-gray-700 pt-3 w-full">
-                                             <img :src="game.home_team_id === team.id ? game.away_team?.logo : game.home_team?.logo" class="w-5 h-5 object-contain" />
+                                             <img :src="game.home_team_id === team.id ? game.away_team?.logo_url : game.home_team?.logo_url" class="w-5 h-5 object-contain" />
                                         </div>
                                     </div>
                                 </div>
@@ -373,7 +373,7 @@ const formatSeason = (s, country = null) => {
                                 <div v-if="nextMatch" @click="viewMatch(nextMatch.id)" class="flex items-center justify-between gap-4 cursor-pointer group">
                                     <div class="flex flex-col items-center gap-2 flex-1">
                                         <div class="w-10 h-10 p-2 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700">
-                                             <img :src="nextMatch.home_team?.logo" class="w-full h-full object-contain" />
+                                             <img :src="nextMatch.home_team?.logo_url" class="w-full h-full object-contain" />
                                         </div>
                                         <span class="text-[9px] font-bold text-gray-900 dark:text-white text-center truncate uppercase tracking-tight w-full">{{ nextMatch.home_team?.name }}</span>
                                     </div>
@@ -383,7 +383,7 @@ const formatSeason = (s, country = null) => {
                                     </div>
                                     <div class="flex flex-col items-center gap-2 flex-1">
                                         <div class="w-10 h-10 p-2 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700">
-                                             <img :src="nextMatch.away_team?.logo" class="w-full h-full object-contain" />
+                                             <img :src="nextMatch.away_team?.logo_url" class="w-full h-full object-contain" />
                                         </div>
                                         <span class="text-[9px] font-bold text-gray-900 dark:text-white text-center truncate uppercase tracking-tight w-full">{{ nextMatch.away_team?.name }}</span>
                                     </div>
@@ -517,7 +517,7 @@ const formatSeason = (s, country = null) => {
                                                  <td class="px-5 py-3.5 text-[10px] font-bold text-gray-900 dark:text-white text-center">{{ s.rank }}</td>
                                                  <td class="px-5 py-3.5">
                                                       <div class="flex items-center gap-3">
-                                                           <img :src="s.team?.logo" class="w-5 h-5 object-contain" />
+                                                           <img :src="s.team?.logo_url" class="w-5 h-5 object-contain" />
                                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase tracking-tight">{{ s.team?.name }}</span>
                                                       </div>
                                                  </td>
@@ -571,7 +571,7 @@ const formatSeason = (s, country = null) => {
                                         :style="p.style">
                                         <div class="relative group cursor-pointer" @click="viewPlayer(p.id)">
                                              <div class="w-10 h-10 md:w-11 md:h-11 rounded-full border-2 border-white/20 bg-gray-900/50 shadow-xl overflow-hidden group-hover:scale-110 transition-transform">
-                                                  <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover" />
+                                                  <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover" />
                                                   <div v-else class="w-full h-full flex items-center justify-center text-[10px] font-bold text-white">{{ p.number }}</div>
                                              </div>
                                              <!-- Player Rating -->
@@ -634,7 +634,7 @@ const formatSeason = (s, country = null) => {
                                                   :style="p.style">
                                                   <div class="relative group cursor-pointer" @click="viewPlayer(p.id); showPitchModal = false">
                                                        <div class="w-12 h-12 sm:w-20 sm:h-20 rounded-full border-2 sm:border-4 border-white/20 bg-gray-900/50 shadow-2xl overflow-hidden group-hover:scale-110 transition-transform">
-                                                            <img v-if="p.id" :src="`https://media.api-sports.io/football/players/${p.id}.png`" class="w-full h-full object-cover" />
+                                                            <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover" />
                                                        </div>
                                                        <!-- Player Rating -->
                                                        <div v-if="p.rating" 

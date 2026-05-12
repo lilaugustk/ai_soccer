@@ -15,7 +15,7 @@
           <nav class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               <Link href="/" class="hover:text-emerald-500">Trang chủ</Link>
               <span>/</span>
-              <span>{{ league.country_name }}</span>
+              <span>{{ league.country }}</span>
               <span>/</span>
               <span class="text-gray-900 dark:text-gray-200">{{ league.name }}</span>
           </nav>
@@ -24,14 +24,14 @@
           <div class="bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-6 shadow-sm overflow-hidden relative">
             <div class="flex flex-col md:flex-row items-center gap-6 relative z-10">
               <div class="w-24 h-24 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 flex items-center justify-center shadow-inner">
-                <img :src="league.logo" :alt="league.name" class="w-full h-full object-contain" />
+                <img :src="league.logo_url" :alt="league.name" class="w-full h-full object-contain" />
               </div>
               
               <div class="flex-1 text-center md:text-left space-y-3">
                 <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700/50 rounded-full text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-300">
-                        <img :src="getFlagUrl(league.country_name)" class="w-3 h-2.5 object-cover rounded-sm" />
-                        {{ league.country_name }}
+                        <img :src="getFlagUrl(league.country)" class="w-3 h-2.5 object-cover rounded-sm" />
+                        {{ league.country }}
                     </div>
                     <div class="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-bold uppercase tracking-widest">
                         {{ league.type === 'League' ? 'Hạng đấu' : 'Giải đấu' }}
@@ -67,11 +67,11 @@
                   <div class="relative season-dropdown pb-4">
                         <button @click="isSeasonOpen = !isSeasonOpen" 
                                 class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
-                            Mùa giải: {{ formatSeason(season, league.country_name) }}
+                            Mùa giải: {{ formatSeason(season, league.country) }}
                             <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                         </button>
                         <div v-show="isSeasonOpen" class="absolute top-full right-0 mt-1 min-w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl py-2 z-50 max-h-60 overflow-y-auto custom-scrollbar">
-                            <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap" :class="s == season ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, league.country_name) }}</button>
+                            <button v-for="s in availableSeasons" :key="s" @click="changeSeason(s)" class="w-full text-center px-4 py-2 text-[11px] font-bold hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap" :class="s == season ? 'text-emerald-500' : 'text-gray-500'">{{ formatSeason(s, league.country) }}</button>
                         </div>
                   </div>
               </div>
@@ -182,7 +182,7 @@ const switchTab = (tabId) => {
 };
 
 const isSeasonOpen = ref(false);
-const expandedCountry = ref(props.league.country_name);
+const expandedCountry = ref(props.league.country);
 
 const groupedLeagues = computed(() => usePage().props.sharedLeagues || []);
 
@@ -251,10 +251,10 @@ const filteredMatches = computed(() => {
   let list = [];
   if (selectedRound.value === 'all') {
     list = [...props.matches];
-    return list.sort((a, b) => new Date(b.match_at) - new Date(a.match_at));
+    return list.sort((a, b) => new Date(b.event_date || b.match_at) - new Date(a.event_date || a.match_at));
   }
   list = props.matches.filter(m => m.round === selectedRound.value);
-  return list.sort((a, b) => new Date(a.match_at) - new Date(b.match_at));
+  return list.sort((a, b) => new Date(a.event_date || a.match_at) - new Date(b.event_date || b.match_at));
 });
 
 const handleOutsideClick = (e) => {

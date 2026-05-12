@@ -11,7 +11,7 @@
                     class="relative flex flex-col items-center p-3 rounded-2xl bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 hover:border-rose-300 dark:hover:border-rose-500/50 transition-all group shadow-sm">
                     <Link :href="`/teams/${team.id}`" class="flex flex-col items-center w-full">
                         <div class="w-10 h-10 mb-2 p-1 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform">
-                            <img v-if="team.logo" :src="team.logo" class="w-full h-full object-contain" />
+                            <img v-if="team.logo_url" :src="team.logo_url" class="w-full h-full object-contain" />
                         </div>
                         <span class="text-[10px] font-bold text-gray-700 dark:text-gray-200 text-center truncate w-full uppercase tracking-tighter">{{ team.name }}</span>
                     </Link>

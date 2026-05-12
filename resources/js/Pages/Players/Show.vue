@@ -229,17 +229,17 @@ const trophiesByTeam = computed(() => {
             seasonMap[s.season] = {
                 id: s.team_id,
                 name: s.detailed_stats?.team?.name || "Unknown",
-                logo: s.detailed_stats?.team?.logo || null
+                logo_url: s.detailed_stats?.team?.logo_url || null
             };
         }
     });
 
     const getTeamForSeason = (seasonStr) => {
-        if (!seasonStr) return { name: "Other", logo: null };
+        if (!seasonStr) return { name: "Other", logo_url: null };
         const year = parseInt(seasonStr);
         if (seasonMap[year]) return seasonMap[year];
         if (seasonMap[seasonStr]) return seasonMap[seasonStr];
-        return { name: "Other", logo: null };
+        return { name: "Other", logo_url: null };
     };
 
     const teamGroups = {};
@@ -253,7 +253,7 @@ const trophiesByTeam = computed(() => {
         if (!teamGroups[teamKey]) {
             teamGroups[teamKey] = {
                 teamName: teamKey,
-                teamLogo: team.logo,
+                teamLogo: team.logo_url,
                 competitions: {}
             };
         }
@@ -563,7 +563,7 @@ const positionCoords = computed(() => {
                                     </div>
                                 </div>
                                 <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-800 rounded-full border border-gray-100 dark:border-gray-700 flex items-center justify-center shadow-md">
-                                    <img v-if="displayStat?.team?.logo || player.team?.logo" :src="displayStat?.team?.logo || player.team?.logo" class="w-5 h-5 object-contain" />
+                                    <img v-if="displayStat?.team?.logo_url || player.team?.logo_url" :src="displayStat?.team?.logo_url || player.team?.logo_url" class="w-5 h-5 object-contain" />
                                 </div>
                             </div>
 
@@ -783,14 +783,14 @@ const positionCoords = computed(() => {
                                             <div class="flex items-center gap-3">
                                                 <span class="text-xs font-bold text-gray-900 dark:text-white tabular-nums">{{ formatSeason(stat.season, stat.league?.country_name) }}</span>
                                                 <div class="flex items-center gap-2">
-                                                    <img v-if="stat.league?.logo" :src="stat.league.logo" class="w-4 h-4 object-contain opacity-60" />
+                                                    <img v-if="stat.league?.logo_url" :src="stat.league.logo_url" class="w-4 h-4 object-contain opacity-60" />
                                                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate max-w-[120px]">{{ stat.league?.name }}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center gap-2">
-                                                <img v-if="stat.team?.logo" :src="stat.team.logo" class="w-4 h-4 object-contain" />
+                                                <img v-if="stat.team?.logo_url" :src="stat.team.logo_url" class="w-4 h-4 object-contain" />
                                                 <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ stat.team?.name }}</span>
                                             </div>
                                         </td>

@@ -21,12 +21,12 @@
             <td class="px-4 py-4">
               <div class="flex items-center gap-3">
                 <div class="relative">
-                    <img :src="player.photo" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700" />
+                    <img :src="player.player?.photo_url" class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700" />
                     <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-white dark:bg-gray-800 rounded-full border border-gray-100 dark:border-gray-700 p-0.5">
                          <img :src="`https://media.api-sports.io/football/teams/${player.team_id}.png`" class="w-full h-full object-contain" />
                     </div>
                 </div>
-                <span class="text-[12px] font-bold text-gray-900 dark:text-gray-100 truncate">{{ player.player_name }}</span>
+                <span class="text-[12px] font-bold text-gray-900 dark:text-gray-100 truncate">{{ player.player?.name || 'Cầu thủ' }}</span>
               </div>
             </td>
             <td class="px-4 py-4">

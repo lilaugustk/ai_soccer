@@ -82,7 +82,7 @@
                       <Link v-for="team in searchResults.teams" :key="team.id" :href="`/teams/${team.id}`" @click="showResults = false"
                             class="flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors group">
                         <div class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center p-1 border border-gray-100 dark:border-gray-600 group-hover:bg-white dark:group-hover:bg-gray-600 transition-colors overflow-hidden">
-                          <img v-if="team.logo" :src="team.logo" class="w-full h-full object-contain" />
+                          <img v-if="team.logo_url" :src="team.logo_url" class="w-full h-full object-contain" />
                           <span v-else class="text-[10px] font-bold uppercase text-gray-300">{{ team.code || team.name.substring(0,1) }}</span>
                         </div>
                         <span class="text-sm font-bold">{{ team.name }}</span>
