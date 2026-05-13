@@ -10,7 +10,7 @@ class FootballShotmap extends Model
 
     protected $fillable = [
         'event_id', 'team_id', 'player_id', 'minute', 'x', 'y', 'xg',
-        'body_part', 'situation', 'is_goal'
+        'body_part', 'situation', 'is_goal', 'shot_type'
     ];
 
     protected $casts = [

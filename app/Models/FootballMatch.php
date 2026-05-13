@@ -78,10 +78,6 @@ class FootballMatch extends Model
         return $this->hasMany(FootballMomentum::class, 'event_id');
     }
 
-    public function heatmap()
-    {
-        return $this->hasMany(FootballHeatmap::class, 'event_id');
-    }
 
     public function stats()
     {

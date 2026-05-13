@@ -241,6 +241,30 @@ const scrollToLeague = (leagueName) => {
         });
     }
 };
+let dashboardInterval = null;
+
+onMounted(() => {
+    // Polling mỗi 60 giây để cập nhật tỉ số các trận đang diễn ra
+    dashboardInterval = setInterval(() => {
+        const hasLiveMatches = Object.values(props.groupedGames).some(league => 
+            league.some(match => match.status === 'live')
+        );
+        
+        if (hasLiveMatches || props.filters.status === 'LIVE') {
+            router.reload({ 
+                preserveScroll: true, 
+                preserveState: true,
+                only: ['groupedGames'] // Chỉ lấy lại dữ liệu trận đấu để tối ưu
+            });
+        }
+    }, 60000);
+});
+
+onUnmounted(() => {
+    if (dashboardInterval) {
+        clearInterval(dashboardInterval);
+    }
+});
 </script>
 
 <style scoped>

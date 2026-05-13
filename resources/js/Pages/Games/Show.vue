@@ -135,105 +135,6 @@
                 </div>
             </div>
 
-            <!-- Info Bar (Stadium, Referee, Attendance) -->
-            <div class="grid grid-cols-3 gap-2 mb-6">
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 border border-gray-100 dark:border-gray-700 flex items-center gap-2.5 shadow-sm"
-                >
-                    <div
-                        class="w-7 h-7 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-emerald-500"
-                    >
-                        <svg
-                            class="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <span
-                            class="block text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5"
-                            >Sân vận động</span
-                        >
-                        <span
-                            class="text-[10px] font-bold text-gray-900 dark:text-white line-clamp-1 truncate w-20 md:w-auto"
-                            >{{ game.venue?.name
-                            }}{{
-                                game.venue?.city ? ", " + game.venue.city : ""
-                            }}</span
-                        >
-                    </div>
-                </div>
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 border border-gray-100 dark:border-gray-700 flex items-center gap-2.5 shadow-sm"
-                >
-                    <div
-                        class="w-7 h-7 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-blue-500"
-                    >
-                        <svg
-                            class="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <span
-                            class="block text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5"
-                            >Trọng tài</span
-                        >
-                        <span
-                            class="text-[10px] font-bold text-gray-900 dark:text-white line-clamp-1 truncate w-20 md:w-auto"
-                            >{{ game.referee || "N/A" }}</span
-                        >
-                    </div>
-                </div>
-                <div
-                    class="bg-white dark:bg-gray-800 rounded-2xl p-2.5 border border-gray-100 dark:border-gray-700 flex items-center gap-2.5 shadow-sm"
-                >
-                    <div
-                        class="w-7 h-7 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-purple-500"
-                    >
-                        <svg
-                            class="w-3.5 h-3.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <span
-                            class="block text-[7px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5"
-                            >Khán giả</span
-                        >
-                        <span
-                            class="text-[10px] font-bold text-gray-900 dark:text-white"
-                            >{{ game.attendance?.toLocaleString() }}</span
-                        >
-                    </div>
-                </div>
-            </div>
 
             <!-- Tabs Navigation (Synced Underline Style) -->
             <div class="flex items-center justify-center gap-8 border-b border-gray-100 dark:border-gray-800 mb-6 overflow-x-auto no-scrollbar">
@@ -261,9 +162,7 @@
                 <!-- Lineups Tab -->
                 <div v-if="activeTab === 'lineups'" class="space-y-8">
                     <!-- Formation Pitch (Visual - Flashscore Horizontal Style) -->
-                    <div
-                        class="relative overflow-hidden"
-                    >
+                    <div class="relative">
                         <!-- Expand Button -->
                         <button
                             @click="showPitchModal = true"
@@ -326,25 +225,6 @@
                                 class="absolute top-1/2 -translate-y-1/2 right-4 w-6 h-24 md:w-10 md:h-32 border-y border-l border-white/15"
                             ></div>
 
-                            <!-- Team Info Overlays (Lineup Toggle) -->
-                            <div class="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                                <div class="p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-2xl flex items-center gap-1">
-                                    <button 
-                                        @click="lineupView = 'start'"
-                                        :class="lineupView === 'start' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'"
-                                        class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all"
-                                    >
-                                        Xuất phát
-                                    </button>
-                                    <button 
-                                        @click="lineupView = 'end'"
-                                        :class="lineupView === 'end' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'"
-                                        class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all"
-                                    >
-                                        Kết thúc
-                                    </button>
-                                </div>
-                            </div>
 
 
 
@@ -529,13 +409,6 @@
                                     <div class="absolute top-1/2 -translate-y-1/2 right-4 w-24 h-64 border-y border-l border-white/15"></div>
                                     <div class="absolute top-1/2 -translate-y-1/2 right-4 w-10 h-32 border-y border-l border-white/15"></div>
 
-                                    <!-- Lineup Toggle -->
-                                    <div class="absolute top-4 left-1/2 -translate-x-1/2 z-40">
-                                        <div class="p-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10 shadow-2xl flex items-center gap-1">
-                                            <button @click="lineupView = 'start'" :class="lineupView === 'start' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all">Bắt đầu</button>
-                                            <button @click="lineupView = 'end'" :class="lineupView === 'end' ? 'bg-emerald-500 text-white shadow-lg' : 'text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-[0.2em] transition-all">Kết thúc</button>
-                                        </div>
-                                    </div>
 
                                     <!-- Formation Labels -->
                                     <div class="absolute top-4 left-6 z-40">
@@ -941,15 +814,12 @@
                 </div>
 
                 <!-- Match Stats Tab -->
-                <div v-else-if="activeTab === 'stats'" class="py-4 space-y-6">
+                <div v-else-if="activeTab === 'stats'" class="pb-4 space-y-6">
                     <!-- Momentum Chart (BSD v2 Exclusive) -->
                     <MomentumChart v-if="momentum && momentum.length" :momentum="momentum" class="mb-6" />
 
                     <!-- Shotmap & Heatmap (BSD v2 Exclusive) -->
-                    <div class="grid md:grid-cols-2 gap-6 mb-6">
-                        <ShotMap :shots="shotmap" />
-                        <HeatMap :points="heatmap" />
-                    </div>
+                    <ShotMap :shots="shotmap" :home-team="game.home_team" :away-team="game.away_team" />
 
                     <!-- Detailed Comparison Stats (Moved from Analysis) -->
                     <div v-if="prediction && prediction.comparison" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
@@ -1107,7 +977,7 @@
                 </div>
 
                 <!-- H2H Tab -->
-                <div v-else-if="activeTab === 'h2h'" class="py-4 space-y-6">
+                <div v-else-if="activeTab === 'h2h'" class="pb-4 space-y-6">
                     <div
                         v-if="h2hMatches && h2hMatches.length"
                         class="space-y-8"
@@ -1266,9 +1136,8 @@
                     </div>
                 </div>
 
-                <!-- Timeline Tab (SofaScore Style) -->
                 <!-- Timeline Tab (Premium Style) -->
-                <div v-else-if="activeTab === 'timeline'" class="py-4">
+                <div v-else-if="activeTab === 'timeline'" class="pb-4">
                     <div
                         v-if="processedEvents.length"
                         class="bg-white dark:bg-[#0a1921] rounded-[2rem] shadow-xl dark:shadow-2xl overflow-hidden min-h-[400px] border border-gray-100 dark:border-white/5"
@@ -1394,7 +1263,7 @@
 
 
                 <!-- Standings Tab -->
-                <div v-else-if="activeTab === 'standings'" class="py-4">
+                <div v-else-if="activeTab === 'standings'" class="pb-4">
                     <div v-if="isValidStandings" class="space-y-6">
                         <div class="flex items-center justify-between px-4">
                             <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -1412,7 +1281,7 @@
                 </div>
 
                 <!-- Analysis Tab (API Predictions) -->
-                <div v-else-if="activeTab === 'analysis'" class="py-4 space-y-8">
+                <div v-else-if="activeTab === 'analysis'" class="pb-4 space-y-8">
                     <!-- Tactical AI Insights (Groq) -->
                     <div v-if="aiInsights" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm relative overflow-hidden">
                         <div class="flex items-center justify-between mb-6">
@@ -1477,42 +1346,21 @@
 
                     </div>
                     <div v-else class="py-20 text-center">
-                        <div
-                            class="w-16 h-16 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-emerald-500"
-                        >
-                            <svg
-                                class="w-8 h-8 animate-pulse"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
+                        <div v-if="isRefreshing" class="flex flex-col items-center gap-3">
+                            <div class="w-12 h-12 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Đang tự động cập nhật dữ liệu...</span>
                         </div>
-                        <h3
-                            class="text-lg font-bold text-gray-900 dark:text-white"
-                        >
-                            Dữ liệu phân tích đang được cập nhật...
-                        </h3>
-                        <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto mb-8">
-                            Vui lòng chờ trong giây lát khi hệ thống tổng hợp
-                            thông tin từ API.
-                        </p>
-                        <button 
-                            @click="refreshMatchData"
-                            :disabled="isRefreshing"
-                            class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/25 inline-flex items-center gap-2"
-                        >
-                            <svg v-if="isRefreshing" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            {{ isRefreshing ? 'Đang tải...' : 'Cập nhật ngay' }}
-                        </button>
+                        <div v-else class="flex flex-col items-center">
+                            <div class="w-16 h-16 rounded-full bg-gray-50 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-gray-400">
+                                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Dữ liệu đang được xử lý</h3>
+                            <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto">
+                                Hệ thống đang tự động đồng bộ thông tin mới nhất cho bạn.
+                            </p>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -1533,7 +1381,6 @@ import LeagueSidebar from "../../Components/LeagueSidebar.vue";
 import RadarChart from "../../Components/RadarChart.vue";
 import MomentumChart from "../../Components/MomentumChart.vue";
 import ShotMap from "../../Components/ShotMap.vue";
-import HeatMap from "../../Components/HeatMap.vue";
 
 dayjs.extend(utc);
 
@@ -1549,7 +1396,6 @@ const props = defineProps({
     aiInsights: { type: String, default: null },
     momentum: { type: Array, default: () => [] },
     shotmap: { type: Array, default: () => [] },
-    heatmap: { type: Array, default: () => [] },
 });
 
 const activeTab = ref("lineups");
@@ -1569,17 +1415,36 @@ const setActiveTab = (tabId) => {
     window.location.hash = tabId;
 };
 
+let refreshInterval = null;
+
 onMounted(() => {
     const hash = window.location.hash.replace("#", "");
     if (hash && tabs.some((t) => t.id === hash)) {
         activeTab.value = hash;
     }
-    console.log("LINEUPS DATA:", props.game.lineups);
-    console.log("HOME TEAM ID:", props.game.home_team?.id);
-    // Debug grid
-    const homeLineup = props.game.lineups?.find((l) => l.team?.id == props.game.home_team?.id);
-    console.log("HOME startXI:", homeLineup?.startXI);
-    console.log("First player grid:", homeLineup?.startXI?.[0]?.player?.grid);
+    
+    // Tự động sync nếu thiếu dữ liệu quan trọng
+    if (!props.prediction || !props.game.statistics || props.game.statistics.length === 0) {
+        refreshMatchData();
+    }
+
+    // Thiết lập polling 30s nếu trận đấu đang LIVE
+    const liveStatuses = ['live', 'in_progress', 'halftime', '1st_half', '2nd_half', 'et', 'penalties'];
+    const isLive = liveStatuses.includes(props.game.status?.toLowerCase());
+    
+    if (isLive) {
+        refreshInterval = setInterval(() => {
+            if (!isRefreshing.value) {
+                refreshMatchData();
+            }
+        }, 30000);
+    }
+});
+
+onUnmounted(() => {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
 });
 
 const isRefreshing = ref(false);
@@ -1646,6 +1511,7 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
 
     // Kiểm tra có player nào có grid không
     const hasGrid = players.some((p) => p.player?.grid);
+    console.log("LINEUP DEBUG - hasGrid:", hasGrid, "players count:", players.length);
 
     if (hasGrid) {
         // --- Chế độ grid: dùng p.player.grid để tính vị trí ---
@@ -1683,8 +1549,10 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
                 });
             });
         });
+        console.log("LINEUP DEBUG - Final processed count (grid):", processed.length);
         return processed;
     }
+
 
     // --- Fallback: không có grid → tự phân bổ theo hàng (GK + hàng còn lại) ---
     // Mặc định formation 1-4-3-3 (11 người)
@@ -1715,7 +1583,7 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
         });
         colIdx++;
     });
-
+    console.log("LINEUP DEBUG - Final processed count (fallback):", processed.length);
     return processed;
 };
 
@@ -1826,10 +1694,19 @@ const matchStatsGroups = computed(() => {
     };
 
     const processStat = (label, type, suffix = "", detailsType = null) => {
-        const homeRaw = String(findVal(homeStats, type) || 0).replace("%", "");
-        const awayRaw = String(findVal(awayStats, type) || 0).replace("%", "");
-        const homeVal = parseFloat(homeRaw) || 0;
-        const awayVal = parseFloat(awayRaw) || 0;
+        let homeRaw = String(findVal(homeStats, type) || 0).replace("%", "");
+        let awayRaw = String(findVal(awayStats, type) || 0).replace("%", "");
+        
+        // Handle X/Y format for progress bar (take X)
+        const getVal = (raw) => {
+            if (typeof raw === 'string' && raw.includes('/')) {
+                return parseFloat(raw.split('/')[0]) || 0;
+            }
+            return parseFloat(raw) || 0;
+        };
+
+        const homeVal = getVal(homeRaw);
+        const awayVal = getVal(awayRaw);
 
         // Lấy chi tiết (ví dụ: cho Passes)
         let homeDetail = null;
@@ -1856,19 +1733,19 @@ const matchStatsGroups = computed(() => {
         {
             group: "DỨT ĐIỂM",
             items: [
-                processStat("Kỳ vọng bàn thắng (xG)", "expected_goals"),
+                processStat("Kỳ vọng bàn thắng (xG)", "Expected Goals"),
                 processStat("Tổng cú sút", "Total Shots"),
                 processStat("Sút trúng đích", "Shots on Goal"),
                 processStat("Sút ra ngoài", "Shots off Goal"),
                 processStat("Cú sút bị chặn", "Blocked Shots"),
-                processStat("Sút trong vòng cấm", "Shots insidebox"),
-                processStat("Sút ngoài vòng cấm", "Shots outsidebox"),
             ].filter((i) => i.home != "0" || i.away != "0"),
         },
         {
             group: "TẤN CÔNG",
             items: [
                 processStat("Kiểm soát bóng", "Ball Possession", "%"),
+                processStat("Tấn công", "Attacks"),
+                processStat("Tấn công nguy hiểm", "Dangerous Attacks"),
                 processStat("Phạt góc", "Corner Kicks"),
                 processStat("Việt vị", "Offsides"),
             ].filter((i) => i.home != "0" || i.away != "0"),
@@ -1876,20 +1753,17 @@ const matchStatsGroups = computed(() => {
         {
             group: "CHUYỀN BÓNG",
             items: [
+                processStat("Độ chính xác chuyền", "Pass Accuracy"),
                 processStat("Tổng số đường chuyền", "Total passes"),
-                processStat(
-                    "Chuyền chính xác",
-                    "Passes accurate",
-                    "",
-                    "Passes %"
-                ),
+                processStat("Tạt bóng", "Crosses"),
+                processStat("Rê bóng", "Dribbles"),
+                processStat("Chuyền dài", "Long Balls"),
             ].filter((i) => i.home != "0" || i.away != "0"),
         },
         {
             group: "PHÒNG NGỰ & THỦ MÔN",
             items: [
                 processStat("Cứu thua", "Goalkeeper Saves"),
-                processStat("Bàn thắng ngăn chặn", "goals_prevented"),
                 processStat("Phạm lỗi", "Fouls"),
                 processStat("Thẻ vàng", "Yellow Cards"),
                 processStat("Thẻ đỏ", "Red Cards"),

@@ -14,7 +14,7 @@
             </div>
         </div>
 
-        <div class="relative h-40 w-full mt-4 flex items-end gap-[2px]">
+        <div class="relative h-56 w-full mt-4 flex items-end gap-[2px]">
             <!-- Zero Line -->
             <div class="absolute top-1/2 left-0 right-0 h-px bg-gray-100 dark:bg-white/10 z-0"></div>
 
@@ -29,10 +29,10 @@
                 <div 
                     v-if="val > 0"
                     class="absolute bottom-1/2 left-0 right-0 bg-emerald-500/60 group-hover:bg-emerald-500 transition-all rounded-t-sm"
-                    :style="{ height: (val) + '%' }"
+                    :style="{ height: `calc(${(val / maxVal * 45)}% + 1px)` }"
                 >
                     <div class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-50">
-                        P{{ index + 1 }}: +{{ val }}
+                        Phút {{ index + 1 }}: +{{ val }}
                     </div>
                 </div>
 
@@ -40,10 +40,10 @@
                 <div 
                     v-if="val < 0"
                     class="absolute top-1/2 left-0 right-0 bg-blue-500/60 group-hover:bg-blue-500 transition-all rounded-b-sm"
-                    :style="{ height: (Math.abs(val)) + '%' }"
+                    :style="{ height: `calc(${(Math.abs(val) / maxVal * 45)}% + 1px)` }"
                 >
                     <div class="opacity-0 group-hover:opacity-100 absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-50">
-                        P{{ index + 1 }}: {{ val }}
+                        Phút {{ index + 1 }}: {{ val }}
                     </div>
                 </div>
             </div>
@@ -58,11 +58,19 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
     momentum: {
         type: Array,
         default: () => []
     }
+});
+
+const maxVal = computed(() => {
+    if (!props.momentum.length) return 100;
+    const max = Math.max(...props.momentum.map(v => Math.abs(v)));
+    return max > 0 ? max : 100;
 });
 </script>
 

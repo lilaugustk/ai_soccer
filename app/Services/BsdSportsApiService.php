@@ -13,7 +13,7 @@ use App\Models\FootballIncident;
 use App\Models\FootballShotmap;
 use App\Models\FootballStanding;
 use App\Models\FootballEventStat;
-use App\Models\FootballHeatmap;
+use App\Models\FootballMomentum;
 use App\Models\FootballLineup;
 use App\Models\FootballLineupPlayer;
 use App\Models\FootballLineupTeam;
@@ -39,10 +39,14 @@ class BsdSportsApiService
         ];
     }
 
-    private function get($endpoint, $params = [])
+    private $playerExistsCache = [];
+    private $teamExistsCache   = [];
+
+    public function get($endpoint, $params = [])
     {
         try {
             $response = Http::withHeaders($this->getHeaders())
+                ->timeout(10) // Thêm timeout để tránh treo quá lâu
                 ->withoutVerifying()
                 ->get($this->getBaseUrl() . $endpoint, $params);
 
@@ -56,6 +60,45 @@ class BsdSportsApiService
             Log::error("BSD API Exception ({$endpoint}): " . $e->getMessage());
             return null;
         }
+    }
+
+    private function syncPlayerIfNotExists($playerId, $name, $teamId)
+    {
+        if (empty($playerId)) return;
+        
+        // Dùng cache trong bộ nhớ để tránh truy vấn DB lặp lại cho cùng 1 cầu thủ trong 1 request
+        if (isset($this->playerExistsCache[$playerId])) return;
+
+        if (!FootballPlayer::query()->where('id', $playerId)->exists()) {
+            try {
+                FootballPlayer::create([
+                    'id' => $playerId,
+                    'name' => $name ?? 'Unknown Player',
+                    'current_team_id' => $teamId,
+                ]);
+            } catch (\Exception $e) {
+                // Có thể đã được tạo bởi tiến trình khác
+            }
+        }
+        
+        $this->playerExistsCache[$playerId] = true;
+    }
+
+    private function syncTeamIfNotExists($teamId, $name)
+    {
+        if (empty($teamId)) return;
+        if (isset($this->teamExistsCache[$teamId])) return;
+
+        if (!FootballTeam::query()->where('id', $teamId)->exists()) {
+            try {
+                FootballTeam::create([
+                    'id' => $teamId,
+                    'name' => $name ?? 'Unknown Team',
+                ]);
+            } catch (\Exception $e) {
+            }
+        }
+        $this->teamExistsCache[$teamId] = true;
     }
 
     /**
@@ -359,178 +402,216 @@ class BsdSportsApiService
      */
     public function hydrateMatch($matchId)
     {
+        set_time_limit(90);
         return DB::transaction(function () use ($matchId) {
             $match = FootballMatch::query()->find($matchId);
             if (!$match) return null;
 
-        // 1. Statistics
-        $statsData = $this->get("events/{$matchId}/stats/");
-        if ($statsData && isset($statsData['stats'])) {
-            $data = $statsData['stats'];
-            foreach (['home', 'away'] as $side) {
-                if (isset($data[$side])) {
-                    $s = $data[$side];
-                    FootballEventStat::updateOrCreate(
-                        ['event_id' => $matchId, 'team_id' => $match->{$side . '_team_id'}],
-                        [
-                            'side' => $side,
-                            'ball_possession' => $s['ball_possession'] ?? 0,
-                            'total_shots' => $s['total_shots'] ?? 0,
-                            'crosses_value' => $s['crosses']['value'] ?? 0,
-                            'crosses_total' => $s['crosses']['total'] ?? 0,
-                            'crosses_pct' => $s['crosses']['pct'] ?? 0,
-                            'dribbles_value' => $s['dribbles']['value'] ?? 0,
-                            'dribbles_total' => $s['dribbles']['total'] ?? 0,
-                            'dribbles_pct' => $s['dribbles']['pct'] ?? 0,
-                            'long_balls_value' => $s['long_balls']['value'] ?? 0,
-                            'long_balls_total' => $s['long_balls']['total'] ?? 0,
-                            'long_balls_pct' => $s['long_balls']['pct'] ?? 0,
-                            'attack' => $s['attack'] ?? 0,
-                            'ball_safe' => $s['ball_safe'] ?? 0,
-                            'dangerous_attack' => $s['dangerous_attack'] ?? 0,
-                            'pass_accuracy_pct' => $s['pass_accuracy_pct'] ?? 0,
-                            'xg_actual' => $s['xg']['actual'] ?? 0,
-                        ]
-                    );
-                }
-            }
-        }
+            // Dọn dẹp cache local cho player IDs
+            $this->playerExistsCache = [];
 
-        // 2. Lineups
-        $lineupsData = $this->get("events/{$matchId}/lineups/");
-        if ($lineupsData && isset($lineupsData['lineups'])) {
-            $data = $lineupsData['lineups'];
-            $lineup = FootballLineup::updateOrCreate(
-                ['event_id' => $matchId],
-                ['lineup_status' => $lineupsData['lineup_status'] ?? 'confirmed']
-            );
+            // 1. GỌI SONG SONG TẤT CẢ CÁC ENDPOINT ĐỂ TỐI ƯU TỐC ĐỘ (Parallel Requests)
+            $responses = Http::pool(fn ($pool) => [
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/"),
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/stats/"),
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/lineups/"),
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/incidents/"),
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/metadata/"),
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "predictions/{$matchId}/"),
+                // Đồng bộ luôn bảng xếp hạng của giải đấu này
+                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "leagues/{$match->league_id}/standings/", ['season_id' => $match->season_id]),
+            ]);
 
-            foreach (['home', 'away'] as $side) {
-                if (isset($data[$side])) {
-                    $teamData = $data[$side];
-                    $lineupTeam = FootballLineupTeam::updateOrCreate(
-                        ['lineup_id' => $lineup->id, 'team_id' => $match->{$side . '_team_id'}],
-                        [
-                            'formation' => $teamData['formation'] ?? 'N/A',
-                            'side' => $side,
-                            'confidence' => isset($teamData['confidence']) ? ($teamData['confidence'] > 1 ? $teamData['confidence'] / 100 : $teamData['confidence']) : 1.0,
-                        ]
-                    );
+            $eventData    = $responses[0]->successful() ? $responses[0]->json() : null;
+            $statsData    = $responses[1]->successful() ? $responses[1]->json() : null;
+            $lineupsData  = $responses[2]->successful() ? $responses[2]->json() : null;
+            $incidentsData = $responses[3]->successful() ? $responses[3]->json() : null;
+            $metaData     = $responses[4]->successful() ? $responses[4]->json() : null;
+            $predictionsData = $responses[5]->successful() ? $responses[5]->json() : null;
+            $standingsData = $responses[6]->successful() ? $responses[6]->json() : null;
 
-                    // Save Players
-                    FootballLineupPlayer::query()->where('lineup_team_id', $lineupTeam->id)->delete();
-                    
-                    // Start XI
-                    foreach ($teamData['players'] ?? [] as $p) {
-                        try {
-                            if (isset($p['id']) && !FootballPlayer::query()->where('id', $p['id'])->exists()) {
-                                FootballPlayer::create([
-                                    'id' => $p['id'],
-                                    'name' => $p['name'] ?? 'Unknown Player',
-                                    'current_team_id' => $match->{$side . '_team_id'},
-                                ]);
-                            }
-                            FootballLineupPlayer::create([
-                                'lineup_team_id' => $lineupTeam->id,
-                                'player_id' => $p['id'],
-                                'jersey_number' => $p['jersey_number'] ?? null,
-                                'position' => $p['position'] ?? null,
-                                'grid' => $p['grid'] ?? null,
-                                'is_substitute' => false,
-                                'ai_score' => $p['ai_score'] ?? null,
-                            ]);
-                        } catch (\Exception $e) {
-                            Log::error("Error saving lineup player (XI): " . $e->getMessage(), ['player' => $p]);
-                        }
-                    }
-
-                    // Substitutes
-                    foreach ($teamData['substitutes'] ?? [] as $p) {
-                        try {
-                            if (isset($p['id']) && !FootballPlayer::query()->where('id', $p['id'])->exists()) {
-                                FootballPlayer::create([
-                                    'id' => $p['id'],
-                                    'name' => $p['name'] ?? 'Unknown Player',
-                                    'current_team_id' => $match->{$side . '_team_id'},
-                                ]);
-                            }
-                            FootballLineupPlayer::create([
-                                'lineup_team_id' => $lineupTeam->id,
-                                'player_id' => $p['id'],
-                                'jersey_number' => $p['jersey_number'] ?? null,
-                                'position' => $p['position'] ?? null,
-                                'grid' => $p['grid'] ?? null,
-                                'is_substitute' => true,
-                                'ai_score' => $p['ai_score'] ?? null,
-                            ]);
-                        } catch (\Exception $e) {
-                            Log::error("Error saving lineup player (Sub): " . $e->getMessage(), ['player' => $p]);
-                        }
-                    }
-                }
+            // 1.1 Update Match Info
+            if ($eventData) {
+                $match->update([
+                    'status' => $eventData['status'] ?? $match->status,
+                    'home_score' => $eventData['home_score'] ?? $match->home_score,
+                    'away_score' => $eventData['away_score'] ?? $match->away_score,
+                    'weather_description' => $eventData['weather']['description'] ?? $match->weather_description,
+                    'attendance' => $eventData['attendance'] ?? $match->attendance,
+                ]);
             }
 
-            // Save Unavailable Players
-            if (isset($lineupsData['unavailable_players'])) {
-                FootballUnavailablePlayer::query()->where('lineup_id', $lineup->id)->delete();
+            // 1.2 Statistics & Shotmap & Momentum & Average Positions
+            if ($statsData && isset($statsData['stats'])) {
+                $data = $statsData['stats'];
                 foreach (['home', 'away'] as $side) {
-                    if (isset($lineupsData['unavailable_players'][$side])) {
-                        foreach ($lineupsData['unavailable_players'][$side] as $p) {
-                            if (!isset($p['id'])) continue;
-                            try {
-                                if (!FootballPlayer::query()->where('id', $p['id'])->exists()) {
-                                    FootballPlayer::create([
-                                        'id' => $p['id'],
-                                        'name' => $p['name'] ?? 'Unknown Player',
-                                        'current_team_id' => $match->{$side . '_team_id'},
-                                    ]);
-                                }
-                                FootballUnavailablePlayer::create([
-                                    'lineup_id' => $lineup->id,
-                                    'player_id' => $p['id'],
-                                    'status' => $p['status'] ?? null,
-                                    'reason' => $p['reason'] ?? null,
-                                ]);
-                            } catch (\Exception $e) {
-                                Log::error("Error saving unavailable player: " . $e->getMessage());
-                            }
+                    if (isset($data[$side])) {
+                        $s = $data[$side];
+                        FootballEventStat::updateOrCreate(
+                            ['event_id' => $matchId, 'team_id' => $match->{$side . '_team_id'}],
+                            [
+                                'side' => $side,
+                                'ball_possession' => $s['ball_possession'] ?? 0,
+                                'total_shots' => $s['total_shots'] ?? 0,
+                                'shots_on_goal' => $s['shots_on_goal'] ?? 0,
+                                'shots_off_goal' => $s['shots_off_goal'] ?? 0,
+                                'blocked_shots' => $s['blocked_shots'] ?? 0,
+                                'crosses_value' => $s['crosses']['value'] ?? 0,
+                                'crosses_total' => $s['crosses']['total'] ?? 0,
+                                'crosses_pct' => $s['crosses']['pct'] ?? 0,
+                                'dribbles_value' => $s['dribbles']['value'] ?? 0,
+                                'dribbles_total' => $s['dribbles']['total'] ?? 0,
+                                'dribbles_pct' => $s['dribbles']['pct'] ?? 0,
+                                'long_balls_value' => $s['long_balls']['value'] ?? 0,
+                                'long_balls_total' => $s['long_balls']['total'] ?? 0,
+                                'long_balls_pct' => $s['long_balls']['pct'] ?? 0,
+                                'attack' => $s['attack'] ?? 0,
+                                'ball_safe' => $s['ball_safe'] ?? 0,
+                                'dangerous_attack' => $s['dangerous_attack'] ?? 0,
+                                'corner_kicks' => $s['corner_kicks'] ?? 0,
+                                'offsides' => $s['offsides'] ?? 0,
+                                'fouls' => $s['fouls'] ?? 0,
+                                'goalkeeper_saves' => $s['goalkeeper_saves'] ?? 0,
+                                'yellow_cards' => $s['yellow_cards'] ?? 0,
+                                'red_cards' => $s['red_cards'] ?? 0,
+                                'pass_accuracy_pct' => $s['pass_accuracy_pct'] ?? 0,
+                                'xg_actual' => $s['xg']['actual'] ?? 0,
+                            ]
+                        );
+                    }
+                }
+            }
+
+            // Average Positions (Players)
+            if (isset($statsData['average_positions'])) {
+                foreach (['home', 'away'] as $side) {
+                    if (isset($statsData['average_positions'][$side])) {
+                        foreach ($statsData['average_positions'][$side] as $p) {
+                            $pid = $p['pid'] ?? $p['id'] ?? null;
+                            $this->syncPlayerIfNotExists($pid, $p['name'] ?? null, $match->{$side . '_team_id'});
                         }
                     }
                 }
             }
-        }
 
-        // 3. Incidents
-        $incidentsData = $this->get("events/{$matchId}/incidents/");
-        if ($incidentsData && isset($incidentsData['incidents'])) {
-            $data = $incidentsData['incidents'];
-            FootballIncident::query()->where('event_id', $matchId)->delete();
-            foreach ($data as $e) {
-                if (!is_array($e)) continue;
+            // Momentum
+            if (isset($statsData['momentum'])) {
+                FootballMomentum::query()->where('event_id', $matchId)->delete();
+                $momentumData = [];
+                foreach ($statsData['momentum'] as $m) {
+                    if (!is_array($m)) continue;
+                    $momentumData[] = [
+                        'event_id' => $matchId,
+                        'minute' => $m['m'] ?? 0,
+                        'value' => $m['v'] ?? 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+                
+                if (!empty($momentumData)) {
+                    FootballMomentum::insert($momentumData);
+                }
+            }
 
-                // Ensure players exist
-                foreach (['player_id' => 'player', 'player_in_id' => 'player_in', 'player_out_id' => 'player_out'] as $idKey => $nameKey) {
-                    if (isset($e[$idKey]) && !empty($e[$idKey])) {
-                        if (!FootballPlayer::query()->where('id', $e[$idKey])->exists()) {
-                            try {
-                                FootballPlayer::create([
-                                    'id' => $e[$idKey],
-                                    'name' => $e[$nameKey] ?? 'Unknown Player',
-                                    'current_team_id' => $e['is_home'] ? $match->home_team_id : $match->away_team_id,
-                                ]);
-                            } catch (\Exception $ex) {
-                                Log::error("Error creating player from incident: " . $ex->getMessage());
-                            }
+            // Shotmap
+            if (isset($statsData['shotmap'])) {
+                FootballShotmap::query()->where('event_id', $matchId)->delete();
+                foreach ($statsData['shotmap'] as $s) {
+                    if (!is_array($s)) continue;
+                    $pid = $s['pid'] ?? $s['player_id'] ?? null;
+                    $isHome = $s['home'] ?? ($s['is_home'] ?? true);
+                    $teamId = $s['team_id'] ?? ($isHome ? $match->home_team_id : $match->away_team_id);
+                    $this->syncPlayerIfNotExists($pid, $s['player_name'] ?? null, $teamId);
+
+                    FootballShotmap::create([
+                        'event_id' => $matchId,
+                        'team_id' => $teamId,
+                        'player_id' => $pid,
+                        'minute' => $s['min'] ?? $s['minute'] ?? 0,
+                        'x' => $s['pos']['x'] ?? $s['x'] ?? 0,
+                        'y' => $s['pos']['y'] ?? $s['y'] ?? 0,
+                        'xg' => $s['xg'] ?? null,
+                        'body_part' => $s['body'] ?? $s['body_part'] ?? null,
+                        'situation' => $s['sit'] ?? $s['situation'] ?? null,
+                        'is_goal' => ($s['type'] ?? '') === 'goal' || ($s['is_goal'] ?? false),
+                        'shot_type' => $s['type'] ?? null,
+                    ]);
+                }
+            }
+
+            // 2. Lineups
+            if ($lineupsData && isset($lineupsData['lineups'])) {
+                $data = $lineupsData['lineups'];
+                $lineup = FootballLineup::updateOrCreate(
+                    ['event_id' => $matchId],
+                    ['lineup_status' => $lineupsData['lineup_status'] ?? 'confirmed']
+                );
+
+                foreach (['home', 'away'] as $side) {
+                    if (isset($data[$side])) {
+                        $teamData = $data[$side];
+                        $lineupTeam = FootballLineupTeam::updateOrCreate(
+                            ['lineup_id' => $lineup->id, 'team_id' => $match->{$side . '_team_id'}],
+                            [
+                                'formation' => $teamData['formation'] ?? 'N/A',
+                                'side' => $side,
+                                'confidence' => isset($teamData['confidence']) ? ($teamData['confidence'] > 1 ? $teamData['confidence'] / 100 : $teamData['confidence']) : 1.0,
+                            ]
+                        );
+
+                        FootballLineupPlayer::query()->where('lineup_team_id', $lineupTeam->id)->delete();
+                        foreach (array_merge($teamData['players'] ?? [], $teamData['substitutes'] ?? []) as $index => $p) {
+                            if (!isset($p['id'])) continue;
+                            $this->syncPlayerIfNotExists($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
+                            
+                            FootballLineupPlayer::create([
+                                'lineup_team_id' => $lineupTeam->id,
+                                'player_id' => $p['id'],
+                                'jersey_number' => $p['jersey_number'] ?? null,
+                                'position' => $p['position'] ?? null,
+                                'grid' => $p['grid'] ?? null,
+                                'is_substitute' => $index >= count($teamData['players'] ?? []),
+                                'ai_score' => $p['ai_score'] ?? null,
+                            ]);
                         }
                     }
                 }
 
-                try {
+                // Unavailable
+                if (isset($lineupsData['unavailable_players'])) {
+                    FootballUnavailablePlayer::query()->where('lineup_id', $lineup->id)->delete();
+                    foreach (['home', 'away'] as $side) {
+                        foreach ($lineupsData['unavailable_players'][$side] ?? [] as $p) {
+                            if (!isset($p['id'])) continue;
+                            $this->syncPlayerIfNotExists($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
+                            FootballUnavailablePlayer::create([
+                                'lineup_id' => $lineup->id,
+                                'player_id' => $p['id'],
+                                'status' => $p['status'] ?? null,
+                                'reason' => $p['reason'] ?? null,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // 3. Incidents
+            if ($incidentsData && isset($incidentsData['incidents'])) {
+                FootballIncident::query()->where('event_id', $matchId)->delete();
+                foreach ($incidentsData['incidents'] as $e) {
+                    if (!is_array($e)) continue;
+                    $isHome = $e['is_home'] ?? true;
+                    $teamId = $isHome ? $match->home_team_id : $match->away_team_id;
+                    $this->syncPlayerIfNotExists($e['player_id'] ?? null, $e['player'] ?? null, $teamId);
+                    $this->syncPlayerIfNotExists($e['player_in_id'] ?? null, $e['player_in'] ?? null, $teamId);
+                    $this->syncPlayerIfNotExists($e['player_out_id'] ?? null, $e['player_out'] ?? null, $teamId);
+
                     FootballIncident::create([
                         'event_id' => $matchId,
                         'type' => $e['type'] ?? 'unknown',
                         'minute' => $e['minute'] ?? 0,
-                        'is_home' => $e['is_home'] ?? true,
+                        'is_home' => $isHome,
                         'player_id' => $e['player_id'] ?? null,
                         'player_in_id' => $e['player_in_id'] ?? null,
                         'player_out_id' => $e['player_out_id'] ?? null,
@@ -539,109 +620,58 @@ class BsdSportsApiService
                         'confirmed' => $e['confirmed'] ?? true,
                         'payload' => $e,
                     ]);
-                } catch (\Exception $ex) {
-                    Log::error("Error saving incident: " . $ex->getMessage());
                 }
             }
-        }
 
-        // 4. Shotmap
-        if (isset($statsData['shotmap'])) {
-            $data = $statsData['shotmap'];
-            FootballShotmap::query()->where('event_id', $matchId)->delete();
-            foreach ($data as $s) {
-                if (!is_array($s) || !isset($s['player_id'])) continue;
-                try {
-                    FootballShotmap::create([
-                        'event_id' => $matchId,
-                        'team_id' => $s['team_id'] ?? $match->home_team_id,
-                        'player_id' => $s['player_id'],
-                        'minute' => $s['minute'] ?? 0,
-                        'x' => $s['x'] ?? 0,
-                        'y' => $s['y'] ?? 0,
-                        'xg' => $s['xg'] ?? null,
-                        'body_part' => $s['body_part'] ?? null,
-                        'situation' => $s['situation'] ?? null,
-                        'is_goal' => $s['is_goal'] ?? false,
-                    ]);
-                } catch (\Exception $ex) {
-                    Log::error("Error saving shotmap entry: " . $ex->getMessage());
-                }
+            // 4. Predictions & AI Insights
+            if ($predictionsData) {
+                $match->update(['prediction' => $predictionsData]);
             }
-        }
 
-        // 4.5 Heatmap
-        if (isset($statsData['heatmap'])) {
-            $data = $statsData['heatmap'];
-            FootballHeatmap::query()->where('event_id', $matchId)->delete();
-            foreach ($data as $h) {
-                if (!is_array($h)) continue;
-                try {
-                    FootballHeatmap::create([
-                        'event_id' => $matchId,
-                        'team_id' => $h['team_id'] ?? null,
-                        'player_id' => $h['player_id'] ?? null,
-                        'x' => $h['x'] ?? 0,
-                        'y' => $h['y'] ?? 0,
-                        'value' => $h['value'] ?? 1,
+            // 5. Metadata
+            if ($metaData) {
+                if (isset($metaData['venue'])) {
+                    FootballVenue::updateOrCreate(['id' => $metaData['venue']['id']], [
+                        'name' => $metaData['venue']['name'],
+                        'city' => $metaData['venue']['city'] ?? null,
                     ]);
-                } catch (\Exception $ex) {
-                    Log::error("Error saving heatmap entry: " . $ex->getMessage());
+                    $match->venue_id = $metaData['venue']['id'];
+                }
+                if (isset($metaData['referee'])) {
+                    FootballReferee::updateOrCreate(['id' => $metaData['referee']['id']], [
+                        'name' => $metaData['referee']['name'],
+                    ]);
+                    $match->referee_id = $metaData['referee']['id'];
                 }
             }
-        }
 
-        // 5. Metadata
-        try {
-            $meta = $this->get("events/{$matchId}/metadata/");
-            if ($meta) {
-                $venueData = $meta['venue'] ?? null;
-                if ($venueData) {
-                    FootballVenue::updateOrCreate(['id' => $venueData['id']], [
-                        'name' => $venueData['name'],
-                        'city' => $venueData['city'] ?? null,
-                    ]);
-                    $match->venue_id = $venueData['id'];
-                }
-                $refData = $meta['referee'] ?? null;
-                if ($refData) {
-                    FootballReferee::updateOrCreate(['id' => $refData['id']], [
-                        'name' => $refData['name'],
-                    ]);
-                    $match->referee_id = $refData['id'];
-                }
+            // 6. Standings
+            if ($standingsData) {
+                $this->processStandingsData($match->league_id, $match->season_id, $standingsData);
             }
-        } catch (\Exception $ex) {
-            Log::error("Error saving metadata: " . $ex->getMessage());
-        }
 
             $match->save();
             return $match;
         });
     }
 
-    /**
-     * Đồng bộ bảng xếp hạng của một giải đấu
-     */
-    public function syncStandings($leagueId, $seasonId)
+    private function processStandingsData($leagueId, $seasonId, $data)
     {
-        $data = $this->get("leagues/{$leagueId}/standings/", ['season_id' => $seasonId]);
-        if (!$data) return [];
+        if (isset($data['standings'])) {
+            $standings = $data['standings'];
+        } elseif (isset($data['results'])) {
+            $standings = $data['results'];
+        } elseif (is_array($data) && !isset($data['id'])) {
+            $standings = $data;
+        } else {
+            $standings = [];
+        }
 
-        $standings = isset($data['standings']) ? $data['standings'] : [];
-        
         foreach ($standings as $s) {
-            // Đảm bảo Team tồn tại
-            if (!FootballTeam::query()->where('id', $s['team_id'])->exists()) {
-                FootballTeam::create(['id' => $s['team_id'], 'name' => $s['team_name'] ?? 'Unknown Team']);
-            }
+            $this->syncTeamIfNotExists($s['team_id'], $s['team_name'] ?? null);
 
             FootballStanding::updateOrCreate(
-                [
-                    'league_id' => $leagueId,
-                    'season_id' => $seasonId,
-                    'team_id' => $s['team_id']
-                ],
+                ['league_id' => $leagueId, 'season_id' => $seasonId, 'team_id' => $s['team_id']],
                 [
                     'position' => $s['position'],
                     'played' => $s['played'],
@@ -660,8 +690,19 @@ class BsdSportsApiService
                 ]
             );
         }
-
         return $standings;
+    }
+
+    /**
+     * Đồng bộ bảng xếp hạng của một giải đấu
+     */
+    public function syncStandings($leagueId, $seasonId)
+    {
+        $data = $this->get("leagues/{$leagueId}/standings/", ['season_id' => $seasonId]);
+        if (!$data) return [];
+        
+        $this->teamExistsCache = []; // Reset cache cho standalone call
+        return $this->processStandingsData($leagueId, $seasonId, $data);
     }
 
     /**

@@ -25,7 +25,12 @@ class DashboardController extends Controller
 
         // Lọc theo trạng thái
         if ($statusFilter === 'LIVE') {
-            $matchesQuery->whereIn('status', ['inprogress', 'penalties']);
+            $liveStatuses = ['inprogress', 'penalties', '1st_half', 'ht', '2nd_half', 'et', 'postponed_rain', 'postponed_fog'];
+            $matchesQuery->where(function($q) use ($liveStatuses) {
+                $q->whereIn('status', $liveStatuses)
+                  ->orWhere('status', 'like', '%half%')
+                  ->orWhere('status', 'like', '%time%');
+            });
         } elseif ($statusFilter === 'FINISHED') {
             $matchesQuery->where('status', 'finished');
         } elseif ($statusFilter === 'SCHEDULED') {
@@ -48,11 +53,16 @@ class DashboardController extends Controller
         } else {
             $hasMissingScores = $matches->whereIn('status', ['finished', 'inprogress', 'penalties'])->whereNull('home_score')->count() > 0;
             $hasPendingMatches = $matches->where('status', 'notstarted')->count() > 0;
+            $hasPastPendingMatches = $matches->where('status', 'notstarted')
+                ->where('event_date', '<', now()->subMinutes(5)) // Thêm buffer 5 phút
+                ->count() > 0;
             $isPastDate = \Carbon\Carbon::parse($dateStr)->isPast();
             $isToday = \Carbon\Carbon::parse($dateStr)->isToday();
 
             if ($hasMissingScores) {
                 $shouldSync = true; 
+            } elseif ($hasPastPendingMatches) {
+                $shouldSync = true; // Rule 1.5: Có trận lẽ ra đã đá nhưng chưa cập nhật
             } elseif ($isToday && !$lastSync) {
                 $shouldSync = true; 
             } elseif ($isPastDate && $hasPendingMatches && !$lastSync) {
@@ -61,11 +71,11 @@ class DashboardController extends Controller
         }
 
         if ($shouldSync) {
-            // Nạp dữ liệu ngày hiện tại
-            $apiService->syncMatchesByDate($dateStr); 
+            // BSD v2 lấy theo UTC, do đó một ngày local (GMT+7) sẽ vắt qua 2 ngày UTC
+            $apiService->syncMatchesByDate($dateStr); // Ngày hiện tại
             
-            // BSD v2 lấy theo UTC nên có thể cần lấy thêm ngày hôm sau/trước tùy múi giờ
-            // $apiService->syncMatchesByDate($nextDay);
+            $prevDay = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
+            $apiService->syncMatchesByDate($prevDay); // Ngày hôm trước (để lấy các trận đá đêm/rạng sáng)
 
             $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
             cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
@@ -123,11 +133,18 @@ class DashboardController extends Controller
 
     private function mapStatus($status)
     {
-        return match ($status) {
-            'finished' => 'finished',
-            'inprogress', 'penalties' => 'live',
-            default => 'scheduled',
-        };
+        $status = strtolower($status);
+        if ($status === 'finished' || $status === 'ft' || $status === 'full_time') {
+            return 'finished';
+        }
+        
+        $liveStatuses = ['inprogress', 'penalties', '1st_half', 'ht', '2nd_half', 'et', 'postponed_rain', 'postponed_fog'];
+        if (in_array($status, $liveStatuses) || str_contains($status, 'half') || str_contains($status, 'time')) {
+             // Ngoại trừ finished đã check ở trên
+             return 'live';
+        }
+
+        return 'scheduled';
     }
 }
 

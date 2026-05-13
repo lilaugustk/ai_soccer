@@ -53,8 +53,8 @@
                   <div class="flex gap-8 overflow-x-auto no-scrollbar whitespace-nowrap">
                       <button v-for="tab in tabs" :key="tab.id"
                               @click="switchTab(tab.id)"
-                              :class="activeTab === tab.id ? 'text-emerald-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'"
-                              class="relative pb-4 px-1 text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap outline-none">
+                              :class="activeTab === tab.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+                              class="relative pb-4 px-1 text-[11px] font-bold uppercase tracking-[0.2em] transition-all whitespace-nowrap outline-none">
                           {{ tab.name }}
                           <!-- Active Underline Indicator -->
                           <div v-if="activeTab === tab.id" 
@@ -122,16 +122,6 @@
                 <div v-else-if="activeTab === 'assists'" key="assists">
                     <TopPlayerList :players="topAssists" statKey="assists" statLabel="Kiến tạo" />
                 </div>
-
-                <!-- YELLOW CARDS -->
-                <div v-else-if="activeTab === 'yellow_cards'" key="yellow_cards">
-                    <TopPlayerList :players="topYellowCards" statKey="yellow_cards" statLabel="Thẻ vàng" />
-                </div>
-
-                <!-- RED CARDS -->
-                <div v-else-if="activeTab === 'red_cards'" key="red_cards">
-                    <TopPlayerList :players="topRedCards" statKey="red_cards" statLabel="Thẻ đỏ" />
-                </div>
                 
             </transition>
           </div>
@@ -142,8 +132,6 @@
              <!-- Top Players Previews -->
              <TopPlayerPreview title="Vua phá lưới" :players="topScorers" statKey="goals" statLabel="bàn" />
              <TopPlayerPreview title="Kiến tạo" :players="topAssists" statKey="assists" statLabel="lần" />
-             <TopPlayerPreview title="Thẻ vàng" :players="topYellowCards" statKey="yellow_cards" statLabel="thẻ" />
-             <TopPlayerPreview title="Thẻ đỏ" :players="topRedCards" statKey="red_cards" statLabel="thẻ" />
         </aside>
 
       </div>
@@ -165,8 +153,6 @@ const props = defineProps({
   standings: Array,
   topScorers: Array,
   topAssists: Array,
-  topYellowCards: Array,
-  topRedCards: Array,
   matches: Array,
   season: [Number, String],
   availableSeasons: Array
@@ -214,9 +200,7 @@ const tabs = [
   { id: 'standings', name: 'Bảng xếp hạng' },
   { id: 'matches', name: 'Kết quả & Lịch thi đấu' },
   { id: 'scorers', name: 'Vua phá lưới' },
-  { id: 'assists', name: 'Kiến tạo' },
-  { id: 'yellow_cards', name: 'Thẻ vàng' },
-  { id: 'red_cards', name: 'Thẻ đỏ' }
+  { id: 'assists', name: 'Kiến tạo' }
 ];
 
 const changeSeason = (s) => {

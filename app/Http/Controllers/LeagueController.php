@@ -47,7 +47,22 @@ class LeagueController extends Controller
                 return redirect()->route('dashboard')->with('error', 'Không tìm thấy giải đấu này.');
             }
         }
-        $year = $request->input('season', 2024);
+        $year = $request->input('season', 2025);
+        
+        // Nếu không truyền season, tìm season hiện tại (is_current) hoặc mới nhất trong DB
+        if (!$year) {
+            $defaultSeason = FootballSeason::query()->where('league_id', $id)
+                ->where('is_current', true)
+                ->first();
+            
+            if (!$defaultSeason) {
+                $defaultSeason = FootballSeason::query()->where('league_id', $id)
+                    ->orderBy('year', 'desc')
+                    ->first();
+            }
+
+            $year = $defaultSeason ? $defaultSeason->year : 2024;
+        }
         
         // Tìm season_id thực tế từ year
         $seasonRecord = FootballSeason::query()->where('league_id', $id)
@@ -62,8 +77,24 @@ class LeagueController extends Controller
             $seasonRecord = FootballSeason::query()->where('league_id', $id)
                 ->where('year', $year)
                 ->first();
+            
+            // Nếu vẫn chưa có và đây là request mặc định (không truyền season), lấy cái mới nhất vừa sync xong
+            if (!$seasonRecord && !$request->has('season')) {
+                $seasonRecord = FootballSeason::query()->where('league_id', $id)
+                    ->orderBy('year', 'desc')
+                    ->first();
+                if ($seasonRecord) {
+                    $year = $seasonRecord->year;
+                }
+            }
         }
             
+        // Lấy danh sách mùa giải có sẵn cho dropdown
+        $availableSeasons = FootballSeason::query()->where('league_id', $id)
+            ->orderBy('year', 'desc')
+            ->pluck('year')
+            ->toArray();
+
         // Nếu vẫn không thấy thì chặn để tránh lỗi FK
         if (!$seasonRecord) {
             return Inertia::render('Leagues/Show', [
@@ -75,7 +106,7 @@ class LeagueController extends Controller
                 'topRedCards' => [],
                 'matches' => [],
                 'season' => $year,
-                'availableSeasons' => [2024, 2023, 2022]
+                'availableSeasons' => $availableSeasons ?: [2024, 2023, 2022]
             ]);
         }
 
@@ -163,9 +194,6 @@ class LeagueController extends Controller
             ->limit(10)
             ->get();
 
-        $topYellowCards = [];
-        $topRedCards = [];
-
         // 3. Trận đấu với logo_url và sắp xếp - LỌC THEO MÙA GIẢI
         $matchesQuery = FootballMatch::with(['homeTeam', 'awayTeam'])
             ->where('league_id', $id)
@@ -193,20 +221,11 @@ class LeagueController extends Controller
                 return $m;
             });
 
-        // 4. Lấy danh sách mùa giải có sẵn (Cache 24h)
-        $availableSeasons = Cache::remember("league_seasons_{$id}", 86400, function() use ($id) {
-            $seasons = $this->apiService->getLeagueSeasons($id);
-            // Fallback nếu API lỗi
-            return !empty($seasons) ? $seasons : [2025, 2024, 2023, 2022];
-        });
-
         return Inertia::render('Leagues/Show', [
             'league' => $league,
             'standings' => $standings,
             'topScorers' => $topScorers,
             'topAssists' => $topAssists,
-            'topYellowCards' => $topYellowCards,
-            'topRedCards' => $topRedCards,
             'matches' => $matches,
             'season' => $year,
             'availableSeasons' => $availableSeasons

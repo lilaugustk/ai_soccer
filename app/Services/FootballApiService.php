@@ -8,6 +8,7 @@ use App\Models\FootballLeague;
 use App\Models\FootballTeam;
 use App\Models\FootballMatch;
 use App\Models\FootballPlayer;
+use App\Models\FootballPlayerMatchStat;
 use App\Models\PlayerMatchStat;
 use App\Models\FootballScorer;
 use App\Models\PlayerSeasonStat;
@@ -109,7 +110,7 @@ class FootballApiService
                         );
 
                         // Lưu chỉ số trận này
-                        PlayerMatchStat::updateOrCreate(
+                        FootballPlayerMatchStat::updateOrCreate(
                             [
                                 'match_id' => $match->id,
                                 'player_id' => $p['id']
@@ -509,7 +510,7 @@ class FootballApiService
                 [
                     'league_id' => $leagueId,
                     'team_id' => $item['team']['id'],
-                    'season' => $season,
+                    'season_id' => $season,
                 ],
                 [
                     'rank' => $item['rank'],
@@ -642,24 +643,6 @@ class FootballApiService
                     'position' => $stats['games']['position'] ?? null,
                     'birth_year' => isset($playerData['birth']['date']) ? date('Y', strtotime($playerData['birth']['date'])) : null,
                     'current_team_id' => $stats['team']['id'],
-                    'photo' => $playerData['photo'] ?? null,
-                ]
-            );
-
-            // 2. Đồng bộ vào bảng football_scorers (Bảng xếp hạng ghi bàn)
-            FootballScorer::updateOrCreate(
-                [
-                    'player_id' => $playerData['id'],
-                    'league_id' => $leagueId,
-                    'season' => $season,
-                ],
-                [
-                    'player_name' => $playerData['name'],
-                    'team_id' => $stats['team']['id'],
-                    'goals' => $stats['goals']['total'] ?? 0,
-                    'assists' => $stats['goals']['assists'] ?? 0,
-                    'yellow_cards' => $stats['cards']['yellow'] ?? 0,
-                    'red_cards' => $stats['cards']['red'] ?? 0,
                     'photo' => $playerData['photo'] ?? null,
                 ]
             );
@@ -846,27 +829,6 @@ class FootballApiService
                         'logo_url' => $stat['team']['logo'] ?? null,
                     ]
                 );
-            }
-
-            if ($leagueId && $teamId) {
-                PlayerSeasonStat::updateOrCreate(
-                    [
-                        'player_id' => $p['id'],
-                        'league_id' => $leagueId,
-                        'season' => $season, 
-                    ],
-                    [
-                        'team_id' => $teamId,
-                        'games' => $stat['games']['appearences'] ?? 0,
-                    'games_starts' => $stat['games']['lineups'] ?? 0,
-                    'minutes' => $stat['games']['minutes'] ?? 0,
-                    'goals' => $stat['goals']['total'] ?? 0,
-                    'assists' => $stat['goals']['assists'] ?? 0,
-                    'cards_yellow' => $stat['cards']['yellow'] ?? 0,
-                    'cards_red' => $stat['cards']['red'] ?? 0,
-                    'detailed_stats' => $stat, // Lưu toàn bộ JSON để trích xuất chỉ số nâng cao
-                ]
-            );
             }
         }
     }

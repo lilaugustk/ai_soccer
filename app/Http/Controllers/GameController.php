@@ -21,7 +21,7 @@ class GameController extends Controller
             'league', 'homeTeam', 'awayTeam', 'venue', 'season',
             'stats', 'lineup.teams.players.player', 
             'incidents.player', 'incidents.playerIn', 'incidents.playerOut',
-            'shotmap', 'heatmap'
+            'shotmap.player'
         ])->find($id);
         if (!$match) abort(404);
 
@@ -37,38 +37,37 @@ class GameController extends Controller
         // - Người dùng ép buộc reload
         $shouldFetchApi = request()->has('force') || $isMissingData || $isLive || $isUpcoming;
 
+        $isCurrentlyFetching = false;
         if ($shouldFetchApi) {
-            // Dùng lock để tránh nhiều request đồng thời gọi API cùng lúc
             $lockKey = "api_fetch_lock_{$id}";
-            
-            // Nếu không live/force và đang có lock (đang fetch), bỏ qua
             $hasLock = cache()->has($lockKey);
+            
             if (!$hasLock || $isLive || request()->has('force')) {
                 Log::info("[Match {$id}] Fetching API data. Missing={$isMissingData}, Live={$isLive}, Upcoming={$isUpcoming}");
-                
-                // Đặt lock tạm thời
                 cache()->put($lockKey, true, now()->addSeconds(30));
                 
                 try {
-                    // Gọi API và so sánh/lưu dữ liệu
                     $this->fetchAndCompare($id, $apiService, $match);
+                    Cache::forget("match_display_v23_{$id}");
+                } catch (\Exception $e) {
+                    Log::error("[Match {$id}] Error fetching API data: " . $e->getMessage());
                 } finally {
-                    // Giải phóng lock sau khi xong
                     cache()->forget($lockKey);
                 }
-                
-                // Xóa display cache để rebuild với data mới
-                Cache::forget("match_display_v23_{$id}");
+            } else {
+                // Đang có request khác fetch, chúng ta sẽ không fetch lại nhưng vẫn tiếp tục để build data từ DB
+                $isCurrentlyFetching = true;
+                Log::info("[Match {$id}] API fetch locked by another request.");
             }
-
-            // Reload match với data mới nhất từ DB
-            $match->refresh()->load([
-                'league', 'homeTeam', 'awayTeam', 'venue', 'season',
-                'stats', 'lineup.teams.players.player',
-                'incidents.player', 'incidents.playerIn', 'incidents.playerOut',
-                'shotmap', 'heatmap'
-            ]);
         }
+
+        // LUÔN LUÔN refresh và load lại quan hệ trước khi build data
+        $match->refresh()->load([
+            'league', 'homeTeam', 'awayTeam', 'venue', 'season',
+            'stats', 'lineup.teams.players.player',
+            'incidents.player', 'incidents.playerIn', 'incidents.playerOut',
+            'shotmap.player', 'momentum'
+        ]);
 
         Log::info("[Match {$id}] Stats={$match->stats->count()}, HasLineup=" . ($match->lineup ? 'yes' : 'no'));
 
@@ -77,6 +76,7 @@ class GameController extends Controller
         $data = Cache::get($displayCacheKey);
         
         if (!$data) {
+            Log::info("[Match {$id}] Cache miss or forced reload. Building display data. League: {$match->league_id}, Season: {$match->season_id}");
             $data = [
                 'game' => [
                     'id' => $match->id,
@@ -110,9 +110,40 @@ class GameController extends Controller
                     'weather' => $match->weather_description,
                     'season' => $match->season->year ?? $match->season_id,
                     'statistics' => $this->shimStatistics($match),
-                    'momentum' => $match->momentum->toArray(),
-                    'shotmap' => $match->shotmap->toArray(),
-                    'heatmap' => $match->heatmap->toArray(),
+                    'momentum' => $match->momentum->sortBy('minute')->pluck('value')->toArray(),
+                    'shotmap' => $match->shotmap->map(fn($s) => [
+                        'id' => $s->id,
+                        'x' => ($s->team_id == $match->home_team_id) ? (100 - (float)$s->x) : (float)$s->x,
+                        'y' => (float)$s->y,
+                        'xg' => (float)$s->xg,
+                        'type' => $s->is_goal ? 'goal' : $s->shot_type,
+                        'type_label' => $s->is_goal ? 'Bàn thắng' : match($s->shot_type) {
+                            'save' => 'Cản phá',
+                            'miss' => 'Sút ra ngoài',
+                            'block' => 'Bị chặn',
+                            'post' => 'Trúng cột dọc',
+                            default => 'Khác'
+                        },
+                        'player_name' => $s->player->name ?? 'Unknown',
+                        'team_id' => $s->team_id,
+                        'team_name' => ($s->team_id == $match->home_team_id) ? $match->homeTeam?->name : $match->awayTeam?->name,
+                        'team_logo' => ($s->team_id == $match->home_team_id) ? $match->homeTeam?->logo_url : $match->awayTeam?->logo_url,
+                        'body_part' => match($s->body_part) {
+                            'right-foot' => 'Chân phải',
+                            'left-foot' => 'Chân trái',
+                            'head', 'header' => 'Đánh đầu',
+                            default => $s->body_part
+                        },
+                        'situation' => match($s->situation) {
+                            'assisted' => 'Phối hợp',
+                            'regular' => 'Thường',
+                            'fast-break' => 'Phản công',
+                            'set-piece' => 'Cố định',
+                            'penalty' => 'Phạt đền',
+                            'corner' => 'Phạt góc',
+                            default => $s->situation
+                        },
+                    ])->toArray(),
                     'lineups' => $this->shimLineups($match),
                     'events' => $this->shimEvents($match),
                     'injuries' => $this->shimInjuries($match),
@@ -151,6 +182,17 @@ class GameController extends Controller
                 ->orderBy('position', 'asc')
                 ->get();
 
+            // FALLBACK: Nếu không có standings trong DB, thử đồng bộ từ API
+            if ($standings->isEmpty()) {
+                Log::info("[Match {$id}] Standings empty in DB for League {$match->league_id}, Season {$match->season_id}. Syncing...");
+                $apiService->syncStandings($match->league_id, $match->season_id);
+                $standings = FootballStanding::with('team')
+                    ->where('league_id', $match->league_id)
+                    ->where('season_id', $match->season_id)
+                    ->orderBy('position', 'asc')
+                    ->get();
+            }
+
             $data['h2hMatches'] = $h2h->values()->all();
             $data['standings'] = $standings->values()->all();
             $data['aiInsights'] = null;
@@ -170,15 +212,17 @@ class GameController extends Controller
             // else: không cache nếu vẫn chưa có data → lần sau sẽ retry API
         }
 
-        return Inertia::render('Games/Show', [
+        $response = Inertia::render('Games/Show', [
             'game' => $data['game'],
             'h2hMatches' => $data['h2hMatches'],
             'standings' => $data['standings'],
             'aiInsights' => $data['aiInsights'] ?? null,
             'momentum' => $data['game']['momentum'] ?? [],
             'shotmap' => $data['game']['shotmap'] ?? [],
-            'heatmap' => $data['game']['heatmap'] ?? [],
         ]);
+
+        Log::info("[Match {$id}] Rendering Show page. Shotmap count: " . count($data['game']['shotmap'] ?? []));
+        return $response;
     }
 
     /**
@@ -203,11 +247,17 @@ class GameController extends Controller
 
     private function mapStatus($status)
     {
-        return match ($status) {
-            'finished' => 'finished',
-            'inprogress', 'penalties' => 'live',
-            default => 'scheduled',
-        };
+        $status = strtolower($status);
+        if ($status === 'finished' || $status === 'ft' || $status === 'full_time') {
+            return 'finished';
+        }
+        
+        $liveStatuses = ['inprogress', 'penalties', '1st_half', 'ht', '2nd_half', 'et', 'postponed_rain', 'postponed_fog'];
+        if (in_array($status, $liveStatuses) || str_contains($status, 'half') || str_contains($status, 'time')) {
+             return 'live';
+        }
+
+        return 'scheduled';
     }
 
     private function shimStatistics($match)
@@ -231,6 +281,15 @@ class GameController extends Controller
             $teamStats = [
                 ['type' => 'Ball Possession', 'value' => ($s->ball_possession ?? 0) . '%'],
                 ['type' => 'Total Shots', 'value' => $s->total_shots ?? 0],
+                ['type' => 'Shots on Goal', 'value' => $s->shots_on_goal ?? 0],
+                ['type' => 'Shots off Goal', 'value' => $s->shots_off_goal ?? 0],
+                ['type' => 'Blocked Shots', 'value' => $s->blocked_shots ?? 0],
+                ['type' => 'Corner Kicks', 'value' => $s->corner_kicks ?? 0],
+                ['type' => 'Offsides', 'value' => $s->offsides ?? 0],
+                ['type' => 'Fouls', 'value' => $s->fouls ?? 0],
+                ['type' => 'Goalkeeper Saves', 'value' => $s->goalkeeper_saves ?? 0],
+                ['type' => 'Yellow Cards', 'value' => $s->yellow_cards ?? 0],
+                ['type' => 'Red Cards', 'value' => $s->red_cards ?? 0],
                 ['type' => 'Crosses', 'value' => ($s->crosses_value ?? 0) . '/' . ($s->crosses_total ?? 0)],
                 ['type' => 'Dribbles', 'value' => ($s->dribbles_value ?? 0) . '/' . ($s->dribbles_total ?? 0)],
                 ['type' => 'Long Balls', 'value' => ($s->long_balls_value ?? 0) . '/' . ($s->long_balls_total ?? 0)],
@@ -278,7 +337,7 @@ class GameController extends Controller
                         'pos' => $p['pos'], 
                         'grid' => $p['grid']
                     ],
-                ])->values(),
+                ])->values()->all(),
                 'substitutes' => $substitutes->map(fn($p) => [
                     'player' => [
                         'id' => $p->player_id, 
@@ -287,7 +346,7 @@ class GameController extends Controller
                         'pos' => $p->position, 
                         'grid' => null
                     ],
-                ])->values(),
+                ])->values()->all(),
             ];
         }
         return $result;
@@ -345,7 +404,7 @@ class GameController extends Controller
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
                 'pos' => $p->position,
-                'grid' => $p->grid ?? "1:1"
+                'grid' => (!empty($p->grid)) ? $p->grid : "1:1"
             ]);
         }
 
@@ -361,7 +420,7 @@ class GameController extends Controller
                         'name' => $p->player?->name,
                         'number' => $p->jersey_number,
                         'pos' => $p->position,
-                        'grid' => $p->grid ?? ($rowIdx + 1) . ":" . $colIdx
+                        'grid' => (!empty($p->grid)) ? $p->grid : ($rowIdx + 1) . ":" . $colIdx
                     ]);
                     $playerIdx++;
                 }
@@ -376,7 +435,7 @@ class GameController extends Controller
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
                 'pos' => $p->position,
-                'grid' => $p->grid ?? "5:1"
+                'grid' => (!empty($p->grid)) ? $p->grid : "5:1"
             ]);
             $playerIdx++;
         }
@@ -450,12 +509,19 @@ class GameController extends Controller
 
     public function sync($id, BsdSportsApiService $apiService)
     {
+        set_time_limit(90);
         // 1. Xóa cache
         Cache::forget("match_display_v22_{$id}");
         Cache::forget("match_display_v23_{$id}");
 
         // 2. Ép buộc call API lấy chi tiết
         $apiService->hydrateMatch($id);
+
+        // 3. Sync Standings
+        $match = FootballMatch::query()->find($id);
+        if ($match && $match->league_id && $match->season_id) {
+            $apiService->syncStandings($match->league_id, $match->season_id);
+        }
 
         return back()->with('success', 'Dữ liệu đã được cập nhật!');
     }
