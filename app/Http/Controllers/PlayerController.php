@@ -6,11 +6,13 @@ use App\Models\FootballPlayer;
 use App\Models\FootballPlayerMatchStat;
 use App\Models\FootballPlayerCareerStat;
 use App\Models\FootballTeam;
+use App\Models\FootballPlayerNationalStat;
+use App\Models\FootballPlayerTransfer;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Services\FootballApiService;
+use App\Services\BsdSportsApiService;
 
 class PlayerController extends Controller
 {
@@ -58,7 +60,7 @@ class PlayerController extends Controller
 
     protected $apiService;
 
-    public function __construct(FootballApiService $apiService)
+    public function __construct(BsdSportsApiService $apiService)
     {
         $this->apiService = $apiService;
     }
@@ -68,101 +70,101 @@ class PlayerController extends Controller
         // Try to find the player, if not found, fetch from API
         $player = FootballPlayer::query()->find($id);
 
-        if (!$player) {
-            // Player doesn't exist, fetch their latest season profile
-            $this->apiService->syncPlayerIfNotFound($id);
-            $player = FootballPlayer::findOrFail($id); // If still fails, it throws 404
+        if (!$player || empty($player->position)) {
+            // Player doesn't exist or incomplete, fetch their profile
+            $this->apiService->syncPlayerCareer($id); // This will also sync profile via syncPlayerIfNotExists
+            $player = FootballPlayer::findOrFail($id);
         }
 
-        // Fetch seasons list if available_seasons is null or profile is incomplete
-        if (is_null($player->available_seasons) || is_null($player->firstname) || is_null($player->birth_date)) {
-            $this->apiService->syncPlayerIfNotFound($id);
-            $player->refresh();
+        // Determine requested season
+        $requestedSeason = $request->input('season');
+        if (!$requestedSeason) {
+             $latestSeasonStat = $player->careerStats()->orderByDesc('season_id')->first();
+             $requestedSeason = $latestSeasonStat ? $latestSeasonStat->season_id : 2026;
         }
 
-        // Determine requested season (default to latest available or 2024)
-        $availableSeasons = $player->available_seasons ?: [];
-        $requestedSeason = $request->input('season', (!empty($availableSeasons) ? max($availableSeasons) : 2024));
+        // Sync career and other data if needed
+        $this->apiService->syncPlayerCareer($id, $requestedSeason);
+        $this->apiService->syncPlayerMatches($id);
+        $this->apiService->syncPlayerTransfers($id);
+        $this->apiService->syncPlayerNationalTeam($id);
 
-        // Check if we need to sync from API for the requested season
-        $hasStatForSeason = FootballPlayerCareerStat::query()->where('player_id', $id)
-            ->where('season_id', $requestedSeason)
-            ->exists();
-
-        if (!$hasStatForSeason) {
-            $this->apiService->getPlayerStats($id, $requestedSeason); // Sync for requested season
-            $player->refresh();
-        }
-
-        $player->load(['team', 'seasonStats.league', 'seasonStats.team']);
-
-        // Season stats sorted newest first — this is the "career timeline"
-        $seasonStats = $player->seasonStats()
-            ->with(['league', 'team'])
-            ->orderByDesc('id')
-            ->get();
-
-        // Match history — last 30 games
+        // Fetch match history (last 30 games) with proper joins and ordering
         $matchHistory = FootballPlayerMatchStat::query()->where('player_id', $id)
+            ->join('events', 'player_match_stats.event_id', '=', 'events.id')
+            ->select('player_match_stats.*')
+            ->orderByDesc('events.event_date')
             ->with([
                 'match.homeTeam',
                 'match.awayTeam',
                 'match.league',
+                'match.season',
                 'team',
+                'match.lineup.teams.players' => function($q) use ($id) {
+                    $q->where('player_id', $id);
+                }
             ])
-            ->join('events', 'player_match_stats.event_id', '=', 'events.id')
-            ->orderBy('events.event_date', 'desc')
-            ->select('player_match_stats.*')
             ->limit(30)
             ->get();
 
-        // Latest season stat for quick stats panel
-        $latestStat = $seasonStats->first();
+        $player->load(['team', 'careerStats.league', 'careerStats.team', 'careerStats.season']);
 
-        // Sync additional career data if empty
-        if (empty($player->transfers)) {
-            $this->apiService->getPlayerTransfers($id);
-            $player->refresh();
+        // Season stats sorted newest first
+        $seasonStats = $player->careerStats()
+            ->with(['league', 'team', 'season'])
+            ->orderByDesc('season_id')
+            ->get();
+
+        // Hydrate the last 8 matches if they lack ratings
+        foreach ($matchHistory->take(8) as $stat) {
+            if ($stat->rating <= 0) {
+                $this->apiService->hydrateMatch($stat->event_id);
+            }
         }
-        if (empty($player->trophies)) {
-            $this->apiService->getPlayerTrophies($id);
-            $player->refresh();
+
+        // Re-extract ratings from newly hydrated lineups
+        foreach ($matchHistory as $stat) {
+            if ($stat->rating <= 0 && $stat->match && $stat->match->lineup) {
+                foreach ($stat->match->lineup->teams as $lTeam) {
+                    $lp = $lTeam->players->first();
+                    if ($lp && $lp->ai_score > 0) {
+                        $stat->rating = (float)$lp->ai_score;
+                        $stat->save();
+                    }
+                }
+            }
         }
-        if (empty($player->sidelined_history)) {
-            $this->apiService->getPlayerSidelined($id);
-            $player->refresh();
-        }
+
+        // Latest season stat for quick stats panel
+        $latestStat = $seasonStats->firstWhere('season_id', $requestedSeason) ?: $seasonStats->first();
+
+        // National team data
+        $nationalTeam = FootballPlayerNationalStat::query()->where('player_id', $id)
+            ->with('nationalTeam')
+            ->first();
+
+        // Transfers
+        $transfers = FootballPlayerTransfer::query()->where('player_id', $id)
+            ->with(['fromTeam', 'toTeam'])
+            ->orderByDesc('transfer_date')
+            ->get();
 
         // Aggregate career totals across all seasons
         $careerTotals = [
             'total_games'   => $seasonStats->sum('matches'),
-            'total_starts'  => 0, // Need to add this field to table if needed
             'total_minutes' => $seasonStats->sum('minutes'),
             'total_goals'   => $seasonStats->sum('goals'),
             'total_assists' => $seasonStats->sum('assists'),
-            'total_yellows' => 0,
-            'total_reds'    => 0,
+            'avg_rating'    => $seasonStats->avg('avg_rating'),
         ];
 
-        // Derive available seasons from synced stats + player profile
-        $syncedSeasons = $seasonStats->pluck('season_id')->unique()->toArray();
-        $apiAvailableSeasons = $player->available_seasons ?: [];
-        
-        // Filter: Only include seasons where we have stats OR which are part of the player's recorded career
-        // If apiAvailableSeasons looks generic (long list), we might want to be careful.
-        // For now, let's merge synced ones with api ones, but we can filter by birth year if available.
-        $finalSeasons = array_unique(array_merge($syncedSeasons, $apiAvailableSeasons));
-        
-        // If we have birth year, filter out impossible seasons (before age 15)
-        if ($player->birth_year) {
-            $finalSeasons = array_filter($finalSeasons, fn($s) => $s >= ($player->birth_year + 15));
-        } elseif ($player->birth_date) {
-            $birthYear = \Illuminate\Support\Carbon::parse($player->birth_date)->year;
-            $finalSeasons = array_filter($finalSeasons, fn($s) => $s >= ($birthYear + 15));
-        }
-
-        sort($finalSeasons);
-        $finalSeasons = array_reverse(array_values($finalSeasons));
+        // Format available seasons with names/years
+        $availableSeasons = $seasonStats->map(function($s) {
+            return [
+                'id' => $s->season_id,
+                'name' => $s->season ? ($s->season->year ? $s->season->year . '-' . ($s->season->year + 1) : $s->season->name) : $s->season_id
+            ];
+        })->unique('id')->sortByDesc('id')->values()->toArray();
 
         return Inertia::render('Players/Show', [
             'player'          => $player,
@@ -170,8 +172,10 @@ class PlayerController extends Controller
             'latestStat'      => $latestStat,
             'matchHistory'    => $matchHistory,
             'careerTotals'    => $careerTotals,
-            'availableSeasons' => $finalSeasons,
+            'availableSeasons' => $availableSeasons,
             'currentSeason'   => (int)$requestedSeason,
+            'nationalTeam'    => $nationalTeam,
+            'transfers'       => $transfers,
         ]);
     }
 }

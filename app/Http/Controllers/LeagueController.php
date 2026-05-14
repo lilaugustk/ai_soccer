@@ -16,32 +16,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
 
-use App\Services\FootballApiService;
-
 class LeagueController extends Controller
 {
     protected $apiService;
 
-    public function __construct(FootballApiService $apiService)
+    public function __construct(BsdSportsApiService $apiService)
     {
         $this->apiService = $apiService;
     }
 
-
-    public function show(Request $request, $id, BsdSportsApiService $apiService)
+    public function show(Request $request, $id)
     {
         $league = FootballLeague::query()->find($id);
         if (!$league) {
             // Nếu không có trong DB, thử lấy từ API
-            $leagues = $this->apiService->getLeagues();
-            $apiLeague = collect($leagues)->firstWhere('league.id', (int)$id);
+            $leagues = $this->apiService->syncLeagues();
+            $apiLeague = collect($leagues)->firstWhere('id', (int)$id);
             
             if ($apiLeague) {
                 $league = FootballLeague::query()->create([
-                    'id' => $apiLeague['league']['id'],
-                    'name' => $apiLeague['league']['name'],
-                    'logo_url' => $apiLeague['league']['logo'] ?? null,
-                    'country' => $apiLeague['country']['name'] ?? null,
+                    'id' => $apiLeague['id'],
+                    'name' => $apiLeague['name'],
+                    'country' => $apiLeague['country'] ?? null,
                 ]);
             } else {
                 return redirect()->route('dashboard')->with('error', 'Không tìm thấy giải đấu này.');

@@ -1,5 +1,5 @@
 <template>
-  <Head :title="`${league.name} - Kết quả, Lịch thi đấu, BXH | AI Soccer`" />
+  <Head :title="`${league.name} - Kết quả, Lịch thi đấu, Bảng xếp hạng | AI Soccer`" />
   
   <MainLayout>
     <div class="pt-2 pb-8 relative min-h-screen">
@@ -63,10 +63,11 @@
                       </button>
                   </div>
 
-                  <!-- Season Dropdown -->
-                  <div class="relative season-dropdown pb-4">
+                  <!-- Season Dropdown - Only show on Standings tab (Preserve height) -->
+                  <div class="relative season-dropdown pb-4 transition-all duration-200" 
+                       :class="activeTab === 'standings' ? 'opacity-100' : 'opacity-0 pointer-events-none'">
                         <button @click="isSeasonOpen = !isSeasonOpen" 
-                                class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
+                                class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
                             Mùa giải: {{ formatSeason(season, league.country) }}
                             <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                         </button>

@@ -73,8 +73,8 @@ class BsdSportsApiService
 
         $player = FootballPlayer::query()->find($playerId);
         
-        // 1. Kiểm tra xem có cần đồng bộ sâu không (Chưa có player hoặc tên là Unknown)
-        $needsDeepSync = !$player || $player->name === 'Unknown Player' || empty($player->name);
+        // 1. Kiểm tra xem có cần đồng bộ sâu không (Chưa có player hoặc thiếu thông tin cơ bản)
+        $needsDeepSync = !$player || $player->name === 'Unknown Player' || empty($player->name) || empty($player->position);
 
         if ($needsDeepSync) {
             // Bước 1: Lưu nhanh thông tin từ Match API để UI có dữ liệu hiển thị ngay
@@ -102,9 +102,16 @@ class BsdSportsApiService
                                 'current_team_id' => $playerData['current_team_id'] ?? $teamId,
                                 'position' => $playerData['position'] ?? null,
                                 'specific_position' => $playerData['specific_position'] ?? null,
-                                'photo_url' => $playerData['photo_url'] ?? "https://sports.bzzoiro.com/img/player/{$playerId}/",
+                                'jersey_number' => $playerData['jersey_number'] ?? null,
+                                'date_of_birth' => $playerData['date_of_birth'] ?? null,
+                                'height_cm' => $playerData['height_cm'] ?? null,
+                                'weight_kg' => $playerData['weight_kg'] ?? null,
+                                'preferred_foot' => $playerData['preferred_foot'] ?? null,
+                                'nationality' => $playerData['nationality'] ?? null,
+                                'nationality_code' => $playerData['nationality_code'] ?? null,
                                 'market_value_eur' => $playerData['market_value_eur'] ?? null,
                                 'contract_until' => $playerData['contract_until'] ?? null,
+                                'availability' => $playerData['availability'] ?? 'available',
                             ]
                         );
                     }
@@ -123,12 +130,26 @@ class BsdSportsApiService
         if (isset($this->teamExistsCache[$teamId])) return;
 
         if (!FootballTeam::query()->where('id', $teamId)->exists()) {
+            $teamName = $name;
+            $logoUrl = null;
+
+            if (!$teamName) {
+                // Try to fetch team details from API
+                $data = $this->get("teams/{$teamId}/");
+                if ($data && !isset($data['error'])) {
+                    $teamName = $data['name'] ?? $data['short_name'] ?? 'Unknown Team';
+                    $logoUrl = $data['logo_url'] ?? null;
+                }
+            }
+
             try {
                 FootballTeam::create([
                     'id' => $teamId,
-                    'name' => $name ?? 'Unknown Team',
+                    'name' => $teamName ?? 'Unknown Team',
+                    'logo_url' => $logoUrl
                 ]);
             } catch (\Exception $e) {
+                Log::error("Failed to create team {$teamId}: " . $e->getMessage());
             }
         }
         $this->teamExistsCache[$teamId] = true;
@@ -239,18 +260,15 @@ class BsdSportsApiService
         return $data['results'];
     }
 
-    /**
-     * Đồng bộ danh sách cầu thủ và chỉ số sự nghiệp của họ
-     */
     public function syncPlayersByTeam($teamId, $seasonId)
     {
         $data = $this->get('players/', [
             'team_id' => $teamId,
             'season_id' => $seasonId,
-            'limit' => 50
+            'limit' => 100
         ]);
 
-        if (!$data) return [];
+        if (!$data || !isset($data['results'])) return [];
 
         foreach ($data['results'] as $item) {
             // 1. Lưu Profile cầu thủ
@@ -275,39 +293,179 @@ class BsdSportsApiService
                 ]
             );
 
-            // 2. Lưu chỉ số sự nghiệp (Career Stats) - CHỈ đồng bộ nếu chưa có dữ liệu hoặc định kỳ
-            // Để tránh treo server, chúng ta sẽ kiểm tra xem đã có dữ liệu gần đây chưa
-            $hasStats = FootballPlayerCareerStat::where('player_id', $item['id'])
-                ->where('season_id', $seasonId)
-                ->exists();
-
-            if (!$hasStats) {
-                $career = $this->get("players/{$item['id']}/career/");
-                if ($career && isset($career['seasons'])) {
-                    foreach ($career['seasons'] as $s) {
-                        if ($s['season_id'] == $seasonId) {
-                            FootballPlayerCareerStat::updateOrCreate(
-                                [
-                                    'player_id' => $item['id'],
-                                    'season_id' => $seasonId,
-                                    'league_id' => $s['league_id'] ?? null,
-                                ],
-                                [
-                                    'team_id' => $teamId,
-                                    'goals' => $s['goals'] ?? 0,
-                                    'assists' => $s['assists'] ?? 0,
-                                    'yellow_cards' => $s['yellow_cards'] ?? 0,
-                                    'red_cards' => $s['red_cards'] ?? 0,
-                                    'appearances' => $s['appearances'] ?? 0,
-                                    'minutes_played' => $s['minutes_played'] ?? 0,
-                                ]
-                            );
-                        }
-                    }
-                }
-            }
+            // 2. Lưu chỉ số sự nghiệp (Career Stats) cho mùa giải này
+            $this->syncPlayerCareer($item['id'], $seasonId);
         }
         return $data['results'];
+    }
+
+    public function syncPlayerMatches($playerId)
+    {
+        $player = FootballPlayer::query()->find($playerId);
+        $params = ['limit' => 30];
+        
+        // If we want to focus on club matches for their current team
+        if ($player && $player->current_team_id) {
+            $params['team_id'] = $player->current_team_id;
+        }
+
+        // Use the correct player-specific stats endpoint from BSD v2 docs
+        $data = $this->get("players/{$playerId}/stats/", $params);
+        
+        Log::info("Syncing player matches for {$playerId}. Data keys: " . ($data ? implode(',', array_keys($data)) : 'null'));
+
+        $stats = $data['results'] ?? $data['player_stats'] ?? [];
+        
+        if (empty($stats)) {
+            Log::warning("No player stats found for player {$playerId} at players/{$playerId}/stats/. Response: " . json_encode($data));
+            return [];
+        }
+
+        Log::info("Found " . count($stats) . " stats records for player {$playerId}");
+        $synced = [];
+
+        foreach ($stats as $item) {
+            // Ensure the match exists in our DB
+            // The item has 'event_id'. We should probably fetch/save the match info if missing.
+            $match = FootballMatch::query()->find($item['event_id']);
+            if (!$match) {
+                // Fetch basic match info to avoid broken relations
+                $eventData = $this->get("events/{$item['event_id']}/");
+                if ($eventData && !isset($eventData['error'])) {
+                    $match = $this->saveMatch($eventData);
+                }
+            }
+
+            if (!$match) continue;
+
+            $synced[] = FootballPlayerMatchStat::updateOrCreate(
+                [
+                    'player_id' => $playerId,
+                    'event_id' => $match->id,
+                ],
+                [
+                    'team_id' => $item['team_id'] ?? $match->home_team_id,
+                    'minutes_played' => $item['minutes_played'] ?? 0,
+                    'rating' => $item['rating'] ?? 0,
+                    'goals' => $item['goals'] ?? 0,
+                    'goal_assist' => $item['goal_assist'] ?? 0,
+                    'yellow_card' => $item['yellow_card'] ?? 0,
+                    'red_card' => $item['red_card'] ?? 0,
+                    'expected_goals' => $item['expected_goals'] ?? null,
+                    'expected_assists' => $item['expected_assists'] ?? null,
+                    'total_shots' => $item['total_shots'] ?? 0,
+                    'shots_on_target' => $item['shots_on_target'] ?? 0,
+                    'key_pass' => $item['key_pass'] ?? 0,
+                    'total_tackle' => $item['total_tackle'] ?? 0,
+                    'interception' => $item['interception'] ?? 0,
+                ]
+            );
+        }
+        
+        Log::info("Synced " . count($synced) . " match stats for player {$playerId} using players/{id}/stats/ endpoint.");
+        return $synced;
+    }
+
+    /**
+     * Đồng bộ chỉ số sự nghiệp của một cầu thủ (toàn bộ hoặc theo mùa giải)
+     */
+    public function syncPlayerCareer($playerId, $seasonId = null)
+    {
+        $data = $this->get("players/{$playerId}/career/");
+        if (!$data || !isset($data['seasons'])) return [];
+
+        $synced = [];
+        foreach ($data['seasons'] as $s) {
+            // Nếu có seasonId, chỉ sync season đó. Nếu không, sync tất cả.
+            if ($seasonId && $s['season_id'] != $seasonId) continue;
+
+            // Đảm bảo League, Season, Team tồn tại để tránh lỗi FK
+            if (isset($s['league_id'])) {
+                if (!FootballLeague::query()->where('id', $s['league_id'])->exists()) {
+                    FootballLeague::create(['id' => $s['league_id'], 'name' => 'Unknown League']);
+                }
+            }
+            if (isset($s['season_id'])) {
+                if (!FootballSeason::query()->where('id', $s['season_id'])->exists()) {
+                    FootballSeason::create(['id' => $s['season_id'], 'league_id' => $s['league_id'], 'name' => 'Unknown Season', 'year' => 2026]);
+                }
+            }
+            if (isset($s['team_id'])) {
+                $this->syncTeamIfNotExists($s['team_id'], null);
+            }
+
+            $stat = FootballPlayerCareerStat::updateOrCreate(
+                [
+                    'player_id' => $playerId,
+                    'season_id' => $s['season_id'],
+                    'league_id' => $s['league_id'] ?? null,
+                    'team_id' => $s['team_id'] ?? null,
+                ],
+                [
+                    'matches' => $s['matches'] ?? 0,
+                    'minutes' => $s['minutes'] ?? 0,
+                    'goals' => $s['goals'] ?? 0,
+                    'assists' => $s['assists'] ?? 0,
+                    'avg_rating' => $s['avg_rating'] ?? null,
+                ]
+            );
+            $synced[] = $stat;
+        }
+        return $synced;
+    }
+
+    /**
+     * Đồng bộ lịch sử chuyển nhượng của một cầu thủ
+     */
+    public function syncPlayerTransfers($playerId)
+    {
+        $data = $this->get("players/{$playerId}/transfers/");
+        if (!$data || !isset($data['transfers'])) return [];
+
+        \App\Models\FootballPlayerTransfer::query()->where('player_id', $playerId)->delete();
+
+        $synced = [];
+        foreach ($data['transfers'] as $t) {
+            if (isset($t['from_team_id'])) $this->syncTeamIfNotExists($t['from_team_id'], $t['from_team_name'] ?? null);
+            if (isset($t['to_team_id'])) $this->syncTeamIfNotExists($t['to_team_id'], $t['to_team_name'] ?? null);
+
+            $synced[] = \App\Models\FootballPlayerTransfer::create([
+                'player_id' => $playerId,
+                'transfer_date' => $t['transfer_date'],
+                'from_team_id' => $t['from_team_id'] ?? null,
+                'to_team_id' => $t['to_team_id'] ?? null,
+                'fee_eur' => $t['fee_eur'] ?? null,
+                'fee_description' => $t['fee_description'] ?? null,
+                'transfer_type' => $t['transfer_type'] ?? null,
+            ]);
+        }
+        return $synced;
+    }
+
+    /**
+     * Đồng bộ thông tin đội tuyển quốc gia của cầu thủ
+     */
+    public function syncPlayerNationalTeam($playerId)
+    {
+        $data = $this->get("players/{$playerId}/national-team/");
+        if (!$data || !isset($data['national_team_id'])) return null;
+
+        $this->syncTeamIfNotExists($data['national_team_id'], null);
+
+        // Update player record with national team ID
+        FootballPlayer::query()->where('id', $playerId)->update([
+            'national_team_id' => $data['national_team_id']
+        ]);
+
+        return \App\Models\FootballPlayerNationalStat::updateOrCreate(
+            ['player_id' => $playerId],
+            [
+                'national_team_id' => $data['national_team_id'],
+                'caps' => $data['caps'] ?? 0,
+                'goals' => $data['goals'] ?? 0,
+                'last_appearance' => isset($data['last_appearance']) ? Carbon::parse($data['last_appearance']) : null,
+            ]
+        );
     }
 
     /**
@@ -627,7 +785,7 @@ class BsdSportsApiService
                                 'jersey_number' => $p['jersey_number'] ?? null,
                                 'position' => $p['position'] ?? null,
                                 'is_substitute' => $index >= count($teamData['players'] ?? []),
-                                'ai_score' => $p['ai_score'] ?? null,
+                                'ai_score' => $p['ai_score'] ?? $p['rating'] ?? null,
                             ]);
                         }
 
@@ -785,6 +943,91 @@ class BsdSportsApiService
         $this->get("events/", ['team_id' => $team2Id, 'limit' => 20]);
         
         return true;
+    }
+
+    /**
+     * Đồng bộ thông tin huấn luyện viên và sự nghiệp của họ
+     */
+    public function syncManager($managerId)
+    {
+        $data = $this->get("managers/{$managerId}/");
+        if (!$data) return null;
+
+        $manager = \App\Models\FootballManager::updateOrCreate(
+            ['id' => $managerId],
+            [
+                'name' => $data['name'],
+                'short_name' => $data['short_name'] ?? null,
+                'country' => $data['country'] ?? null,
+                'tactical_profile' => $data['tactical_profile'] ?? null,
+                'preferred_formation' => $data['preferred_formation'] ?? null,
+                'current_team_id' => $data['current_team_id'] ?? null,
+                'matches_total' => $data['matches_total'] ?? 0,
+                'wins' => $data['wins'] ?? 0,
+                'draws' => $data['draws'] ?? 0,
+                'losses' => $data['losses'] ?? 0,
+                'win_pct' => $data['win_pct'] ?? 0,
+                'avg_goals_scored' => $data['avg_goals_scored'] ?? 0,
+                'avg_goals_conceded' => $data['avg_goals_conceded'] ?? 0,
+                'avg_possession' => $data['avg_possession'] ?? 0,
+                'clean_sheet_pct' => $data['clean_sheet_pct'] ?? 0,
+                'btts_pct' => $data['btts_pct'] ?? 0,
+                'over_25_pct' => $data['over_25_pct'] ?? 0,
+                'stats_updated_at' => isset($data['stats_updated_at']) ? Carbon::parse($data['stats_updated_at']) : null,
+            ]
+        );
+
+        // Đồng bộ sự nghiệp
+        $this->syncManagerCareer($managerId);
+
+        return $manager;
+    }
+
+    /**
+     * Đồng bộ lịch sử nhiệm kỳ của một huấn luyện viên
+     */
+    public function syncManagerCareer($managerId)
+    {
+        $data = $this->get("managers/{$managerId}/career/");
+        if (!$data || !isset($data['tenures'])) return [];
+
+        foreach ($data['tenures'] as $tenure) {
+            // Đảm bảo team tồn tại
+            if (isset($tenure['team_id'])) {
+                $this->syncTeamIfNotExists($tenure['team_id'], $tenure['team_name'] ?? null);
+            }
+
+            \App\Models\FootballManagerCareer::updateOrCreate(
+                [
+                    'manager_id' => $managerId,
+                    'team_id' => $tenure['team_id'],
+                    'date_from' => $tenure['date_from'],
+                ],
+                [
+                    'date_to' => $tenure['date_to'],
+                    'matches' => $tenure['matches'] ?? 0,
+                    'wins' => $tenure['wins'] ?? 0,
+                    'draws' => $tenure['draws'] ?? 0,
+                    'losses' => $tenure['losses'] ?? 0,
+                    'win_pct' => $tenure['win_pct'] ?? 0,
+                ]
+            );
+        }
+
+        return $data['tenures'];
+    }
+
+    /**
+     * Tìm và đồng bộ huấn luyện viên hiện tại của một đội bóng
+     */
+    public function syncTeamManager($teamId)
+    {
+        $data = $this->get('managers/', ['team_id' => $teamId]);
+        if (!$data || !isset($data['results']) || empty($data['results'])) return null;
+
+        // API trả về danh sách các manager có "Active tenure" tại team này
+        $managerData = $data['results'][0];
+        return $this->syncManager($managerData['id']);
     }
 
     public function syncVenueIfNotExists($venueId)

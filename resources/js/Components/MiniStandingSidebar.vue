@@ -1,7 +1,7 @@
 <template>
   <div class="rounded-[2.5rem] border border-gray-100 dark:border-gray-700/50 bg-white dark:bg-gray-800/40 backdrop-blur-xl p-6 shadow-2xl shadow-gray-200/20 dark:shadow-none h-fit group">
     <div class="flex items-center justify-between mb-6">
-      <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-400">BXH Rút gọn</h3>
+      <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Bảng xếp hạng Rút gọn</h3>
       <span class="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">TOP 5</span>
     </div>
     

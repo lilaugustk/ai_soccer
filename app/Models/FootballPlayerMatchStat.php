@@ -21,7 +21,7 @@ class FootballPlayerMatchStat extends Model
         return $this->belongsTo(FootballPlayer::class, 'player_id');
     }
 
-    public function event()
+    public function match()
     {
         return $this->belongsTo(FootballMatch::class, 'event_id');
     }
