@@ -111,13 +111,13 @@
               {{ (team.gf ?? team.goals_for ?? 0) - (team.ga ?? team.goals_against ?? 0) }}
             </td>
             <td class="px-2 py-3 text-[10px] text-center text-gray-500 hidden xl:table-cell font-medium">
-              {{ team.xgf || 0 }}
+              {{ team.xgf && team.xgf != 0 ? team.xgf : '—' }}
             </td>
             <td class="px-2 py-3 text-[10px] text-center text-gray-500 hidden xl:table-cell font-medium">
-              {{ team.xga || 0 }}
+              {{ team.xga && team.xga != 0 ? team.xga : '—' }}
             </td>
-            <td class="px-2 py-3 text-[10px] text-center hidden xl:table-cell font-bold" :class="(team.xgd || 0) >= 0 ? 'text-emerald-500/70' : 'text-rose-500/70'">
-              {{ team.xgd || 0 }}
+            <td class="px-2 py-3 text-[10px] text-center hidden xl:table-cell font-bold" :class="(team.xgd || 0) > 0 ? 'text-emerald-500/70' : (team.xgd < 0 ? 'text-rose-500/70' : 'text-gray-400')">
+              {{ team.xgd && team.xgd != 0 ? team.xgd : '—' }}
             </td>
             <td class="px-2 py-3 text-[11px] text-center font-bold text-emerald-600 dark:text-emerald-400">{{ team.pts ?? team.points ?? 0 }}</td>
             <td class="px-4 py-3">

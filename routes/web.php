@@ -19,6 +19,7 @@ Route::get('/bsd/sync-leagues', [BsdTestController::class, 'syncLeagues']);
 Route::get('/bsd/sync-matches', [BsdTestController::class, 'syncMatches']);
 
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+Route::post('/api/dashboard/sync', [DashboardController::class, 'syncMatches'])->name('api.dashboard.sync');
 Route::get('/api/search', [SearchController::class, 'index'])->name('api.search');
 
 Route::get('/matches', function () {

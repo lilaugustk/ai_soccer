@@ -17,9 +17,9 @@ class FootballPlayer extends Model
         'contract_until', 'availability'
     ];
 
-    protected $appends = ['photo'];
+    protected $appends = ['photo_url'];
 
-    public function getPhotoAttribute()
+    public function getPhotoUrlAttribute()
     {
         return "https://sports.bzzoiro.com/img/player/{$this->id}/";
     }

@@ -70,22 +70,43 @@ class DashboardController extends Controller
             }
         }
 
-        if ($shouldSync) {
-            // BSD v2 lấy theo UTC, do đó một ngày local (GMT+7) sẽ vắt qua 2 ngày UTC
-            $apiService->syncMatchesByDate($dateStr); // Ngày hiện tại
-            
-            $prevDay = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
-            $apiService->syncMatchesByDate($prevDay); // Ngày hôm trước (để lấy các trận đá đêm/rạng sáng)
+        // Gửi flag shouldSync xuống frontend để kích hoạt đồng bộ ngầm
+        return Inertia::render('Welcome', [
+            'groupedGames' => $this->mapMatches($matches),
+            'filters' => [
+                'date' => $dateStr,
+                'league_id' => $leagueId,
+                'status' => $statusFilter,
+            ],
+            'availableLeagues' => $this->getAvailableLeagues($matches),
+            'shouldSync' => $shouldSync,
+            'dateStr' => $dateStr
+        ]);
+    }
 
-            $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
-            cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
+    public function syncMatches(Request $request, BsdSportsApiService $apiService)
+    {
+        $dateStr = $request->input('date', now()->toDateString());
+        $cacheKey = "last_sync_v2_{$dateStr}";
 
-            // Reload dữ liệu mới nhất từ DB
-            $matches = $matchesQuery->get();
-        }
+        // Thực hiện đồng bộ
+        $apiService->syncMatchesByDate($dateStr);
+        
+        $prevDay = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
+        $apiService->syncMatchesByDate($prevDay);
 
-        // 3. Mapping dữ liệu cho Frontend (format chuẩn cũ)
-        $groupedGames = $matches->map(function ($match) {
+        $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
+        cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dữ liệu đã được cập nhật ngầm thành công.'
+        ]);
+    }
+
+    private function mapMatches($matches)
+    {
+        return $matches->map(function ($match) {
             return [
                 'id' => $match->id,
                 'match_datetime' => $match->event_date->toIso8601ZuluString(),
@@ -112,23 +133,15 @@ class DashboardController extends Controller
             $country = $game['league']['country'];
             return $country ? "{$name} ({$country})" : $name;
         });
+    }
 
-        // Danh sách các giải đấu có trận trong ngày (cho filter nhanh)
-        $availableLeagues = $matches->map(fn($m) => [
+    private function getAvailableLeagues($matches)
+    {
+        return $matches->map(fn($m) => [
             'id' => $m->league->id,
             'name' => $m->league->name,
             'logo_url' => $m->league->logo_url,
         ])->unique('id')->values();
-
-        return Inertia::render('Welcome', [
-            'groupedGames' => $groupedGames,
-            'filters' => [
-                'date' => $dateStr,
-                'league_id' => $leagueId,
-                'status' => $statusFilter,
-            ],
-            'availableLeagues' => $availableLeagues,
-        ]);
     }
 
     private function mapStatus($status)

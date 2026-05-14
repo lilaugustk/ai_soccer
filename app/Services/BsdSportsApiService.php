@@ -62,22 +62,55 @@ class BsdSportsApiService
         }
     }
 
-    private function syncPlayerIfNotExists($playerId, $name, $teamId)
+    private $deepSyncCount = 0;
+    private const MAX_DEEP_SYNCS_PER_REQUEST = 10;
+
+    private function syncPlayerIfNotExists($playerId, $name = null, $teamId = null)
     {
         if (empty($playerId)) return;
         
-        // Dùng cache trong bộ nhớ để tránh truy vấn DB lặp lại cho cùng 1 cầu thủ trong 1 request
         if (isset($this->playerExistsCache[$playerId])) return;
 
-        if (!FootballPlayer::query()->where('id', $playerId)->exists()) {
-            try {
-                FootballPlayer::create([
-                    'id' => $playerId,
-                    'name' => $name ?? 'Unknown Player',
-                    'current_team_id' => $teamId,
-                ]);
-            } catch (\Exception $e) {
-                // Có thể đã được tạo bởi tiến trình khác
+        $player = FootballPlayer::query()->find($playerId);
+        
+        // 1. Kiểm tra xem có cần đồng bộ sâu không (Chưa có player hoặc tên là Unknown)
+        $needsDeepSync = !$player || $player->name === 'Unknown Player' || empty($player->name);
+
+        if ($needsDeepSync) {
+            // Bước 1: Lưu nhanh thông tin từ Match API để UI có dữ liệu hiển thị ngay
+            if ($name && $name !== 'Unknown Player') {
+                FootballPlayer::updateOrCreate(
+                    ['id' => $playerId],
+                    [
+                        'name' => $name,
+                        'current_team_id' => $teamId,
+                    ]
+                );
+            }
+
+            // Bước 2: Chỉ gọi API chi tiết nếu chưa đạt giới hạn trong request này
+            if ($this->deepSyncCount < self::MAX_DEEP_SYNCS_PER_REQUEST) {
+                try {
+                    $this->deepSyncCount++;
+                    $playerData = $this->get("players/{$playerId}/");
+                    if ($playerData && !isset($playerData['error'])) {
+                        FootballPlayer::updateOrCreate(
+                            ['id' => $playerId],
+                            [
+                                'name' => $playerData['name'] ?? $name ?? 'Unknown Player',
+                                'short_name' => $playerData['short_name'] ?? null,
+                                'current_team_id' => $playerData['current_team_id'] ?? $teamId,
+                                'position' => $playerData['position'] ?? null,
+                                'specific_position' => $playerData['specific_position'] ?? null,
+                                'photo_url' => $playerData['photo_url'] ?? "https://sports.bzzoiro.com/img/player/{$playerId}/",
+                                'market_value_eur' => $playerData['market_value_eur'] ?? null,
+                                'contract_until' => $playerData['contract_until'] ?? null,
+                            ]
+                        );
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to deep sync player {$playerId}: " . $e->getMessage());
+                }
             }
         }
         
@@ -187,8 +220,8 @@ class BsdSportsApiService
 
         foreach ($data['results'] as $item) {
             // Đảm bảo Venue tồn tại để tránh lỗi FK
-            if (isset($item['venue_id']) && !FootballVenue::query()->where('id', $item['venue_id'])->exists()) {
-                FootballVenue::create(['id' => $item['venue_id'], 'name' => 'Unknown Venue']);
+            if (isset($item['venue_id'])) {
+                $this->syncVenueIfNotExists($item['venue_id']);
             }
 
             $teamData = [
@@ -242,45 +275,60 @@ class BsdSportsApiService
                 ]
             );
 
-            // 2. Lưu chỉ số sự nghiệp (Career Stats) cho mùa giải này
-            $career = $this->get("players/{$item['id']}/career/");
-            if ($career && isset($career['seasons'])) {
-                foreach ($career['seasons'] as $s) {
-                    // Đảm bảo các ràng buộc FK được thỏa mãn
-                    if (!FootballLeague::query()->where('id', $s['league_id'])->exists()) {
-                        FootballLeague::create(['id' => $s['league_id'], 'name' => 'Unknown League']);
-                    }
-                    if (!FootballTeam::query()->where('id', $s['team_id'])->exists()) {
-                        FootballTeam::create(['id' => $s['team_id'], 'name' => 'Unknown Team']);
-                    }
-                    if (!FootballSeason::query()->where('id', $s['season_id'])->exists()) {
-                        FootballSeason::create([
-                            'id' => $s['season_id'],
-                            'league_id' => $s['league_id'],
-                            'name' => 'Season ' . ($s['season_year'] ?? 'N/A'),
-                            'year' => $s['season_year'] ?? 2026
-                        ]);
-                    }
+            // 2. Lưu chỉ số sự nghiệp (Career Stats) - CHỈ đồng bộ nếu chưa có dữ liệu hoặc định kỳ
+            // Để tránh treo server, chúng ta sẽ kiểm tra xem đã có dữ liệu gần đây chưa
+            $hasStats = FootballPlayerCareerStat::where('player_id', $item['id'])
+                ->where('season_id', $seasonId)
+                ->exists();
 
-                    FootballPlayerCareerStat::updateOrCreate(
-                        [
-                            'player_id' => $item['id'],
-                            'season_id' => $s['season_id'],
-                            'league_id' => $s['league_id'],
-                            'team_id' => $s['team_id']
-                        ],
-                        [
-                            'matches' => $s['matches'],
-                            'minutes' => $s['minutes'],
-                            'goals' => $s['goals'],
-                            'assists' => $s['assists'],
-                            'avg_rating' => $s['avg_rating'],
-                        ]
-                    );
+            if (!$hasStats) {
+                $career = $this->get("players/{$item['id']}/career/");
+                if ($career && isset($career['seasons'])) {
+                    foreach ($career['seasons'] as $s) {
+                        if ($s['season_id'] == $seasonId) {
+                            FootballPlayerCareerStat::updateOrCreate(
+                                [
+                                    'player_id' => $item['id'],
+                                    'season_id' => $seasonId,
+                                    'league_id' => $s['league_id'] ?? null,
+                                ],
+                                [
+                                    'team_id' => $teamId,
+                                    'goals' => $s['goals'] ?? 0,
+                                    'assists' => $s['assists'] ?? 0,
+                                    'yellow_cards' => $s['yellow_cards'] ?? 0,
+                                    'red_cards' => $s['red_cards'] ?? 0,
+                                    'appearances' => $s['appearances'] ?? 0,
+                                    'minutes_played' => $s['minutes_played'] ?? 0,
+                                ]
+                            );
+                        }
+                    }
                 }
             }
         }
         return $data['results'];
+    }
+
+    /**
+     * Đồng bộ toàn bộ trận đấu của một mùa giải
+     */
+    public function syncSeasonMatches($seasonId)
+    {
+        $data = $this->get('events/', [
+            'season_id' => $seasonId,
+            'limit' => 1000 // Lấy tối đa 1000 trận để bao phủ toàn bộ mùa giải
+        ]);
+
+        if (!$data || !isset($data['results'])) return [];
+
+        $syncedMatches = [];
+        foreach ($data['results'] as $item) {
+            $syncedMatches[] = $this->saveMatch($item);
+        }
+        
+        Log::info("Synced " . count($syncedMatches) . " matches for season $seasonId");
+        return $syncedMatches;
     }
 
     /**
@@ -354,28 +402,18 @@ class BsdSportsApiService
         }
 
         if (!$seasonId) {
-            $seasonId = FootballSeason::query()->where('league_id', $item['league_id'])->where('is_current', true)->value('id');
-        }
-        
-        // Nếu vẫn không có season, tạo dummy
-        if (!$seasonId) {
-            $seasonId = $item['league_id'] * 1000 + 2026; 
-            FootballSeason::updateOrCreate(['id' => $seasonId], [
-                'league_id' => $item['league_id'],
-                'name' => 'Season 2026',
-                'year' => 2026,
-                'is_current' => true
-            ]);
+            Log::warning("Match {$item['id']} missing season_id and no current season found for league {$item['league_id']}. Skipping save.");
+            return null;
         }
 
         // Đảm bảo Venue tồn tại
-        if (isset($item['venue_id']) && !FootballVenue::query()->where('id', $item['venue_id'])->exists()) {
-            FootballVenue::create(['id' => $item['venue_id'], 'name' => 'Unknown Venue']);
+        if (isset($item['venue_id'])) {
+            $this->syncVenueIfNotExists($item['venue_id']);
         }
 
         // Đảm bảo Referee tồn tại
-        if (isset($item['referee_id']) && !FootballReferee::query()->where('id', $item['referee_id'])->exists()) {
-            FootballReferee::create(['id' => $item['referee_id'], 'name' => 'Unknown Referee']);
+        if (isset($item['referee_id'])) {
+            $this->syncRefereeIfNotExists($item['referee_id']);
         }
 
         return FootballMatch::updateOrCreate(
@@ -389,10 +427,13 @@ class BsdSportsApiService
                 'referee_id' => $item['referee_id'] ?? null,
                 'event_date' => Carbon::parse($item['event_date'])->setTimezone('UTC'),
                 'status' => $item['status'],
+                'round_number' => $item['round_number'] ?? null,
                 'current_minute' => $item['current_minute'] ?? null,
                 'home_score' => $item['home_score'] ?? 0,
                 'away_score' => $item['away_score'] ?? 0,
-                'last_updated' => isset($item['last_updated']) ? Carbon::parse($item['last_updated']) : null,
+                'home_score_ht' => $item['home_score_ht'] ?? null,
+                'away_score_ht' => $item['away_score_ht'] ?? null,
+                'last_updated' => isset($item['last_updated']) ? Carbon::parse($item['last_updated']) : now(),
             ]
         );
     }
@@ -402,7 +443,7 @@ class BsdSportsApiService
      */
     public function hydrateMatch($matchId)
     {
-        set_time_limit(90);
+        set_time_limit(120);
         return DB::transaction(function () use ($matchId) {
             $match = FootballMatch::query()->find($matchId);
             if (!$match) return null;
@@ -412,14 +453,12 @@ class BsdSportsApiService
 
             // 1. GỌI SONG SONG TẤT CẢ CÁC ENDPOINT ĐỂ TỐI ƯU TỐC ĐỘ (Parallel Requests)
             $responses = Http::pool(fn ($pool) => [
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/"),
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/stats/"),
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/lineups/"),
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/incidents/"),
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/metadata/"),
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "predictions/{$matchId}/"),
-                // Đồng bộ luôn bảng xếp hạng của giải đấu này
-                $pool->withHeaders($this->getHeaders())->timeout(15)->withoutVerifying()->get($this->getBaseUrl() . "leagues/{$match->league_id}/standings/", ['season_id' => $match->season_id]),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/stats/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/lineups/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/incidents/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/metadata/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "predictions/{$matchId}/"),
             ]);
 
             $eventData    = $responses[0]->successful() ? $responses[0]->json() : null;
@@ -428,7 +467,7 @@ class BsdSportsApiService
             $incidentsData = $responses[3]->successful() ? $responses[3]->json() : null;
             $metaData     = $responses[4]->successful() ? $responses[4]->json() : null;
             $predictionsData = $responses[5]->successful() ? $responses[5]->json() : null;
-            $standingsData = $responses[6]->successful() ? $responses[6]->json() : null;
+            // $standingsData = $responses[6]->successful() ? $responses[6]->json() : null; // Đã lược bỏ để tăng tốc
 
             // 1.1 Update Match Info
             if ($eventData) {
@@ -436,9 +475,26 @@ class BsdSportsApiService
                     'status' => $eventData['status'] ?? $match->status,
                     'home_score' => $eventData['home_score'] ?? $match->home_score,
                     'away_score' => $eventData['away_score'] ?? $match->away_score,
+                    'home_score_ht' => $eventData['home_score_ht'] ?? ($eventData['scores']['halftime']['home'] ?? $match->home_score_ht),
+                    'away_score_ht' => $eventData['away_score_ht'] ?? ($eventData['scores']['halftime']['away'] ?? $match->away_score_ht),
+                    'penalty_shootout' => $eventData['penalty_shootout'] ?? ($eventData['scores']['penalty'] ?? $match->penalty_shootout),
+                    'period' => $eventData['period'] ?? $match->period,
+                    'current_minute' => $eventData['current_minute'] ?? $match->current_minute,
+                    'weather_code' => $eventData['weather']['code'] ?? $match->weather_code,
                     'weather_description' => $eventData['weather']['description'] ?? $match->weather_description,
+                    'weather_wind_speed' => $eventData['weather']['wind_speed'] ?? ($eventData['weather']['wind'] ?? $match->weather_wind_speed),
+                    'weather_temperature_c' => $eventData['weather']['temperature_c'] ?? ($eventData['weather']['temp'] ?? $match->weather_temperature_c),
                     'attendance' => $eventData['attendance'] ?? $match->attendance,
+                    'last_updated' => now(),
                 ]);
+
+                // Sync Venue & Referee details if missing or placeholders
+                if (isset($eventData['venue_id'])) {
+                    $this->syncVenueIfNotExists($eventData['venue_id']);
+                }
+                if (isset($eventData['referee_id'])) {
+                    $this->syncRefereeIfNotExists($eventData['referee_id']);
+                }
             }
 
             // 1.2 Statistics & Shotmap & Momentum & Average Positions
@@ -570,10 +626,21 @@ class BsdSportsApiService
                                 'player_id' => $p['id'],
                                 'jersey_number' => $p['jersey_number'] ?? null,
                                 'position' => $p['position'] ?? null,
-                                'grid' => $p['grid'] ?? null,
                                 'is_substitute' => $index >= count($teamData['players'] ?? []),
                                 'ai_score' => $p['ai_score'] ?? null,
                             ]);
+                        }
+
+                        // Update Coaches in the match record
+                        if (isset($teamData['coach']['id'])) {
+                            $coach = $teamData['coach'];
+                            // Use Manager model or sync logic if needed, but for now just update match column
+                            // Check if manager exists or create
+                            \App\Models\FootballManager::updateOrCreate(
+                                ['id' => $coach['id']],
+                                ['name' => $coach['name']]
+                            );
+                            $match->{$side . '_coach_id'} = $coach['id'];
                         }
                     }
                 }
@@ -628,8 +695,9 @@ class BsdSportsApiService
                 $match->update(['prediction' => $predictionsData]);
             }
 
-            // 5. Metadata
+            // 5. Metadata (Đã xử lý Venue/Referee ở trên qua ID)
             if ($metaData) {
+                /*
                 if (isset($metaData['venue'])) {
                     FootballVenue::updateOrCreate(['id' => $metaData['venue']['id']], [
                         'name' => $metaData['venue']['name'],
@@ -637,18 +705,18 @@ class BsdSportsApiService
                     ]);
                     $match->venue_id = $metaData['venue']['id'];
                 }
-                if (isset($metaData['referee'])) {
-                    FootballReferee::updateOrCreate(['id' => $metaData['referee']['id']], [
-                        'name' => $metaData['referee']['name'],
-                    ]);
-                    $match->referee_id = $metaData['referee']['id'];
+                */
+                if (isset($metaData['referee']) && !isset($eventData['referee_id'])) {
+                    $this->syncRefereeIfNotExists($metaData['referee']['id']);
                 }
             }
 
-            // 6. Standings
+            // 6. Standings (Bỏ qua trong hydrateMatch để tránh timeout, GameController sẽ tự sync nếu thiếu)
+            /*
             if ($standingsData) {
                 $this->processStandingsData($match->league_id, $match->season_id, $standingsData);
             }
+            */
 
             $match->save();
             return $match;
@@ -717,5 +785,73 @@ class BsdSportsApiService
         $this->get("events/", ['team_id' => $team2Id, 'limit' => 20]);
         
         return true;
+    }
+
+    public function syncVenueIfNotExists($venueId)
+    {
+        if (!$venueId) return;
+        $venue = \App\Models\FootballVenue::query()->where('id', $venueId)->first();
+        // Cập nhật lại nếu chưa tồn tại hoặc đang là Unknown Venue
+        if (!$venue || str_contains($venue->name, 'Unknown Venue')) {
+            $venueData = $this->get("venues/{$venueId}/");
+            if ($venueData && !isset($venueData['error']) && isset($venueData['name'])) {
+                \App\Models\FootballVenue::updateOrCreate(
+                    ['id' => $venueData['id']],
+                    [
+                        'name' => $venueData['name'],
+                        'city' => $venueData['city'] ?? null,
+                        'country' => $venueData['country'] ?? null,
+                        'country_code' => $venueData['country_code'] ?? null,
+                        'capacity' => $venueData['capacity'] ?? null,
+                        'latitude' => $venueData['latitude'] ?? null,
+                        'longitude' => $venueData['longitude'] ?? null,
+                        'pitch_length_m' => $venueData['pitch_length_m'] ?? null,
+                        'pitch_width_m' => $venueData['pitch_width_m'] ?? null,
+                        'built_year' => $venueData['built_year'] ?? null,
+                        'home_team_id' => $venueData['home_team_id'] ?? null,
+                    ]
+                );
+            } else {
+                if (!$venue) {
+                    \App\Models\FootballVenue::updateOrCreate(['id' => $venueId], ['name' => 'Unknown Venue']);
+                }
+            }
+        }
+    }
+
+    public function syncRefereeIfNotExists($refereeId)
+    {
+        if (!$refereeId) return;
+        $referee = \App\Models\FootballReferee::query()->where('id', $refereeId)->first();
+        
+        // Cập nhật lại nếu chưa tồn tại hoặc đang là Unknown Referee
+        if (!$referee || str_contains($referee->name, 'Unknown Referee')) {
+            $refereeData = $this->get("referees/{$refereeId}/");
+            if ($refereeData && !isset($refereeData['error']) && isset($refereeData['name'])) {
+                \App\Models\FootballReferee::updateOrCreate(
+                    ['id' => $refereeData['id']],
+                    [
+                        'name' => $refereeData['name'],
+                        'country' => $refereeData['country'] ?? null,
+                        'nationality_a3' => $refereeData['nationality_a3'] ?? null,
+                        'birthdate' => $refereeData['birthdate'] ?? null,
+                        'matches' => $refereeData['matches'] ?? 0,
+                        'total_yellow_cards' => $refereeData['total_yellow_cards'] ?? 0,
+                        'total_red_cards' => $refereeData['total_red_cards'] ?? 0,
+                        'avg_yellow_per_match' => $refereeData['avg_yellow_per_match'] ?? 0,
+                        'avg_red_per_match' => $refereeData['avg_red_per_match'] ?? 0,
+                        'avg_goals_per_match' => $refereeData['avg_goals_per_match'] ?? 0,
+                        'avg_fouls_per_match' => $refereeData['avg_fouls_per_match'] ?? 0,
+                        'career_games' => $refereeData['career_games'] ?? 0,
+                        'career_yellow_cards' => $refereeData['career_yellow_cards'] ?? 0,
+                        'career_red_cards' => $refereeData['career_red_cards'] ?? 0,
+                    ]
+                );
+            } else {
+                if (!$referee) {
+                    \App\Models\FootballReferee::updateOrCreate(['id' => $refereeId], ['name' => 'Unknown Referee']);
+                }
+            }
+        }
     }
 }

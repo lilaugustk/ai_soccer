@@ -72,15 +72,20 @@
                                 {{ getMatchStatus(game) }}
                             </span>
                         </div>
-                        <div
-                            class="flex items-center gap-4 text-3xl md:text-4xl font-bold text-gray-950 dark:text-white tabular-nums"
-                        >
-                            <span>{{ game.home_score ?? "-" }}</span>
-                            <span
-                                class="text-gray-200 dark:text-gray-700 opacity-50 text-xl"
-                                >:</span
+                        <div class="flex flex-col items-center">
+                            <div
+                                class="flex items-center gap-4 text-3xl md:text-4xl font-bold text-gray-950 dark:text-white tabular-nums"
                             >
-                            <span>{{ game.away_score ?? "-" }}</span>
+                                <span>{{ game.home_score ?? "-" }}</span>
+                                <span
+                                    class="text-gray-200 dark:text-gray-700 opacity-50 text-xl"
+                                    >:</span
+                                >
+                                <span>{{ game.away_score ?? "-" }}</span>
+                            </div>
+                            <div v-if="game.home_score_ht !== null && game.away_score_ht !== null" class="mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                                HT: {{ game.home_score_ht }} - {{ game.away_score_ht }}
+                            </div>
                         </div>
                         <div class="mt-2 flex flex-col items-center">
                             <span
@@ -131,6 +136,27 @@
                             class="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full"
                             >Đội khách</span
                         >
+                    </div>
+                </div>
+
+                <!-- Match Info Badges -->
+                <div class="mt-6 pt-5 border-t border-gray-100 dark:border-gray-700/50 flex flex-wrap justify-center gap-3 md:gap-6 relative z-10">
+                    <div v-if="game.venue?.name" class="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <span>{{ game.venue.name }}{{ game.venue.city ? `, ${game.venue.city}` : '' }}</span>
+                    </div>
+                    <div v-if="game.referee" class="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        <span>{{ game.referee }}</span>
+                    </div>
+                    <div v-if="game.attendance" class="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        <span>{{ Number(game.attendance).toLocaleString() }}</span>
+                    </div>
+                    <div v-if="game.weather?.description" class="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
+                        <span class="capitalize">{{ game.weather.description }}</span>
+                        <span v-if="game.weather.temp" class="ml-1">{{ game.weather.temp }}°C</span>
                     </div>
                 </div>
             </div>
@@ -581,7 +607,7 @@
                                 </div>
                                 <!-- Coach -->
                                 <div
-                                    v-if="homeLineupData?.coach"
+                                    v-if="game.home_team?.coach"
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between"
                                 >
                                         <div>
@@ -592,7 +618,7 @@
                                             <span
                                                 class="text-sm font-bold text-gray-950 dark:text-white"
                                                 >{{
-                                                    homeLineupData.coach.name
+                                                    game.home_team.coach
                                                 }}</span
                                             >
                                         </div>
@@ -720,7 +746,7 @@
                                 </div>
                                 <!-- Coach -->
                                 <div
-                                    v-if="awayLineupData?.coach"
+                                    v-if="game.away_team?.coach"
                                     class="bg-gray-50/50 dark:bg-gray-900/20 px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex flex-row-reverse items-center justify-between"
                                 >
                                         <div class="text-right">
@@ -731,7 +757,7 @@
                                             <span
                                                 class="text-sm font-bold text-gray-950 dark:text-white"
                                                 >{{
-                                                    awayLineupData.coach.name
+                                                    game.away_team.coach
                                                 }}</span
                                             >
                                         </div>
@@ -1460,10 +1486,13 @@ const refreshMatchData = () => {
 
 // Helper lấy rating của cầu thủ từ dữ liệu statistics
 const getPlayerRating = (playerId) => {
-    // BSD v2 lưu per-player match stats trong game.player_stats
     if (!props.game.player_stats) return null;
     const playerStat = props.game.player_stats.find(p => p.id == playerId);
-    return playerStat?.rating || null;
+    if (playerStat) {
+        // console.log(`Found rating for player ${playerId}: ${playerStat.rating}`);
+        return playerStat.rating;
+    }
+    return null;
 };
 
 const getRatingClass = (rating) => {
@@ -1501,7 +1530,7 @@ const awayAverageRating = computed(() => {
     return (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1);
 });
 
-const getLineupWithPositions = (lineupXI, isAway = false) => {
+const getLineupWithPositions = (lineupXI, formation = '4-3-3', isAway = false) => {
     if (!lineupXI) return [];
 
     const players = Array.isArray(lineupXI) ? lineupXI : Object.values(lineupXI);
@@ -1509,68 +1538,42 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
 
     const horizontalStep = 8.5;
 
-    // Kiểm tra có player nào có grid không
-    const hasGrid = players.some((p) => p.player?.grid);
-    console.log("LINEUP DEBUG - hasGrid:", hasGrid, "players count:", players.length);
-
-    if (hasGrid) {
-        // --- Chế độ grid: dùng p.player.grid để tính vị trí ---
-        const rows = {};
-        players.forEach((p) => {
-            if (!p.player?.grid) return;
-            const [row] = p.player.grid.split(":").map(Number);
-            if (!rows[row]) rows[row] = [];
-            rows[row].push(p);
-        });
-
-        const processed = [];
-        Object.keys(rows).sort((a, b) => Number(a) - Number(b)).forEach((rowNum) => {
-            const playersInRow = [...rows[rowNum]];
-            playersInRow.sort((a, b) => {
-                const colA = parseInt(a.player.grid.split(":")[1]);
-                const colB = parseInt(b.player.grid.split(":")[1]);
-                return isAway ? colB - colA : colA - colB;
-            });
-            const count = playersInRow.length;
-            const dynamicGap = count > 4 ? 17 : count > 3 ? 19 : 21;
-
-            playersInRow.forEach((p, index) => {
-                const [row] = p.player.grid.split(":").map(Number);
-                const left = isAway
-                    ? 100 - ((row - 1) * horizontalStep + 6)
-                    : (row - 1) * horizontalStep + 6;
-                const top = 50 + (index - (count - 1) / 2) * dynamicGap;
-                processed.push({
-                    ...(p.player || {}),
-                    name: p.player?.name ?? 'Unknown',
-                    rating: getPlayerRating(p.player?.id),
-                    events: getPlayerEvents(p.player?.id),
-                    style: { left: `${left}%`, top: `${top}%`, transform: "translate(-50%, -50%)" },
-                });
-            });
-        });
-        console.log("LINEUP DEBUG - Final processed count (grid):", processed.length);
-        return processed;
+    // Phân tích formation string (ví dụ: "4-3-3" -> [1, 4, 3, 3])
+    let rowSizes = [1]; // Luôn có 1 thủ môn ở hàng đầu
+    if (formation && typeof formation === 'string') {
+        const parts = formation.split('-').map(Number);
+        if (parts.length > 0) {
+            rowSizes = [1, ...parts];
+        }
     }
 
+    // Nếu tổng số người trong rowSizes không khớp với số lượng cầu thủ (thường là 11), tự điều chỉnh
+    const totalInFormation = rowSizes.reduce((a, b) => a + b, 0);
+    if (totalInFormation !== players.length) {
+        // Fallback đơn giản nếu không khớp
+        rowSizes = players.length === 11 ? [1, 4, 3, 3] : [1, Math.ceil((players.length - 1) / 3), Math.floor((players.length - 1) / 3), players.length - 1 - Math.ceil((players.length - 1) / 3) - Math.floor((players.length - 1) / 3)];
+    }
 
-    // --- Fallback: không có grid → tự phân bổ theo hàng (GK + hàng còn lại) ---
-    // Mặc định formation 1-4-3-3 (11 người)
-    const rowSizes = players.length === 11 ? [1, 4, 3, 3] : [1, Math.ceil((players.length - 1) / 3), Math.floor((players.length - 1) / 3), players.length - 1 - Math.ceil((players.length - 1) / 3) - Math.floor((players.length - 1) / 3)];
     const processed = [];
     let rowIdx = 0;
     let colIdx = 0;
 
     players.forEach((p) => {
+        // Chuyển sang hàng tiếp theo nếu hàng hiện tại đã đầy
         while (rowIdx < rowSizes.length && colIdx >= rowSizes[rowIdx]) {
             rowIdx++;
             colIdx = 0;
         }
+
         const rowNum = rowIdx + 1;
         const currentRowSize = rowSizes[rowIdx] ?? 1;
+        
+        // Tính toán vị trí Left (hàng ngang)
         const left = isAway
             ? 100 - ((rowNum - 1) * horizontalStep + 6)
             : (rowNum - 1) * horizontalStep + 6;
+        
+        // Tính toán vị trí Top (hàng dọc)
         const dynamicGap = currentRowSize > 4 ? 17 : currentRowSize > 3 ? 19 : 21;
         const top = 50 + (colIdx - (currentRowSize - 1) / 2) * dynamicGap;
 
@@ -1581,9 +1584,10 @@ const getLineupWithPositions = (lineupXI, isAway = false) => {
             events: getPlayerEvents(p.player?.id),
             style: { left: `${left}%`, top: `${top}%`, transform: "translate(-50%, -50%)" },
         });
+
         colIdx++;
     });
-    console.log("LINEUP DEBUG - Final processed count (fallback):", processed.length);
+
     return processed;
 };
 
@@ -1634,10 +1638,6 @@ const getCurrentXI = (lineupXI, teamId) => {
                 isSubstitutedIn: true,
                 substituteMinute: e.time?.elapsed,
                 replacedPlayerName: e.player?.name,
-                player: {
-                    ...subPlayer.player,
-                    grid: currentXI[idx].player.grid,
-                },
             };
         }
     });
@@ -1650,7 +1650,7 @@ const processedHomeLineup = computed(() => {
         homeLineupData.value?.startXI,
         props.game.home_team?.id,
     );
-    return getLineupWithPositions(xi, false);
+    return getLineupWithPositions(xi, homeLineupData.value?.formation, false);
 });
 
 const processedAwayLineup = computed(() => {
@@ -1658,7 +1658,7 @@ const processedAwayLineup = computed(() => {
         awayLineupData.value?.startXI,
         props.game.away_team?.id,
     );
-    return getLineupWithPositions(xi, true);
+    return getLineupWithPositions(xi, awayLineupData.value?.formation, true);
 });
 
 const homeSubstitutes = computed(() => {

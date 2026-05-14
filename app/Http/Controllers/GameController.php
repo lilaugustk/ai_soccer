@@ -16,9 +16,11 @@ class GameController extends Controller
 {
     public function show($id, BsdSportsApiService $apiService, StatisticalModelService $statService)
     {
+        set_time_limit(120);
         // 1. Load match with all necessary relations
         $match = FootballMatch::with([
             'league', 'homeTeam', 'awayTeam', 'venue', 'season',
+            'referee', 'homeCoach', 'awayCoach',
             'stats', 'lineup.teams.players.player', 
             'incidents.player', 'incidents.playerIn', 'incidents.playerOut',
             'shotmap.player'
@@ -64,6 +66,7 @@ class GameController extends Controller
         // LUÔN LUÔN refresh và load lại quan hệ trước khi build data
         $match->refresh()->load([
             'league', 'homeTeam', 'awayTeam', 'venue', 'season',
+            'referee', 'homeCoach', 'awayCoach',
             'stats', 'lineup.teams.players.player',
             'incidents.player', 'incidents.playerIn', 'incidents.playerOut',
             'shotmap.player', 'momentum'
@@ -86,15 +89,19 @@ class GameController extends Controller
                     'current_minute' => $match->current_minute,
                     'home_score' => $match->home_score,
                     'away_score' => $match->away_score,
+                    'home_score_ht' => $match->home_score_ht,
+                    'away_score_ht' => $match->away_score_ht,
                     'home_team' => [
                         'id' => $match->home_team_id,
                         'name' => optional($match->homeTeam)->name ?? "N/A",
                         'logo_url' => optional($match->homeTeam)->logo_url,
+                        'coach' => optional($match->homeCoach)->name,
                     ],
                     'away_team' => [
                         'id' => $match->away_team_id,
                         'name' => optional($match->awayTeam)->name ?? "N/A",
                         'logo_url' => optional($match->awayTeam)->logo_url,
+                        'coach' => optional($match->awayCoach)->name,
                     ],
                     'league' => [
                         'id' => $match->league_id,
@@ -105,9 +112,16 @@ class GameController extends Controller
                     'venue' => [
                         'id' => $match->venue_id,
                         'name' => optional($match->venue)->name ?? "Unknown Venue",
+                        'city' => optional($match->venue)->city,
                     ],
+                    'referee' => optional($match->referee)->name,
                     'attendance' => $match->attendance,
-                    'weather' => $match->weather_description,
+                    'weather' => [
+                        'description' => $match->weather_description,
+                        'code' => $match->weather_code,
+                        'temp' => $match->weather_temperature_c,
+                        'wind' => $match->weather_wind_speed,
+                    ],
                     'season' => $match->season->year ?? $match->season_id,
                     'statistics' => $this->shimStatistics($match),
                     'momentum' => $match->momentum->sortBy('minute')->pluck('value')->toArray(),
@@ -145,6 +159,10 @@ class GameController extends Controller
                         },
                     ])->toArray(),
                     'lineups' => $this->shimLineups($match),
+                    'player_stats' => $match->lineup ? $match->lineup->teams->flatMap->players->map(fn($p) => [
+                        'id' => $p->player_id,
+                        'rating' => $p->ai_score
+                    ])->values()->all() : [],
                     'events' => $this->shimEvents($match),
                     'injuries' => $this->shimInjuries($match),
                     'odds' => [], 
@@ -335,7 +353,8 @@ class GameController extends Controller
                         'name' => $p['name'], 
                         'number' => $p['number'], 
                         'pos' => $p['pos'], 
-                        'grid' => $p['grid']
+                        'grid' => $p['grid'],
+                        'rating' => $p['rating'] ?? null
                     ],
                 ])->values()->all(),
                 'substitutes' => $substitutes->map(fn($p) => [
@@ -344,7 +363,8 @@ class GameController extends Controller
                         'name' => $p->player?->name, 
                         'number' => $p->jersey_number, 
                         'pos' => $p->position, 
-                        'grid' => null
+                        'grid' => null,
+                        'rating' => $p->ai_score
                     ],
                 ])->values()->all(),
             ];
@@ -404,7 +424,8 @@ class GameController extends Controller
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
                 'pos' => $p->position,
-                'grid' => (!empty($p->grid)) ? $p->grid : "1:1"
+                'grid' => (!empty($p->grid)) ? $p->grid : "1:1",
+                'rating' => $p->ai_score
             ]);
         }
 
@@ -420,7 +441,8 @@ class GameController extends Controller
                         'name' => $p->player?->name,
                         'number' => $p->jersey_number,
                         'pos' => $p->position,
-                        'grid' => (!empty($p->grid)) ? $p->grid : ($rowIdx + 1) . ":" . $colIdx
+                        'grid' => (!empty($p->grid)) ? $p->grid : ($rowIdx + 1) . ":" . $colIdx,
+                        'rating' => $p->ai_score
                     ]);
                     $playerIdx++;
                 }
@@ -435,7 +457,8 @@ class GameController extends Controller
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
                 'pos' => $p->position,
-                'grid' => (!empty($p->grid)) ? $p->grid : "5:1"
+                'grid' => (!empty($p->grid)) ? $p->grid : "5:1",
+                'rating' => $p->ai_score
             ]);
             $playerIdx++;
         }
@@ -509,7 +532,7 @@ class GameController extends Controller
 
     public function sync($id, BsdSportsApiService $apiService)
     {
-        set_time_limit(90);
+        set_time_limit(120);
         // 1. Xóa cache
         Cache::forget("match_display_v22_{$id}");
         Cache::forget("match_display_v23_{$id}");

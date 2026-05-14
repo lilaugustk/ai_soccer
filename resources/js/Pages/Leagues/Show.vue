@@ -93,46 +93,32 @@
                              @mouseleave="onMouseLeave"
                              @mouseup="onMouseUp"
                              @mousemove="onMouseMove"
-                             class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 w-full min-w-0 whitespace-nowrap scroll-smooth cursor-grab active:cursor-grabbing select-none">
+                             class="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 w-full min-w-0 whitespace-nowrap cursor-grab active:cursor-grabbing select-none">
                             <button @click="selectedRound = 'all'" 
-                                    :class="selectedRound === 'all' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700'" 
-                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest whitespace-nowrap shrink-0">
+                                    :class="selectedRound === 'all' ? 'bg-emerald-500 text-white border-emerald-500 ring-2 ring-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm'" 
+                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0 border">
                                 Tất cả
                             </button>
                             <button v-for="round in availableRounds" :key="round"
                                     @click="selectedRound = round"
-                                    :class="selectedRound === round ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm'"
-                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0">
-                                {{ round }}
+                                    :class="selectedRound === round ? 'bg-emerald-500 text-white border-emerald-500 ring-2 ring-emerald-500/20' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm'"
+                                    class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0 border">
+                                Vòng {{ round }}
                             </button>
                         </div>
 
                     <div v-if="filteredMatches.length === 0" class="py-20 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">Không có dữ liệu trận đấu</div>
-                    <div v-else class="grid grid-cols-1 gap-2">
+                    <div v-else class="grid grid-cols-1 gap-2 min-h-[400px] relative">
                         <MatchCard v-for="match in filteredMatches" :key="match.id" :game="match" />
                     </div>
                 </div>
 
-                <!-- SCORERS -->
-                <div v-else-if="activeTab === 'scorers'" key="scorers">
-                    <TopPlayerList :players="topScorers" statKey="goals" statLabel="Bàn thắng" />
-                </div>
-
-                <!-- ASSISTS -->
-                <div v-else-if="activeTab === 'assists'" key="assists">
-                    <TopPlayerList :players="topAssists" statKey="assists" statLabel="Kiến tạo" />
-                </div>
-                
             </transition>
           </div>
         </main>
 
-        <!-- RIGHT SIDEBAR (Ad/Info) -->
-        <aside class="hidden xl:block w-72 shrink-0 space-y-6 pt-[38px]">
-             <!-- Top Players Previews -->
-             <TopPlayerPreview title="Vua phá lưới" :players="topScorers" statKey="goals" statLabel="bàn" />
-             <TopPlayerPreview title="Kiến tạo" :players="topAssists" statKey="assists" statLabel="lần" />
-        </aside>
+        <!-- RIGHT SIDEBAR (Matching Homepage) -->
+        <LeagueSidebar />
 
       </div>
     </div>
@@ -144,15 +130,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import StandingTable from '@/Components/StandingTable.vue';
-import TopPlayerList from '@/Components/TopPlayerList.vue';
-import TopPlayerPreview from '@/Components/TopPlayerPreview.vue';
+import LeagueSidebar from '@/Components/LeagueSidebar.vue';
 import MatchCard from '@/Components/MatchCard.vue';
 
 const props = defineProps({
   league: Object,
   standings: Array,
-  topScorers: Array,
-  topAssists: Array,
   matches: Array,
   season: [Number, String],
   availableSeasons: Array
@@ -198,9 +181,7 @@ const selectedRound = ref(getDefaultRound());
 
 const tabs = [
   { id: 'standings', name: 'Bảng xếp hạng' },
-  { id: 'matches', name: 'Kết quả & Lịch thi đấu' },
-  { id: 'scorers', name: 'Vua phá lưới' },
-  { id: 'assists', name: 'Kiến tạo' }
+  { id: 'matches', name: 'Kết quả & Lịch thi đấu' }
 ];
 
 const changeSeason = (s) => {
@@ -221,14 +202,10 @@ const getFlagUrl = (countryName) => {
 const availableRounds = computed(() => {
   if (!props.matches) return [];
   const rounds = props.matches
-    .map(m => m.round)
-    .filter((v, i, a) => v && a.indexOf(v) === i);
+    .map(m => m.round_number)
+    .filter((v, i, a) => v !== null && v !== undefined && a.indexOf(v) === i);
   
-  return rounds.sort((a, b) => {
-    const numA = parseInt(a.match(/\d+/) || 0);
-    const numB = parseInt(b.match(/\d+/) || 0);
-    return numB - numA; 
-  });
+  return rounds.sort((a, b) => b - a); 
 });
 
 const filteredMatches = computed(() => {
@@ -237,7 +214,7 @@ const filteredMatches = computed(() => {
     list = [...props.matches];
     return list.sort((a, b) => new Date(b.event_date || b.match_at) - new Date(a.event_date || a.match_at));
   }
-  list = props.matches.filter(m => m.round === selectedRound.value);
+  list = props.matches.filter(m => m.round_number === selectedRound.value);
   return list.sort((a, b) => new Date(a.event_date || a.match_at) - new Date(b.event_date || b.match_at));
 });
 
@@ -275,7 +252,7 @@ const onMouseMove = (e) => {
     if (!isDown) return;
     e.preventDefault();
     const x = e.pageX - roundsScrollRef.value.offsetLeft;
-    const walk = (x - startX) * 2; // Tốc độ cuộn
+    const walk = (x - startX) * 1.5; 
     roundsScrollRef.value.scrollLeft = scrollLeft - walk;
 };
 
@@ -316,5 +293,7 @@ const formatSeason = (s, country = null) => {
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.1); border-radius: 20px; }
 .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); }
+.dark .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); }
+
 .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); }
 </style>

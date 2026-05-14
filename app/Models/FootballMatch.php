@@ -58,6 +58,16 @@ class FootballMatch extends Model
         return $this->belongsTo(FootballReferee::class, 'referee_id');
     }
 
+    public function homeCoach()
+    {
+        return $this->belongsTo(FootballManager::class, 'home_coach_id');
+    }
+
+    public function awayCoach()
+    {
+        return $this->belongsTo(FootballManager::class, 'away_coach_id');
+    }
+
     public function venue()
     {
         return $this->belongsTo(FootballVenue::class, 'venue_id');

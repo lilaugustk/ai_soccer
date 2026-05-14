@@ -28,7 +28,7 @@ class LeagueController extends Controller
     }
 
 
-    public function show(Request $request, $id)
+    public function show(Request $request, $id, BsdSportsApiService $apiService)
     {
         $league = FootballLeague::query()->find($id);
         if (!$league) {
@@ -202,13 +202,14 @@ class LeagueController extends Controller
 
         $matches = $matchesQuery->get();
 
-        // 3.1 Tự động đồng bộ Trận đấu nếu trống
-        if ($matches->isEmpty()) {
-            $matches = FootballMatch::with(['homeTeam', 'awayTeam'])
-                ->where('league_id', $id)
-                ->where('season_id', $seasonId)
-                ->orderBy('event_date', 'desc')
-                ->get();
+        // 3.1 Tự động đồng bộ Trận đấu nếu trống hoặc thiếu Round
+        $hasNoRounds = $matches->isNotEmpty() && $matches->every(fn($m) => is_null($m->round_number));
+        
+        if ($matches->isEmpty() || $hasNoRounds) {
+            $apiService->syncSeasonMatches($seasonId);
+            
+            // Re-query sau khi sync
+            $matches = $matchesQuery->get();
         }
 
         $matches = $matches->map(function($m) {
@@ -224,8 +225,6 @@ class LeagueController extends Controller
         return Inertia::render('Leagues/Show', [
             'league' => $league,
             'standings' => $standings,
-            'topScorers' => $topScorers,
-            'topAssists' => $topAssists,
             'matches' => $matches,
             'season' => $year,
             'availableSeasons' => $availableSeasons

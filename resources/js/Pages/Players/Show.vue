@@ -556,7 +556,9 @@ const positionCoords = computed(() => {
                             <div class="relative w-24 h-24 md:w-28 md:h-28 shrink-0 mb-2 md:mb-0">
                                 <div class="w-full h-full rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center justify-center p-1.5 shadow-sm">
                                     <div class="w-full h-full rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800">
-                                        <img v-if="player.photo" :src="player.photo" class="w-full h-full object-cover" />
+                                        <img v-if="player.photo_url" :src="player.photo_url" 
+                                             @error="(e) => e.target.src = 'https://www.sofascore.com/static/images/placeholders/player.png'"
+                                             class="w-full h-full object-cover" />
                                         <div v-else class="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-200">
                                             {{ player.name.charAt(0) }}
                                         </div>
