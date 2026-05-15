@@ -30,14 +30,23 @@ class GameController extends Controller
         $status = $this->mapStatus($match->status);
         $isLive = $status === 'live';
         $isUpcoming = $status === 'scheduled' && $match->event_date && $match->event_date->diffInMinutes(now(), false) > -60;
-        $isMissingData = $match->stats->isEmpty() || !$match->lineup;
-
+        $isMissingData = $match->stats->isEmpty() || !$match->lineup || $match->shotmap->isEmpty();
+        $isRecentlyFinished = $status === 'finished' && $match->event_date && $match->event_date->diffInHours(now()) < 24;
+        
+        // Kiểm tra xem shotmap có đầy đủ so với thống kê tổng cú sút không
+        $totalShotsInStats = $match->stats->sum('total_shots');
+        $shotmapCount = $match->shotmap->count();
+        // Nếu trận đã kết thúc hoặc đang live mà stats có sút nhưng shotmap lại quá ít (ví dụ < 2 shots trong khi stats > 5)
+        // Hoặc shotmap trống rỗng hoàn toàn mặc dù có stats cú sút
+        $isShotmapIncomplete = ($status === 'finished' || $status === 'live') && $totalShotsInStats > 0 && ($shotmapCount === 0 || ($totalShotsInStats > 5 && $shotmapCount < 2));
+        
         // --- LOGIC SO SÁNH & CẬP NHẬT ---
         // Xác định xem có cần gọi API không:
-        // - Chưa có dữ liệu (isMissingData)
         // - Đang live hoặc sắp diễn ra (luôn refresh)
+        // - Vừa kết thúc (trong 24h) và chưa có shotmap hoặc data chưa đủ
+        // - Có thống kê cú sút nhưng shotmap lại trống rỗng hoặc quá ít
         // - Người dùng ép buộc reload
-        $shouldFetchApi = request()->has('force') || $isMissingData || $isLive || $isUpcoming;
+        $shouldFetchApi = request()->has('force') || $isMissingData || $isLive || $isUpcoming || ($isRecentlyFinished && $shotmapCount === 0) || $isShotmapIncomplete;
 
         $isCurrentlyFetching = false;
         if ($shouldFetchApi) {
@@ -174,7 +183,7 @@ class GameController extends Controller
             $homeId = (int)$data['game']['home_team']['id'];
             $awayId = (int)$data['game']['away_team']['id'];
             
-            $h2h = FootballMatch::with(['homeTeam', 'awayTeam'])
+            $h2h = FootballMatch::with(['homeTeam', 'awayTeam', 'league'])
                 ->where(function($q) use ($homeId, $awayId) {
                     $q->where('home_team_id', $homeId)->where('away_team_id', $awayId);
                 })
@@ -185,11 +194,25 @@ class GameController extends Controller
                 ->limit(10)
                 ->get()
                 ->map(fn($m) => [
-                    'fixture' => ['id' => $m->id, 'date' => $m->event_date],
-                    'league' => ['name' => $m->league?->name, 'logo' => $m->league?->logo_url],
+                    'fixture' => [
+                        'id' => $m->id, 
+                        'date' => $m->event_date ? $m->event_date->toIso8601String() : null
+                    ],
+                    'league' => [
+                        'name' => $m->league?->name, 
+                        'logo_url' => $m->league?->logo_url
+                    ],
                     'teams' => [
-                        'home' => ['id' => $m->home_team_id, 'name' => $m->homeTeam?->name, 'logo' => $m->homeTeam?->logo_url],
-                        'away' => ['id' => $m->away_team_id, 'name' => $m->awayTeam?->name, 'logo' => $m->awayTeam?->logo_url],
+                        'home' => [
+                            'id' => $m->home_team_id, 
+                            'name' => $m->homeTeam?->name, 
+                            'logo_url' => $m->homeTeam?->logo_url
+                        ],
+                        'away' => [
+                            'id' => $m->away_team_id, 
+                            'name' => $m->awayTeam?->name, 
+                            'logo_url' => $m->awayTeam?->logo_url
+                        ],
                     ],
                     'goals' => ['home' => $m->home_score, 'away' => $m->away_score]
                 ]);

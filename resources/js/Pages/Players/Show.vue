@@ -61,6 +61,10 @@ const positionLabels = {
     Attacker: "Tiền đạo",
     Forward: "Tiền đạo",
     Centre: "Trung tâm",
+    G: "Thủ môn",
+    D: "Hậu vệ",
+    M: "Tiền vệ",
+    F: "Tiền đạo",
 };
 
 const countryTranslations = {
@@ -161,7 +165,11 @@ const footLabels = {
 };
 
 const recentForm = computed(() => {
-    return props.matchHistory.slice(0, 10).reverse();
+    // Only include matches where player actually played (rating > 0)
+    return props.matchHistory
+        .filter(m => parseFloat(m.rating) > 0)
+        .slice(0, 5)
+        .reverse();
 });
 
 const getRatingColor = (rating) => {
@@ -183,8 +191,8 @@ const performanceChartData = computed(() => {
     if (data.length === 0) return { points: [], pathD: "", areaD: "" };
 
     const points = data.map((stat, i) => {
-        // Map X from 8% to 96% to avoid clipping and overlap with labels on the left
-        const x = 8 + (i / (data.length - 1)) * 88;
+        // Balanced padding (5% on each side)
+        const x = 5 + (i / (data.length - 1)) * 90;
         // Scale rating (0-10) to Y (90% to 10%) to avoid vertical clipping
         const rating = parseFloat(stat.rating) || 0;
         const y = 90 - ((rating - 5) / 5) * 80; 
@@ -374,15 +382,16 @@ onMounted(() => {
                                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm h-full">
                                         <h3 class="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-6 w-full">Phong độ gần đây</h3>
                                         
-                                        <div v-if="recentForm.length > 0" class="relative pt-8 pb-4">
+                                        <div v-if="recentForm.length > 0" class="relative pt-10 pb-6">
                                             <!-- Chart Background Grid -->
-                                            <div class="absolute inset-x-0 top-8 bottom-12 flex flex-col justify-between pointer-events-none px-2">
-                                                <div v-for="level in [9, 8, 7, 6]" :key="level" class="w-full border-t border-gray-100/10 dark:border-gray-700/30 border-dashed relative">
-                                                    <span class="absolute left-0 -top-2 text-[8px] font-bold text-gray-500 uppercase">{{ level }}.0</span>
+                                            <div class="absolute inset-x-0 top-0 bottom-0 pointer-events-none px-2">
+                                                <div v-for="level in [10, 9, 8, 7, 6, 5]" :key="level" 
+                                                     class="absolute w-full border-t border-gray-100/10 dark:border-gray-700/30 border-dashed"
+                                                     :style="{ top: `${90 - ((level - 5) / 5) * 80}%` }">
                                                 </div>
                                             </div>
 
-                                            <div class="relative h-48 w-full overflow-hidden">
+                                            <div class="relative h-48 w-full">
                                                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="w-full h-full overflow-visible">
                                                     <defs>
                                                         <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
@@ -409,12 +418,12 @@ onMounted(() => {
                                                         <div class="w-8 h-8 rounded-xl bg-white dark:bg-gray-800 border-2 shadow-lg flex items-center justify-center p-1.5 transition-all duration-300 group-hover:scale-125 group-hover:z-30"
                                                              :style="{ borderColor: getRatingColor(node.stat.rating) }">
                                                             <img v-if="getMatchOpponent(node.stat)?.logo_url" :src="getMatchOpponent(node.stat).logo_url" class="w-full h-full object-contain" />
-                                                            <img v-else-if="getMatchOpponent(node.stat)?.name && getCountryFlag(getMatchOpponent(stat).name)" :src="getCountryFlag(getMatchOpponent(node.stat).name)" class="w-full h-full object-contain" />
+                                                            <img v-else-if="getMatchOpponent(node.stat)?.name && getCountryFlag(getMatchOpponent(node.stat).name)" :src="getCountryFlag(getMatchOpponent(node.stat).name)" class="w-full h-full object-contain" />
                                                             <span v-else class="text-[8px] font-black">{{ getMatchOpponent(node.stat)?.name?.substring(0,2) }}</span>
                                                         </div>
 
-                                                        <!-- Rating Tooltip (always visible or on hover?) -->
-                                                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded-md border border-gray-100 dark:border-gray-700 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-40">
+                                                        <!-- Rating Tooltip (Always Visible) -->
+                                                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded-md border border-gray-100 dark:border-gray-700 shadow-sm whitespace-nowrap z-40">
                                                             <span class="text-[9px] font-black" :class="getRatingTextColor(node.stat.rating)">{{ Number(node.stat.rating).toFixed(1) }}</span>
                                                         </div>
 
@@ -492,8 +501,8 @@ onMounted(() => {
                                 
                                 <div class="flex-1 flex items-center justify-center gap-4">
                                     <div class="flex items-center gap-3 flex-1 justify-end">
-                                        <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase truncate text-right">{{ stat.match?.homeTeam?.name }}</span>
-                                        <img :src="stat.match?.homeTeam?.logo_url" class="w-6 h-6 object-contain" />
+                                        <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase truncate text-right">{{ stat.match?.home_team?.name }}</span>
+                                        <img :src="stat.match?.home_team?.logo_url" class="w-6 h-6 object-contain" />
                                     </div>
                                     
                                     <div class="px-3 py-1 bg-gray-50 dark:bg-gray-900 rounded-lg text-sm font-bold text-gray-950 dark:text-white tabular-nums border border-gray-100 dark:border-gray-800">
@@ -501,8 +510,8 @@ onMounted(() => {
                                     </div>
                                     
                                     <div class="flex items-center gap-3 flex-1">
-                                        <img :src="stat.match?.awayTeam?.logo_url" class="w-6 h-6 object-contain" />
-                                        <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase truncate">{{ stat.match?.awayTeam?.name }}</span>
+                                        <img :src="stat.match?.away_team?.logo_url" class="w-6 h-6 object-contain" />
+                                        <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase truncate">{{ stat.match?.away_team?.name }}</span>
                                     </div>
                                 </div>
                                 
@@ -533,8 +542,8 @@ onMounted(() => {
                                     <div class="flex flex-col items-end flex-1">
                                         <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Từ</span>
                                         <div class="flex items-center gap-2">
-                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.fromTeam?.name || 'Không rõ' }}</span>
-                                            <img v-if="t.fromTeam?.logo_url" :src="t.fromTeam.logo_url" class="w-5 h-5 object-contain" />
+                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.from_team?.name || 'Không rõ' }}</span>
+                                            <img v-if="t.from_team?.logo_url" :src="t.from_team.logo_url" class="w-5 h-5 object-contain" />
                                         </div>
                                     </div>
                                     
@@ -545,8 +554,8 @@ onMounted(() => {
                                     <div class="flex flex-col items-start flex-1">
                                         <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Đến</span>
                                         <div class="flex items-center gap-2">
-                                            <img v-if="t.toTeam?.logo_url" :src="t.toTeam.logo_url" class="w-5 h-5 object-contain" />
-                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.toTeam?.name || 'Không rõ' }}</span>
+                                            <img v-if="t.to_team?.logo_url" :src="t.to_team.logo_url" class="w-5 h-5 object-contain" />
+                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.to_team?.name || 'Không rõ' }}</span>
                                         </div>
                                     </div>
                                 </div>

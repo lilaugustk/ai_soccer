@@ -216,6 +216,12 @@ export const COUNTRY_MAP = {
     'ye': { vi: 'Yemen', en: 'Yemen' },
     'zm': { vi: 'Zambia', en: 'Zambia' },
     'zw': { vi: 'Zimbabwe', en: 'Zimbabwe' },
+    // Regions & Specials
+    'un': { vi: 'Quốc tế', en: 'International' },
+    'eu': { vi: 'Châu Âu', en: 'Europe' },
+    'africa': { vi: 'Châu Phi', en: 'Africa' },
+    'south-america': { vi: 'Nam Mỹ', en: 'South America' },
+    'world': { vi: 'Thế giới', en: 'World' },
 };
 
 export const getCountryNames = (natString) => {

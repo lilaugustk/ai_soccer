@@ -46,9 +46,9 @@ class BsdSportsApiService
     {
         try {
             $response = Http::withHeaders($this->getHeaders())
-                ->timeout(10) // Thêm timeout để tránh treo quá lâu
+                ->timeout(20)
                 ->withoutVerifying()
-                ->get($this->getBaseUrl() . $endpoint, $params);
+                ->get($this->getBaseUrl() . ltrim($endpoint, '/'), $params);
 
             if ($response->successful()) {
                 return $response->json();
@@ -62,10 +62,37 @@ class BsdSportsApiService
         }
     }
 
-    private $deepSyncCount = 0;
-    private const MAX_DEEP_SYNCS_PER_REQUEST = 10;
+    /**
+     * Tự động lấy toàn bộ các trang dữ liệu (Pagination)
+     */
+    public function getAll($endpoint, $params = [])
+    {
+        $allResults = [];
+        $params['limit'] = $params['limit'] ?? 200;
+        $params['offset'] = $params['offset'] ?? 0;
 
-    private function syncPlayerIfNotExists($playerId, $name = null, $teamId = null)
+        do {
+            $data = $this->get($endpoint, $params);
+            if (!$data) break;
+
+            // Xử lý các cấu trúc trả về khác nhau
+            $results = $data['results'] ?? $data['events'] ?? $data['players'] ?? $data['teams'] ?? $data['seasons'] ?? [];
+            $allResults = array_merge($allResults, $results);
+
+            if (isset($data['next']) && $data['next']) {
+                $params['offset'] += $params['limit'];
+            } else {
+                break;
+            }
+        } while (true);
+
+        return $allResults;
+    }
+
+    private $deepSyncCount = 0;
+    private const MAX_DEEP_SYNCS_PER_REQUEST = 1000; // Nâng giới hạn để nạp đủ dữ liệu cho cả mùa giải
+
+    public function syncPlayerProfile($playerId, $name = null, $teamId = null)
     {
         if (empty($playerId)) return;
         
@@ -73,51 +100,56 @@ class BsdSportsApiService
 
         $player = FootballPlayer::query()->find($playerId);
         
-        // 1. Kiểm tra xem có cần đồng bộ sâu không (Chưa có player hoặc thiếu thông tin cơ bản)
-        $needsDeepSync = !$player || $player->name === 'Unknown Player' || empty($player->name) || empty($player->position);
+        // 1. Kiểm tra xem có cần đồng bộ sâu không
+        $needsDeepSync = !$player 
+            || $player->name === 'Unknown Player' 
+            || empty($player->name) 
+            || empty($player->position)
+            || empty($player->date_of_birth)
+            || ($player->nationality && empty($player->national_team_id));
 
         if ($needsDeepSync) {
-            // Bước 1: Lưu nhanh thông tin từ Match API để UI có dữ liệu hiển thị ngay
-            if ($name && $name !== 'Unknown Player') {
-                FootballPlayer::updateOrCreate(
-                    ['id' => $playerId],
-                    [
-                        'name' => $name,
-                        'current_team_id' => $teamId,
-                    ]
-                );
-            }
-
-            // Bước 2: Chỉ gọi API chi tiết nếu chưa đạt giới hạn trong request này
+            $playerData = null;
+            // Thử đồng bộ sâu nếu chưa chạm giới hạn
             if ($this->deepSyncCount < self::MAX_DEEP_SYNCS_PER_REQUEST) {
                 try {
                     $this->deepSyncCount++;
                     $playerData = $this->get("players/{$playerId}/");
-                    if ($playerData && !isset($playerData['error'])) {
-                        FootballPlayer::updateOrCreate(
-                            ['id' => $playerId],
-                            [
-                                'name' => $playerData['name'] ?? $name ?? 'Unknown Player',
-                                'short_name' => $playerData['short_name'] ?? null,
-                                'current_team_id' => $playerData['current_team_id'] ?? $teamId,
-                                'position' => $playerData['position'] ?? null,
-                                'specific_position' => $playerData['specific_position'] ?? null,
-                                'jersey_number' => $playerData['jersey_number'] ?? null,
-                                'date_of_birth' => $playerData['date_of_birth'] ?? null,
-                                'height_cm' => $playerData['height_cm'] ?? null,
-                                'weight_kg' => $playerData['weight_kg'] ?? null,
-                                'preferred_foot' => $playerData['preferred_foot'] ?? null,
-                                'nationality' => $playerData['nationality'] ?? null,
-                                'nationality_code' => $playerData['nationality_code'] ?? null,
-                                'market_value_eur' => $playerData['market_value_eur'] ?? null,
-                                'contract_until' => $playerData['contract_until'] ?? null,
-                                'availability' => $playerData['availability'] ?? 'available',
-                            ]
-                        );
-                    }
                 } catch (\Exception $e) {
                     Log::error("Failed to deep sync player {$playerId}: " . $e->getMessage());
                 }
+            }
+            
+            // Xử lý lưu dữ liệu
+            if ($playerData && !isset($playerData['error'])) {
+                FootballPlayer::updateOrCreate(
+                    ['id' => $playerId],
+                    [
+                        'name' => $playerData['name'] ?? $name ?? 'Unknown Player',
+                        'short_name' => $playerData['short_name'] ?? null,
+                        'current_team_id' => $playerData['current_team_id'] ?? $teamId,
+                        'position' => $playerData['position'] ?? null,
+                        'specific_position' => $playerData['specific_position'] ?? null,
+                        'jersey_number' => $playerData['jersey_number'] ?? null,
+                        'date_of_birth' => $playerData['date_of_birth'] ?? null,
+                        'height_cm' => $playerData['height_cm'] ?? null,
+                        'weight_kg' => $playerData['weight_kg'] ?? null,
+                        'preferred_foot' => $playerData['preferred_foot'] ?? null,
+                        'nationality' => $playerData['nationality'] ?? null,
+                        'nationality_code' => $playerData['nationality_code'] ?? $playerData['country_code'] ?? null,
+                        'national_team_id' => $playerData['national_team_id'] ?? null,
+                        'market_value_eur' => $playerData['market_value_eur'] ?? null,
+                        'contract_until' => $playerData['contract_until'] ?? null,
+                        'availability' => $playerData['availability'] ?? 'available',
+                    ]
+                );
+            } elseif (!$player) {
+                // Nếu chưa có player và không sync được chi tiết, tạo stub tối thiểu
+                FootballPlayer::create([
+                    'id' => $playerId,
+                    'name' => $name ?? 'Unknown Player',
+                    'current_team_id' => $teamId,
+                ]);
             }
         }
         
@@ -160,11 +192,10 @@ class BsdSportsApiService
      */
     public function syncLeagues()
     {
-        $data = $this->get('leagues/', ['limit' => 200]);
-        if (!$data) return [];
-        Log::info('BSD API Leagues first 5 items:', array_slice($data['results'], 0, 5));
+        $results = $this->getAll('leagues/', ['is_active' => true]);
+        if (empty($results)) return [];
 
-        foreach ($data['results'] as $item) {
+        foreach ($results as $item) {
             $leagueData = [
                     'name' => $item['name'],
                     'country' => $item['country'],
@@ -193,7 +224,7 @@ class BsdSportsApiService
                 );
             }
         }
-        return $data['results'];
+        return $results;
     }
 
     /**
@@ -201,19 +232,8 @@ class BsdSportsApiService
      */
     public function syncSeasons($leagueId)
     {
-        $data = $this->get("leagues/{$leagueId}/seasons/", ['limit' => 100]);
-        if (!$data) return [];
-
-        // Kiểm tra cấu trúc trả về: có thể là {results: []}, {seasons: []} hoặc trực tiếp là mảng []
-        $seasons = [];
-        if (isset($data['results'])) {
-            $seasons = $data['results'];
-        } elseif (isset($data['seasons'])) {
-            $seasons = $data['seasons'];
-        } elseif (is_array($data) && !isset($data['id'])) {
-            // Nếu là mảng trực tiếp (và không phải là 1 object duy nhất có id)
-            $seasons = $data;
-        }
+        $seasons = $this->getAll("leagues/{$leagueId}/seasons/");
+        if (empty($seasons)) return [];
 
         foreach ($seasons as $s) {
             FootballSeason::updateOrCreate(
@@ -236,10 +256,10 @@ class BsdSportsApiService
      */
     public function syncTeamsByLeague($leagueId)
     {
-        $data = $this->get('teams/', ['league_id' => $leagueId]);
-        if (!$data) return [];
+        $results = $this->getAll('teams/', ['league_id' => $leagueId]);
+        if (empty($results)) return [];
 
-        foreach ($data['results'] as $item) {
+        foreach ($results as $item) {
             // Đảm bảo Venue tồn tại để tránh lỗi FK
             if (isset($item['venue_id'])) {
                 $this->syncVenueIfNotExists($item['venue_id']);
@@ -257,20 +277,19 @@ class BsdSportsApiService
                     $teamData
                 );
         }
-        return $data['results'];
+        return $results;
     }
 
     public function syncPlayersByTeam($teamId, $seasonId)
     {
-        $data = $this->get('players/', [
+        $results = $this->getAll('players/', [
             'team_id' => $teamId,
-            'season_id' => $seasonId,
-            'limit' => 100
+            'season_id' => $seasonId
         ]);
 
-        if (!$data || !isset($data['results'])) return [];
+        if (empty($results)) return [];
 
-        foreach ($data['results'] as $item) {
+        foreach ($results as $item) {
             // 1. Lưu Profile cầu thủ
             FootballPlayer::updateOrCreate(
                 ['id' => $item['id']],
@@ -296,7 +315,7 @@ class BsdSportsApiService
             // 2. Lưu chỉ số sự nghiệp (Career Stats) cho mùa giải này
             $this->syncPlayerCareer($item['id'], $seasonId);
         }
-        return $data['results'];
+        return $results;
     }
 
     public function syncPlayerMatches($playerId)
@@ -371,6 +390,9 @@ class BsdSportsApiService
      */
     public function syncPlayerCareer($playerId, $seasonId = null)
     {
+        // Đảm bảo Profile được sync trước
+        $this->syncPlayerProfile($playerId);
+
         $data = $this->get("players/{$playerId}/career/");
         if (!$data || !isset($data['seasons'])) return [];
 
@@ -473,15 +495,14 @@ class BsdSportsApiService
      */
     public function syncSeasonMatches($seasonId)
     {
-        $data = $this->get('events/', [
-            'season_id' => $seasonId,
-            'limit' => 1000 // Lấy tối đa 1000 trận để bao phủ toàn bộ mùa giải
+        $results = $this->getAll('events/', [
+            'season_id' => $seasonId
         ]);
 
-        if (!$data || !isset($data['results'])) return [];
+        if (empty($results)) return [];
 
         $syncedMatches = [];
-        foreach ($data['results'] as $item) {
+        foreach ($results as $item) {
             $syncedMatches[] = $this->saveMatch($item);
         }
         
@@ -616,7 +637,11 @@ class BsdSportsApiService
                 $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/lineups/"),
                 $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/incidents/"),
                 $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/metadata/"),
-                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "predictions/{$matchId}/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/odds/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/player-stats/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/prediction/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/broadcasts/"),
+                $pool->withHeaders($this->getHeaders())->timeout(20)->withoutVerifying()->get($this->getBaseUrl() . "events/{$matchId}/social/"),
             ]);
 
             $eventData    = $responses[0]->successful() ? $responses[0]->json() : null;
@@ -624,8 +649,11 @@ class BsdSportsApiService
             $lineupsData  = $responses[2]->successful() ? $responses[2]->json() : null;
             $incidentsData = $responses[3]->successful() ? $responses[3]->json() : null;
             $metaData     = $responses[4]->successful() ? $responses[4]->json() : null;
-            $predictionsData = $responses[5]->successful() ? $responses[5]->json() : null;
-            // $standingsData = $responses[6]->successful() ? $responses[6]->json() : null; // Đã lược bỏ để tăng tốc
+            $oddsData     = $responses[5]->successful() ? $responses[5]->json() : null;
+            $playerStatsData = $responses[6]->successful() ? $responses[6]->json() : null;
+            $predictionsData = $responses[7]->successful() ? $responses[7]->json() : null;
+            $broadcastsData = $responses[8]->successful() ? $responses[8]->json() : null;
+            $socialData     = $responses[9]->successful() ? $responses[9]->json() : null;
 
             // 1.1 Update Match Info
             if ($eventData) {
@@ -702,7 +730,7 @@ class BsdSportsApiService
                     if (isset($statsData['average_positions'][$side])) {
                         foreach ($statsData['average_positions'][$side] as $p) {
                             $pid = $p['pid'] ?? $p['id'] ?? null;
-                            $this->syncPlayerIfNotExists($pid, $p['name'] ?? null, $match->{$side . '_team_id'});
+                            $this->syncPlayerProfile($pid, $p['name'] ?? null, $match->{$side . '_team_id'});
                         }
                     }
                 }
@@ -710,7 +738,7 @@ class BsdSportsApiService
 
             // Momentum
             if (isset($statsData['momentum'])) {
-                FootballMomentum::query()->where('event_id', $matchId)->delete();
+                \App\Models\FootballMomentum::query()->where('event_id', $matchId)->delete();
                 $momentumData = [];
                 foreach ($statsData['momentum'] as $m) {
                     if (!is_array($m)) continue;
@@ -724,7 +752,47 @@ class BsdSportsApiService
                 }
                 
                 if (!empty($momentumData)) {
-                    FootballMomentum::insert($momentumData);
+                    \App\Models\FootballMomentum::insert($momentumData);
+                }
+            }
+
+            // Average Positions
+            if (isset($statsData['average_positions'])) {
+                \App\Models\FootballAveragePosition::query()->where('event_id', $matchId)->delete();
+                foreach (['home', 'away'] as $side) {
+                    if (isset($statsData['average_positions'][$side])) {
+                        foreach ($statsData['average_positions'][$side] as $p) {
+                            $pid = $p['pid'] ?? $p['id'] ?? null;
+                            if (!$pid) continue;
+                            $this->syncPlayerProfile($pid, $p['name'] ?? null, $match->{$side . '_team_id'});
+                            
+                            // Kiểm tra sự tồn tại trước khi tạo để tránh lỗi FK
+                            if (\App\Models\FootballPlayer::query()->where('id', $pid)->exists()) {
+                                \App\Models\FootballAveragePosition::create([
+                                    'event_id' => $matchId,
+                                    'team_id' => $match->{$side . '_team_id'},
+                                    'player_id' => $pid,
+                                    'x' => $p['pos']['x'] ?? $p['x'] ?? 0,
+                                    'y' => $p['pos']['y'] ?? $p['y'] ?? 0,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // xG per minute
+            if (isset($statsData['xg_per_minute'])) {
+                \App\Models\FootballXgPerMinute::query()->where('event_id', $matchId)->delete();
+                foreach ($statsData['xg_per_minute'] as $m) {
+                    \App\Models\FootballXgPerMinute::create([
+                        'event_id' => $matchId,
+                        'minute' => $m['m'] ?? 0,
+                        'xg_home' => $m['xg_home'] ?? 0,
+                        'xg_away' => $m['xg_away'] ?? 0,
+                        'cum_xg_home' => $m['cum_xg_home'] ?? 0,
+                        'cum_xg_away' => $m['cum_xg_away'] ?? 0,
+                    ]);
                 }
             }
 
@@ -736,21 +804,23 @@ class BsdSportsApiService
                     $pid = $s['pid'] ?? $s['player_id'] ?? null;
                     $isHome = $s['home'] ?? ($s['is_home'] ?? true);
                     $teamId = $s['team_id'] ?? ($isHome ? $match->home_team_id : $match->away_team_id);
-                    $this->syncPlayerIfNotExists($pid, $s['player_name'] ?? null, $teamId);
+                    $this->syncPlayerProfile($pid, $s['player_name'] ?? null, $teamId);
 
-                    FootballShotmap::create([
-                        'event_id' => $matchId,
-                        'team_id' => $teamId,
-                        'player_id' => $pid,
-                        'minute' => $s['min'] ?? $s['minute'] ?? 0,
-                        'x' => $s['pos']['x'] ?? $s['x'] ?? 0,
-                        'y' => $s['pos']['y'] ?? $s['y'] ?? 0,
-                        'xg' => $s['xg'] ?? null,
-                        'body_part' => $s['body'] ?? $s['body_part'] ?? null,
-                        'situation' => $s['sit'] ?? $s['situation'] ?? null,
-                        'is_goal' => ($s['type'] ?? '') === 'goal' || ($s['is_goal'] ?? false),
-                        'shot_type' => $s['type'] ?? null,
-                    ]);
+                    if (\App\Models\FootballPlayer::query()->where('id', $pid)->exists()) {
+                        FootballShotmap::create([
+                            'event_id' => $matchId,
+                            'team_id' => $teamId,
+                            'player_id' => $pid,
+                            'minute' => $s['min'] ?? $s['minute'] ?? 0,
+                            'x' => $s['pos']['x'] ?? $s['x'] ?? 0,
+                            'y' => $s['pos']['y'] ?? $s['y'] ?? 0,
+                            'xg' => $s['xg'] ?? null,
+                            'body_part' => $s['body'] ?? $s['body_part'] ?? null,
+                            'situation' => $s['sit'] ?? $s['situation'] ?? null,
+                            'is_goal' => ($s['type'] ?? '') === 'goal' || ($s['is_goal'] ?? false),
+                            'shot_type' => $s['type'] ?? null,
+                        ]);
+                    }
                 }
             }
 
@@ -777,16 +847,18 @@ class BsdSportsApiService
                         FootballLineupPlayer::query()->where('lineup_team_id', $lineupTeam->id)->delete();
                         foreach (array_merge($teamData['players'] ?? [], $teamData['substitutes'] ?? []) as $index => $p) {
                             if (!isset($p['id'])) continue;
-                            $this->syncPlayerIfNotExists($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
+                            $this->syncPlayerProfile($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
                             
-                            FootballLineupPlayer::create([
-                                'lineup_team_id' => $lineupTeam->id,
-                                'player_id' => $p['id'],
-                                'jersey_number' => $p['jersey_number'] ?? null,
-                                'position' => $p['position'] ?? null,
-                                'is_substitute' => $index >= count($teamData['players'] ?? []),
-                                'ai_score' => $p['ai_score'] ?? $p['rating'] ?? null,
-                            ]);
+                            if (\App\Models\FootballPlayer::query()->where('id', $p['id'])->exists()) {
+                                FootballLineupPlayer::create([
+                                    'lineup_team_id' => $lineupTeam->id,
+                                    'player_id' => $p['id'],
+                                    'jersey_number' => $p['jersey_number'] ?? null,
+                                    'position' => $p['position'] ?? null,
+                                    'is_substitute' => $index >= count($teamData['players'] ?? []),
+                                    'ai_score' => $p['ai_score'] ?? $p['rating'] ?? null,
+                                ]);
+                            }
                         }
 
                         // Update Coaches in the match record
@@ -809,13 +881,16 @@ class BsdSportsApiService
                     foreach (['home', 'away'] as $side) {
                         foreach ($lineupsData['unavailable_players'][$side] ?? [] as $p) {
                             if (!isset($p['id'])) continue;
-                            $this->syncPlayerIfNotExists($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
-                            FootballUnavailablePlayer::create([
-                                'lineup_id' => $lineup->id,
-                                'player_id' => $p['id'],
-                                'status' => $p['status'] ?? null,
-                                'reason' => $p['reason'] ?? null,
-                            ]);
+                            $this->syncPlayerProfile($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
+                            
+                            if (\App\Models\FootballPlayer::query()->where('id', $p['id'])->exists()) {
+                                FootballUnavailablePlayer::create([
+                                    'lineup_id' => $lineup->id,
+                                    'player_id' => $p['id'],
+                                    'status' => $p['status'] ?? null,
+                                    'reason' => $p['reason'] ?? null,
+                                ]);
+                            }
                         }
                     }
                 }
@@ -828,44 +903,162 @@ class BsdSportsApiService
                     if (!is_array($e)) continue;
                     $isHome = $e['is_home'] ?? true;
                     $teamId = $isHome ? $match->home_team_id : $match->away_team_id;
-                    $this->syncPlayerIfNotExists($e['player_id'] ?? null, $e['player'] ?? null, $teamId);
-                    $this->syncPlayerIfNotExists($e['player_in_id'] ?? null, $e['player_in'] ?? null, $teamId);
-                    $this->syncPlayerIfNotExists($e['player_out_id'] ?? null, $e['player_out'] ?? null, $teamId);
+                    $this->syncPlayerProfile($e['player_id'] ?? null, $e['player'] ?? null, $teamId);
+                    $this->syncPlayerProfile($e['player_in_id'] ?? null, $e['player_in'] ?? null, $teamId);
+                    $this->syncPlayerProfile($e['player_out_id'] ?? null, $e['player_out'] ?? null, $teamId);
 
-                    FootballIncident::create([
-                        'event_id' => $matchId,
-                        'type' => $e['type'] ?? 'unknown',
-                        'minute' => $e['minute'] ?? 0,
-                        'is_home' => $isHome,
-                        'player_id' => $e['player_id'] ?? null,
-                        'player_in_id' => $e['player_in_id'] ?? null,
-                        'player_out_id' => $e['player_out_id'] ?? null,
-                        'card_type' => $e['card_type'] ?? null,
-                        'period_label' => $e['period_label'] ?? null,
-                        'confirmed' => $e['confirmed'] ?? true,
-                        'payload' => $e,
-                    ]);
+                    // Kiểm tra Player ID chính
+                    if (!isset($e['player_id']) || \App\Models\FootballPlayer::query()->where('id', $e['player_id'])->exists()) {
+                        FootballIncident::create([
+                            'event_id' => $matchId,
+                            'type' => $e['type'] ?? 'unknown',
+                            'minute' => $e['minute'] ?? 0,
+                            'is_home' => $isHome,
+                            'player_id' => $e['player_id'] ?? null,
+                            'player_in_id' => $e['player_in_id'] ?? null,
+                            'player_out_id' => $e['player_out_id'] ?? null,
+                            'card_type' => $e['card_type'] ?? null,
+                            'period_label' => $e['period_label'] ?? null,
+                            'confirmed' => $e['confirmed'] ?? true,
+                            'payload' => $e,
+                        ]);
+                    }
                 }
             }
 
             // 4. Predictions & AI Insights
             if ($predictionsData) {
-                $match->update(['prediction' => $predictionsData]);
+                $m = $predictionsData['markets'] ?? [];
+                $r = $predictionsData['recommendations'] ?? [];
+                
+                \App\Models\FootballEventPrediction::updateOrCreate(
+                    ['event_id' => $matchId],
+                    [
+                        'prob_home' => $m['match_result']['prob_home'] ?? null,
+                        'prob_draw' => $m['match_result']['prob_draw'] ?? null,
+                        'prob_away' => $m['match_result']['prob_away'] ?? null,
+                        'predicted_result' => $m['match_result']['predicted'] ?? null,
+                        'expected_home_goals' => $m['expected_goals']['home'] ?? null,
+                        'expected_away_goals' => $m['expected_goals']['away'] ?? null,
+                        'prob_over_15' => $m['over_under']['prob_over_15'] ?? null,
+                        'prob_over_25' => $m['over_under']['prob_over_25'] ?? null,
+                        'prob_over_35' => $m['over_under']['prob_over_35'] ?? null,
+                        'prob_btts_yes' => $m['btts']['prob_yes'] ?? null,
+                        'most_likely_score' => $m['score']['most_likely'] ?? null,
+                        'favorite' => $r['favorite'] ?? null,
+                        'favorite_prob' => $r['favorite_prob'] ?? null,
+                        'bet_favorite' => $r['bet_favorite'] ?? false,
+                        'over_15' => $r['over_15'] ?? false,
+                        'over_25' => $r['over_25'] ?? false,
+                        'over_35' => $r['over_35'] ?? false,
+                        'btts' => $r['btts'] ?? false,
+                        'winner' => $r['winner'] ?? false,
+                        'confidence' => $predictionsData['model']['confidence'] ?? null,
+                        'model_version' => $predictionsData['model']['version'] ?? null,
+                    ]
+                );
             }
 
-            // 5. Metadata (Đã xử lý Venue/Referee ở trên qua ID)
-            if ($metaData) {
-                /*
-                if (isset($metaData['venue'])) {
-                    FootballVenue::updateOrCreate(['id' => $metaData['venue']['id']], [
-                        'name' => $metaData['venue']['name'],
-                        'city' => $metaData['venue']['city'] ?? null,
-                    ]);
-                    $match->venue_id = $metaData['venue']['id'];
+            // 4.1 Odds
+            if ($oddsData && isset($oddsData['odds'])) {
+                Log::info("Odds Data for Event {$matchId}: " . json_encode($oddsData['odds']));
+                \App\Models\FootballEventOddsConsensus::updateOrCreate(
+                    ['event_id' => $matchId],
+                    $oddsData['odds']
+                );
+            }
+
+            // 4.2 Player Stats
+            if ($playerStatsData && isset($playerStatsData['player_stats'])) {
+                foreach ($playerStatsData['player_stats'] as $ps) {
+                    $this->syncPlayerProfile($ps['player_id'], null, $ps['team_id']);
+                    
+                    if (\App\Models\FootballPlayer::query()->where('id', $ps['player_id'])->exists()) {
+                        \App\Models\FootballPlayerMatchStat::updateOrCreate(
+                            ['event_id' => $matchId, 'player_id' => $ps['player_id']],
+                            $ps
+                        );
+                    }
                 }
-                */
+            }
+
+            // 5. Metadata
+            if ($metaData) {
+                \App\Models\FootballEventMetadata::updateOrCreate(
+                    ['event_id' => $matchId],
+                    [
+                        'jerseys' => $metaData['jerseys'] ?? null,
+                        'ai_preview_text' => $metaData['ai_preview']['text'] ?? null,
+                        'ai_preview_generated_at' => isset($metaData['ai_preview']['generated_at']) ? Carbon::parse($metaData['ai_preview']['generated_at']) : null,
+                    ]
+                );
+
+                if (isset($metaData['funfacts'])) {
+                    \App\Models\FootballFunfact::query()->where('event_id', $matchId)->delete();
+                    foreach ($metaData['funfacts'] as $f) {
+                        \App\Models\FootballFunfact::create([
+                            'event_id' => $matchId,
+                            'type_id' => $f['type_id'],
+                            'sentence' => $f['sentence'],
+                        ]);
+                    }
+                }
+
                 if (isset($metaData['referee']) && !isset($eventData['referee_id'])) {
                     $this->syncRefereeIfNotExists($metaData['referee']['id']);
+                }
+            }
+
+            // 5.1 Broadcasts
+            if ($broadcastsData && isset($broadcastsData['results'])) {
+                foreach ($broadcastsData['results'] as $b) {
+                    \App\Models\FootballTvChannel::updateOrCreate(
+                        ['id' => $b['channel_id']],
+                        ['name' => $b['channel_name'], 'country_code' => $b['country_code']]
+                    );
+
+                    \App\Models\FootballBroadcast::updateOrCreate(
+                        ['event_id' => $matchId, 'channel_id' => $b['channel_id']],
+                        [
+                            'country_code' => $b['country_code'],
+                            'scheduled_start_time' => Carbon::parse($b['scheduled_start_time']),
+                        ]
+                    );
+                }
+            }
+
+            // 5.2 Social Posts
+            if ($socialData && isset($socialData['results'])) {
+                foreach ($socialData['results'] as $s) {
+                    $post = \App\Models\FootballSocialPost::updateOrCreate(
+                        ['id' => $s['id']],
+                        [
+                            'type' => $s['type'],
+                            'url' => $s['url'],
+                            'text' => $s['text'] ?? null,
+                            'title' => $s['title'] ?? null,
+                            'thumbnail' => $s['thumbnail'] ?? null,
+                            'media' => $s['media'] ?? null,
+                            'account_handle' => $s['account']['handle'] ?? null,
+                            'account_name' => $s['account']['name'] ?? null,
+                            'account_verified' => $s['account']['verified'] ?? false,
+                            'published_at' => Carbon::parse($s['published_at']),
+                        ]
+                    );
+
+                    // Sync relations
+                    if (isset($s['linked']['teams'])) {
+                        $post->teams()->sync(collect($s['linked']['teams'])->pluck('id'));
+                    }
+                    if (isset($s['linked']['events'])) {
+                        $post->events()->sync(collect($s['linked']['events'])->pluck('id'));
+                    }
+                    if (isset($s['linked']['players'])) {
+                        $post->players()->sync(collect($s['linked']['players'])->pluck('id'));
+                    }
+                    if (isset($s['linked']['managers'])) {
+                        $post->managers()->sync(collect($s['linked']['managers'])->pluck('id'));
+                    }
                 }
             }
 

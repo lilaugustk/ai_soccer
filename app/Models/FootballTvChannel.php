@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class FootballTvChannel extends Model
 {
     protected $table = 'tv_channels';
+    public $incrementing = false;
 
-    protected $fillable = ['name', 'country_code', 'link'];
+    protected $fillable = ['id', 'name', 'country_code', 'link'];
 }

@@ -217,7 +217,12 @@ const getFlagUrl = (rawName, countryCode) => {
         'England': 'gb-eng', 'Scotland': 'gb-sct', 'Wales': 'gb-wls',
         'Germany': 'de', 'Spain': 'es', 'Italy': 'it', 'France': 'fr',
         'Vietnam': 'vn', 'Brazil': 'br', 'Argentina': 'ar', 'Portugal': 'pt',
-        'Netherlands': 'nl', 'World': 'un'
+        'Netherlands': 'nl', 'Belgium': 'be', 'Switzerland': 'ch', 'Turkey': 'tr',
+        'Saudi Arabia': 'sa', 'USA': 'us', 'Mexico' : 'mx', 'Poland': 'pl',
+        'Bulgaria': 'bg', 'Romania': 'ro', 'Greece': 'gr', 'Tunisia': 'tn',
+        'Japan': 'jp', 'South Korea': 'kr', 'China': 'cn', 'Morocco': 'ma',
+        'Norway': 'no', 'Finland': 'fi', 'Nigeria': 'ng', 'Sweden': 'se',
+        'Africa': 'un', 'Europe': 'eu', 'International': 'un', 'World': 'un', 'South America': 'un'
     };
     
     if (mapping[rawName]) return `https://flagcdn.com/w80/${mapping[rawName]}.png`;

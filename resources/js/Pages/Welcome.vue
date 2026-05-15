@@ -142,7 +142,6 @@ const props = defineProps({
         }),
     },
     availableLeagues: { type: Array, default: () => [] },
-    shouldSync: Boolean,
     dateStr: String
 });
 
@@ -246,23 +245,7 @@ const scrollToLeague = (leagueName) => {
 let dashboardInterval = null;
 
 onMounted(() => {
-    // 1. Background Sync Logic (Chạy ngay sau khi load trang nếu dữ liệu cần làm mới)
-    if (props.shouldSync) {
-        console.log('Dashboard: Starting background sync for date:', props.dateStr);
-        axios.post('/api/dashboard/sync', { date: props.dateStr })
-            .then(res => {
-                console.log('Dashboard: Sync completed:', res.data.message);
-                // Reload dữ liệu mới mà không làm phiền người dùng
-                router.reload({ 
-                    only: ['groupedGames', 'availableLeagues'], 
-                    preserveScroll: true,
-                    preserveState: true 
-                });
-            })
-            .catch(err => console.error('Dashboard: Sync failed:', err));
-    }
-
-    // 2. Polling mỗi 60 giây để cập nhật tỉ số các trận đang diễn ra
+    // Polling mỗi 60 giây để cập nhật tỉ số các trận đang diễn ra
     dashboardInterval = setInterval(() => {
         const hasLiveMatches = Object.values(props.groupedGames).some(league => 
             league.some(match => match.status === 'live')

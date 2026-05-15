@@ -41,7 +41,10 @@ class FootballLeague extends Model
             'Turkey' => 'tr', 'Scotland' => 'gb-sct', 'Belgium' => 'be', 'Switzerland' => 'ch',
             'Saudi Arabia' => 'sa', 'USA' => 'us', 'Mexico' => 'mx', 'Vietnam' => 'vn',
             'Poland' => 'pl', 'Sweden' => 'se', 'Norway' => 'no', 'Finland' => 'fi',
-            'Nigeria' => 'ng', 'International' => 'un', 'World' => 'un', 'Europe' => 'un'
+            'Nigeria' => 'ng', 'International' => 'un', 'World' => 'un', 'Europe' => 'eu',
+            'Bulgaria' => 'bg', 'Romania' => 'ro', 'Greece' => 'gr', 'Africa' => 'un',
+            'South America' => 'un', 'Tunisia' => 'tn', 'Japan' => 'jp', 'South Korea' => 'kr',
+            'China' => 'cn', 'Morocco' => 'ma', 'Argentina' => 'ar'
         ];
 
         return $map[$this->country] ?? 'un';

@@ -70,9 +70,9 @@ class PlayerController extends Controller
         // Try to find the player, if not found, fetch from API
         $player = FootballPlayer::query()->find($id);
 
-        if (!$player || empty($player->position)) {
-            // Player doesn't exist or incomplete, fetch their profile
-            $this->apiService->syncPlayerCareer($id); // This will also sync profile via syncPlayerIfNotExists
+        if (!$player || empty($player->position) || empty($player->date_of_birth) || $player->careerStats()->count() === 0) {
+            // Player doesn't exist or incomplete, fetch their profile and FULL career
+            $this->apiService->syncPlayerCareer($id); 
             $player = FootballPlayer::findOrFail($id);
         }
 
@@ -80,11 +80,15 @@ class PlayerController extends Controller
         $requestedSeason = $request->input('season');
         if (!$requestedSeason) {
              $latestSeasonStat = $player->careerStats()->orderByDesc('season_id')->first();
-             $requestedSeason = $latestSeasonStat ? $latestSeasonStat->season_id : 2026;
+             // If still no stats after sync, fallback to a sensible default or the latest available
+             $requestedSeason = $latestSeasonStat ? $latestSeasonStat->season_id : null;
         }
 
-        // Sync career and other data if needed
-        $this->apiService->syncPlayerCareer($id, $requestedSeason);
+        // Sync career and other data if needed (if a specific season was requested, sync that too)
+        if ($requestedSeason) {
+            $this->apiService->syncPlayerCareer($id, $requestedSeason);
+        }
+        
         $this->apiService->syncPlayerMatches($id);
         $this->apiService->syncPlayerTransfers($id);
         $this->apiService->syncPlayerNationalTeam($id);

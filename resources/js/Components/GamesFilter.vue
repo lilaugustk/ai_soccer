@@ -48,7 +48,7 @@
                           class="absolute top-full left-0 mt-3 z-[100] bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 p-6 w-80 transform transition-all duration-300">
                         <div class="flex items-center justify-between mb-6">
                             <span class="text-xs font-bold uppercase text-gray-900 dark:text-white tracking-[0.1em]">
-                                {{ dayjs().add(currentMonthOffset, 'month').format("MMMM [Năm] YYYY") }}
+                                {{ dayjs(selectedDate).add(currentMonthOffset, 'month').format("MMMM [Năm] YYYY") }}
                             </span>
                             <div class="flex gap-2">
                                 <button @click.stop="adjustMonth(-1)" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors text-gray-500 hover:text-emerald-500">
@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 
 const props = defineProps({
@@ -119,13 +119,18 @@ const showDatePicker = ref(false);
 const currentMonthOffset = ref(0);
 const today = dayjs().format('YYYY-MM-DD');
 
+// Reset offset when selectedDate changes to keep calendar in sync
+watch(() => props.selectedDate, () => {
+    currentMonthOffset.value = 0;
+});
+
 const adjustMonth = (offset) => {
     currentMonthOffset.value += offset;
 };
 
 const calendarDays = computed(() => {
     const days = [];
-    const baseMonth = dayjs().add(currentMonthOffset.value, 'month');
+    const baseMonth = dayjs(props.selectedDate).add(currentMonthOffset.value, 'month');
     const startOfMonth = baseMonth.startOf('month');
     const endOfMonth = baseMonth.endOf('month');
     
@@ -151,8 +156,10 @@ const calendarDays = computed(() => {
 
 const dateSlider = computed(() => {
     const dates = [];
-    // Only 5 days: -2, -1, 0, +1, +2 from today
-    const start = dayjs().subtract(2, 'day');
+    // Căn giữa slider vào ngày đang được chọn (selectedDate)
+    const baseDate = dayjs(props.selectedDate);
+    const start = baseDate.subtract(2, 'day');
+    
     for (let i = 0; i < 5; i++) {
         const d = start.add(i, 'day');
         dates.push({

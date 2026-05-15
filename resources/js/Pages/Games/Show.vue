@@ -1449,8 +1449,14 @@ onMounted(() => {
         activeTab.value = hash;
     }
     
-    // Tự động sync nếu thiếu dữ liệu quan trọng
-    if (!props.prediction || !props.game.statistics || props.game.statistics.length === 0) {
+    // Tự động sync nếu thiếu dữ liệu quan trọng (Stats hoặc Shotmap cho trận đã/đang diễn ra)
+    const hasStats = props.game.statistics && props.game.statistics.length > 0;
+    const hasShotmap = props.shotmap && props.shotmap.length > 0;
+    const isNotScheduled = props.game.status !== 'scheduled';
+    const syncLock = sessionStorage.getItem(`sync_match_${props.game.id}`);
+
+    if (!syncLock && (!props.prediction || (isNotScheduled && (!hasStats || !hasShotmap)))) {
+        sessionStorage.setItem(`sync_match_${props.game.id}`, 'true');
         refreshMatchData();
     }
 

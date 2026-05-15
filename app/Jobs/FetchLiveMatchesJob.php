@@ -1,40 +1,37 @@
 <?php
-
 namespace App\Jobs;
 
-use App\Services\FootballApiService;
+use App\Services\BsdSportsApiService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class FetchLiveMatchesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function handle(FootballApiService $apiService)
+    /**
+     * Create a new job instance.
+     */
+    public function __construct()
     {
-        // 1. Gọi API lấy dữ liệu trận đang đá
-        $liveMatches = $apiService->getLiveMatches();
+        //
+    }
 
-        if (empty($liveMatches)) {
-            return;
-        }
-
-        // 2. Cập nhật vào Database (Ví dụ dùng Upsert)
-        foreach ($liveMatches as $match) {
-            $apiMatchId = $match['fixture']['id'];
-            $status = $match['fixture']['status']['short']; // 1H, 2H, HT...
-            $homeScore = $match['goals']['home'];
-            $awayScore = $match['goals']['away'];
-            $elapsed = $match['fixture']['status']['elapsed']; // Phút thứ mấy
-
-            // Cập nhật logic Database của bạn ở đây...
-            // \App\Models\Match::where('api_id', $apiMatchId)->update([...]);
-            
-            // Xử lý bài toán Mapping ID nếu cần:
-            // $dbMatch = \App\Models\MatchMapping::where('api_id', $apiMatchId)->first();
+    /**
+     * Execute the job.
+     */
+    public function handle(BsdSportsApiService $apiService): void
+    {
+        try {
+            Log::info('Running FetchLiveMatchesJob...');
+            $apiService->getLiveEvents();
+            Log::info('FetchLiveMatchesJob completed successfully.');
+        } catch (\Exception $e) {
+            Log::error('FetchLiveMatchesJob failed: ' . $e->getMessage());
         }
     }
 }
