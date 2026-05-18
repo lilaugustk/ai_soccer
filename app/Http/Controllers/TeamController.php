@@ -109,7 +109,7 @@ class TeamController extends Controller
                             'id' => $p->player_id, 
                             'name' => $p->player?->name, 
                             'number' => $p->jersey_number, 
-                            'pos' => $p->position, 
+                            'pos' => $p->player?->specific_position ?? $p->position, 
                             'grid' => null,
                             'rating' => $p->ai_score ? number_format($p->ai_score * 10, 1) : null
                         ],
@@ -339,7 +339,7 @@ class TeamController extends Controller
                 'player_id' => $p->player_id,
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
-                'pos' => $p->position,
+                'pos' => $p->player?->specific_position ?? $p->position,
                 'grid' => (!empty($p->grid)) ? $p->grid : "1:1",
                 'rating' => $p->ai_score
             ]);
@@ -356,7 +356,7 @@ class TeamController extends Controller
                         'player_id' => $p->player_id,
                         'name' => $p->player?->name,
                         'number' => $p->jersey_number,
-                        'pos' => $p->position,
+                        'pos' => $p->player?->specific_position ?? $p->position,
                         'grid' => (!empty($p->grid)) ? $p->grid : ($rowIdx + 1) . ":" . $colIdx,
                         'rating' => $p->ai_score
                     ]);
@@ -372,7 +372,7 @@ class TeamController extends Controller
                 'player_id' => $p->player_id,
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
-                'pos' => $p->position,
+                'pos' => $p->player?->specific_position ?? $p->position,
                 'grid' => (!empty($p->grid)) ? $p->grid : "5:1",
                 'rating' => $p->ai_score
             ]);

@@ -76,14 +76,14 @@
                             <div
                                 class="flex items-center gap-4 text-3xl md:text-4xl font-bold text-gray-950 dark:text-white tabular-nums"
                             >
-                                <span>{{ game.home_score ?? "-" }}</span>
+                                <span>{{ (game.status === 'postponed' || game.status === 'cancelled') ? '-' : (game.home_score ?? "-") }}</span>
                                 <span
                                     class="text-gray-200 dark:text-gray-700 opacity-50 text-xl"
                                     >:</span
                                 >
-                                <span>{{ game.away_score ?? "-" }}</span>
+                                <span>{{ (game.status === 'postponed' || game.status === 'cancelled') ? '-' : (game.away_score ?? "-") }}</span>
                             </div>
-                            <div v-if="game.home_score_ht !== null && game.away_score_ht !== null" class="mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                            <div v-if="game.home_score_ht !== null && game.away_score_ht !== null && game.status !== 'postponed' && game.status !== 'cancelled'" class="mt-1 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                                 HT: {{ game.home_score_ht }} - {{ game.away_score_ht }}
                             </div>
                         </div>
@@ -184,9 +184,33 @@
             </div>
 
             <!-- Tab Contents -->
-            <div class="min-h-[500px] py-2">
-                <!-- Lineups Tab -->
-                <div v-if="activeTab === 'lineups'" class="space-y-8">
+            <div class="min-h-[500px] py-2 relative">
+                <!-- Loading State (Skeleton) -->
+                <div v-if="isLoadingTab" class="space-y-8 animate-pulse">
+                    <!-- Scoreboard/Pitch or Stats skeleton -->
+                    <div class="w-full aspect-[1.4/1] md:aspect-[2/1] bg-gray-100 dark:bg-gray-800/50 rounded-[2rem] border border-gray-200 dark:border-gray-700/50 flex items-center justify-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-10 h-10 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Đang tải dữ liệu...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid lg:grid-cols-2 gap-8">
+                        <div class="space-y-4">
+                            <div class="h-10 bg-gray-100 dark:bg-gray-800/50 rounded-2xl w-full"></div>
+                            <div class="bg-gray-50/30 dark:bg-gray-800/20 rounded-[2rem] h-96 border border-gray-100 dark:border-gray-700/50"></div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="h-10 bg-gray-100 dark:bg-gray-800/50 rounded-2xl w-full"></div>
+                            <div class="bg-gray-50/30 dark:bg-gray-800/20 rounded-[2rem] h-96 border border-gray-100 dark:border-gray-700/50"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Contents (Hidden when loading) -->
+                <div v-else>
+                    <!-- Lineups Tab -->
+                    <div v-if="activeTab === 'lineups'" class="space-y-8">
                     <!-- Formation Pitch (Visual - Flashscore Horizontal Style) -->
                     <div class="relative">
                         <!-- Expand Button -->
@@ -452,7 +476,7 @@
                                     <div class="absolute inset-0 z-30">
                                         <!-- Home -->
                                         <div v-for="p in processedHomeLineup" :key="'mhome-' + p.id" class="absolute" :style="p.style">
-                                            <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="router.visit(`/players/${p.id}`); showPitchModal = false">
+                                            <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="openPlayerStats(p); showPitchModal = false">
                                                 <div class="relative">
                                                     <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
                                                         <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover rounded-full" />
@@ -467,7 +491,7 @@
                                         </div>
                                         <!-- Away -->
                                         <div v-for="p in processedAwayLineup" :key="'maway-' + p.id" class="absolute" :style="p.style">
-                                            <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="router.visit(`/players/${p.id}`); showPitchModal = false">
+                                            <div class="flex flex-col items-center gap-1.5 cursor-pointer" @click="openPlayerStats(p); showPitchModal = false">
                                                 <div class="relative">
                                                     <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
                                                         <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover rounded-full" />
@@ -484,6 +508,145 @@
                                 </div>
                             </div>
                         </div>
+                        </Transition>
+                    </Teleport>
+
+                    <!-- Player Stats Modal -->
+                    <Teleport to="body">
+                        <Transition name="modal-fade">
+                            <div
+                                v-if="showPlayerStatsModal && selectedPlayerStats"
+                                class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                            >
+                                <!-- Backdrop -->
+                                <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-[4px]" @click="showPlayerStatsModal = false"></div>
+
+                                <!-- Modal Card -->
+                                <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800/80 transition-all duration-300">
+                                    <!-- Header Profile Banner -->
+                                    <div class="relative px-8 pt-8 pb-5 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-gray-800">
+                                        <!-- Close Button -->
+                                        <button
+                                            @click="showPlayerStatsModal = false"
+                                            class="absolute top-6 right-6 w-8 h-8 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full flex items-center justify-center transition-colors"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+
+                                        <!-- Player Info -->
+                                        <div class="flex items-center gap-4 pr-12">
+                                            <div class="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700/40 overflow-hidden shadow-sm flex-shrink-0">
+                                                <img :src="`https://sports.bzzoiro.com/img/player/${selectedPlayerStats.id}/`" class="w-full h-full object-cover" />
+                                            </div>
+
+                                            <div class="flex-1 min-w-0">
+                                                <h3 class="text-base font-bold text-gray-900 dark:text-white uppercase truncate tracking-tight">{{ selectedPlayerStats.name }}</h3>
+                                                <div class="flex items-center gap-2 mt-0.5">
+                                                    <span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded text-[9px] font-bold uppercase tracking-wider">{{ selectedPlayerStats.pos }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Key Stats Overview Grid -->
+                                    <div class="grid grid-cols-3 gap-2 px-8 py-4 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
+                                        <div class="text-center py-2">
+                                            <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Bàn thắng</div>
+                                            <div class="text-xl font-bold text-gray-950 dark:text-white mt-1">{{ selectedPlayerStats.goals }}</div>
+                                        </div>
+                                        <div class="text-center py-2 border-x border-gray-100 dark:border-gray-800">
+                                            <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Kiến tạo</div>
+                                            <div class="text-xl font-bold text-gray-950 dark:text-white mt-1">{{ selectedPlayerStats.assists }}</div>
+                                        </div>
+                                        <div class="text-center py-2">
+                                            <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Phút thi đấu</div>
+                                            <div class="text-xl font-bold text-gray-950 dark:text-white mt-1">{{ selectedPlayerStats.minutes_played }}'</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Stats Body -->
+                                    <div class="p-8 space-y-5 max-h-[48vh] overflow-y-auto no-scrollbar">
+                                        <!-- Attacking & xG Section -->
+                                        <div class="bg-gray-50/40 dark:bg-gray-800/20 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800/40">
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Tổng số cú sút</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.total_shots }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Sút trúng đích</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.shots_on_target }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Bàn thắng kỳ vọng (xG)</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.expected_goals !== null ? selectedPlayerStats.expected_goals.toFixed(2) : '—' }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Kiến tạo kỳ vọng (xA)</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.expected_assists !== null ? selectedPlayerStats.expected_assists.toFixed(2) : '—' }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Passing Section -->
+                                        <div class="bg-gray-50/40 dark:bg-gray-800/20 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800/40">
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Chuyền chính xác</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.accurate_pass }}/{{ selectedPlayerStats.total_pass }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Tỷ lệ chính xác</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">
+                                                    {{ selectedPlayerStats.total_pass > 0 ? ((selectedPlayerStats.accurate_pass / selectedPlayerStats.total_pass) * 100).toFixed(0) + '%' : '0%' }}
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Đường chuyền quyết định (Key Passes)</span>
+                                                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ selectedPlayerStats.key_pass }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Defending & Discipline Section -->
+                                        <div class="bg-gray-50/40 dark:bg-gray-800/20 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800/40">
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Tắc bóng thành công</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.total_tackle }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Cắt bóng</span>
+                                                <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.interception }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Thẻ phạt</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span v-if="selectedPlayerStats.yellow_card > 0" class="px-1.5 py-0.5 bg-amber-500/10 text-amber-600 rounded text-[10px] font-bold">Thẻ vàng x{{ selectedPlayerStats.yellow_card }}</span>
+                                                    <span v-if="selectedPlayerStats.red_card > 0" class="px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded text-[10px] font-bold">Thẻ đỏ x{{ selectedPlayerStats.red_card }}</span>
+                                                    <span v-if="selectedPlayerStats.yellow_card === 0 && selectedPlayerStats.red_card === 0" class="text-xs font-semibold text-gray-400">0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Goalkeeping Section -->
+                                        <div v-if="selectedPlayerStats.pos === 'GK' || selectedPlayerStats.saves > 0" class="bg-gray-50/40 dark:bg-gray-800/20 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden">
+                                            <div class="flex items-center justify-between px-5 py-3">
+                                                <span class="text-xs text-gray-500 dark:text-gray-400">Cản phá cứu thua (Saves)</span>
+                                                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ selectedPlayerStats.saves }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Footer Actions -->
+                                    <div class="px-8 py-5 bg-gray-50/50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-800 flex gap-4">
+                                        <Link
+                                            :href="`/players/${selectedPlayerStats.id}`"
+                                            class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors uppercase tracking-wider shadow-sm"
+                                        >
+                                            Xem hồ sơ chi tiết
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
                         </Transition>
                     </Teleport>
 
@@ -506,11 +669,12 @@
                                     <div
                                         v-for="p in processedHomeLineup"
                                         :key="p.id"
-                                        class="px-6 py-4 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                        class="px-6 py-4 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
+                                        @click="openPlayerStats(p)"
                                     >
                                         <div class="flex items-center gap-4">
                                             <span
-                                                class="w-6 text-xs font-bold text-gray-300 group-hover:text-emerald-500 transition-colors"
+                                                class="w-6 text-xs font-bold text-slate-900 dark:text-slate-400 group-hover:text-emerald-500 transition-colors"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -522,7 +686,7 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <div class="flex flex-col">
+                                            <div class="flex flex-col" @click.stop>
                                                 <Link
                                                     :href="`/players/${p.id}`"
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
@@ -565,13 +729,14 @@
                                     <div
                                         v-for="p in homeSubstitutes"
                                         :key="p.id"
-                                        class="px-6 py-4 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                        class="px-6 py-4 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
+                                        @click="openPlayerStats(p)"
                                     >
                                         <div
                                             class="flex items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                         >
                                             <span
-                                                class="w-6 text-xs font-bold text-slate-400 dark:text-gray-500"
+                                                class="w-6 text-xs font-bold text-slate-900 dark:text-slate-400"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -583,7 +748,7 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <div class="flex flex-col">
+                                            <div class="flex flex-col" @click.stop>
                                                 <Link
                                                     :href="`/players/${p.id}`"
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-emerald-500 transition-colors"
@@ -595,7 +760,7 @@
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="w-7 h-5 flex items-center justify-center rounded-lg text-[9px] font-bold border border-white/50 dark:border-gray-800 shadow-sm"
+                                                class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -643,13 +808,14 @@
                                     <div
                                         v-for="p in processedAwayLineup"
                                         :key="p.id"
-                                        class="px-6 py-4 flex flex-row-reverse items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                        class="px-6 py-4 flex flex-row-reverse items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
+                                        @click="openPlayerStats(p)"
                                     >
                                         <div
                                             class="flex flex-row-reverse items-center gap-4"
                                         >
                                             <span
-                                                class="w-6 text-xs font-bold text-gray-300 group-hover:text-blue-500 transition-colors text-right"
+                                                class="w-6 text-xs font-bold text-slate-900 dark:text-slate-400 group-hover:text-blue-500 transition-colors text-right"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -661,7 +827,7 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <div class="flex flex-col items-end">
+                                            <div class="flex flex-col items-end" @click.stop>
                                                 <Link
                                                     :href="`/players/${p.id}`"
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
@@ -673,7 +839,7 @@
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="w-7 h-5 flex items-center justify-center rounded-lg text-[9px] font-bold border border-white/50 dark:border-gray-800 shadow-sm"
+                                                class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -704,13 +870,14 @@
                                     <div
                                         v-for="p in awaySubstitutes"
                                         :key="p.id"
-                                        class="px-6 py-4 flex flex-row-reverse items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                                        class="px-6 py-4 flex flex-row-reverse items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
+                                        @click="openPlayerStats(p)"
                                     >
                                         <div
                                             class="flex flex-row-reverse items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity"
                                         >
                                             <span
-                                                class="w-6 text-xs font-bold text-gray-300 text-right"
+                                                class="w-6 text-xs font-bold text-slate-900 dark:text-slate-400 text-right"
                                                 >{{ p.number }}</span
                                             >
                                             <div
@@ -722,7 +889,7 @@
                                                     class="w-full h-full object-cover"
                                                 />
                                             </div>
-                                            <div class="flex flex-col items-end">
+                                            <div class="flex flex-col items-end" @click.stop>
                                                 <Link
                                                     :href="`/players/${p.id}`"
                                                     class="text-sm font-bold text-gray-950 dark:text-white hover:text-blue-500 transition-colors text-right"
@@ -734,7 +901,7 @@
                                         <div class="flex items-center gap-3">
                                             <div
                                                 v-if="p.rating"
-                                                class="w-7 h-5 flex items-center justify-center rounded-lg text-[9px] font-bold border border-white/50 dark:border-gray-800 shadow-sm"
+                                                class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
                                                 "
@@ -1390,14 +1557,15 @@
                         </div>
                     </div>
                 </div>
-            </div>
+                </div> <!-- Closes v-else -->
+            </div> <!-- Closes tab contents wrapper -->
             <LeagueSidebar />
         </div>
     </MainLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import MainLayout from "../../Layouts/MainLayout.vue";
 import dayjs from "dayjs";
@@ -1422,11 +1590,44 @@ const props = defineProps({
     aiInsights: { type: String, default: null },
     momentum: { type: Array, default: () => [] },
     shotmap: { type: Array, default: () => [] },
+    activeTab: { type: String, default: "lineups" },
 });
 
-const activeTab = ref("lineups");
+const activeTab = ref(props.activeTab);
+const isLoadingTab = ref(false);
 const lineupView = ref("start"); // 'start' or 'end'
 const showPitchModal = ref(false);
+const selectedPlayerStats = ref(null);
+const showPlayerStatsModal = ref(false);
+
+const openPlayerStats = (player) => {
+    if (!props.game.player_stats) return;
+    const fullStat = props.game.player_stats.find(ps => ps.id == player.id);
+    
+    selectedPlayerStats.value = {
+        id: player.id,
+        name: player.name,
+        number: player.number,
+        pos: player.pos || 'Unknown',
+        rating: player.rating || fullStat?.rating || '—',
+        minutes_played: fullStat?.minutes_played ?? 0,
+        goals: fullStat?.goals ?? 0,
+        assists: fullStat?.assists ?? 0,
+        expected_goals: fullStat?.expected_goals ?? null,
+        expected_assists: fullStat?.expected_assists ?? null,
+        total_shots: fullStat?.total_shots ?? 0,
+        shots_on_target: fullStat?.shots_on_target ?? 0,
+        total_pass: fullStat?.total_pass ?? 0,
+        accurate_pass: fullStat?.accurate_pass ?? 0,
+        key_pass: fullStat?.key_pass ?? 0,
+        total_tackle: fullStat?.total_tackle ?? 0,
+        interception: fullStat?.interception ?? 0,
+        yellow_card: fullStat?.yellow_card ?? 0,
+        red_card: fullStat?.red_card ?? 0,
+        saves: fullStat?.saves ?? 0,
+    };
+    showPlayerStatsModal.value = true;
+};
 const tabs = [
     { id: "lineups", label: "Đội hình" },
     { id: "stats", label: "Thống kê" },
@@ -1436,26 +1637,47 @@ const tabs = [
     { id: "analysis", label: "Phân tích AI" },
 ];
 
+watch(() => props.activeTab, (newVal) => {
+    activeTab.value = newVal;
+});
+
 const setActiveTab = (tabId) => {
-    activeTab.value = tabId;
-    window.location.hash = tabId;
+    if (tabId === activeTab.value) return;
+    
+    isLoadingTab.value = true;
+    router.get(
+        `/matches/${props.game.id}`,
+        { tab: tabId },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['game', 'h2hMatches', 'standings', 'aiInsights', 'momentum', 'shotmap', 'activeTab'],
+            onFinish: () => {
+                isLoadingTab.value = false;
+                activeTab.value = tabId;
+            }
+        }
+    );
 };
 
 let refreshInterval = null;
 
 onMounted(() => {
-    const hash = window.location.hash.replace("#", "");
-    if (hash && tabs.some((t) => t.id === hash)) {
-        activeTab.value = hash;
-    }
-    
-    // Tự động sync nếu thiếu dữ liệu quan trọng (Stats hoặc Shotmap cho trận đã/đang diễn ra)
+    // Tự động sync nếu thiếu dữ liệu quan trọng
+    const hasLineups = props.game.lineups && props.game.lineups.length > 0;
     const hasStats = props.game.statistics && props.game.statistics.length > 0;
     const hasShotmap = props.shotmap && props.shotmap.length > 0;
     const isNotScheduled = props.game.status !== 'scheduled';
     const syncLock = sessionStorage.getItem(`sync_match_${props.game.id}`);
 
-    if (!syncLock && (!props.prediction || (isNotScheduled && (!hasStats || !hasShotmap)))) {
+    let isDataMissing = false;
+    if (activeTab.value === 'lineups' && isNotScheduled && !hasLineups) {
+        isDataMissing = true;
+    } else if (activeTab.value === 'stats' && isNotScheduled && (!hasStats || !hasShotmap)) {
+        isDataMissing = true;
+    }
+
+    if (!syncLock && isDataMissing) {
         sessionStorage.setItem(`sync_match_${props.game.id}`, 'true');
         refreshMatchData();
     }
@@ -1769,11 +1991,12 @@ const matchStatsGroups = computed(() => {
         {
             group: "PHÒNG NGỰ & THỦ MÔN",
             items: [
+                processStat("Giải nguy", "Ball Safe"),
                 processStat("Cứu thua", "Goalkeeper Saves"),
                 processStat("Phạm lỗi", "Fouls"),
                 processStat("Thẻ vàng", "Yellow Cards"),
                 processStat("Thẻ đỏ", "Red Cards"),
-            ].filter((i) => i.home != "0" || i.away != "0"),
+            ].filter((i) => i.label === "Thẻ đỏ" || i.home != "0" || i.away != "0"),
         },
     ].filter((g) => g.items.length > 0);
 });
@@ -1821,8 +2044,8 @@ const translateDetail = (detail) => {
     if (!detail) return "";
     const lower = detail.toLowerCase().trim();
     if (lower === "goal" || lower.includes("normal goal")) return "Bàn thắng";
-    if (lower.includes("yellow card")) return "Thẻ vàng";
-    if (lower.includes("red card")) return "Thẻ đỏ";
+    if (lower.includes("yellow card") || lower === "yellow") return "Thẻ vàng";
+    if (lower.includes("red card") || lower === "red") return "Thẻ đỏ";
     if (lower.includes("own goal")) return "Phản lưới nhà";
     if (lower.includes("penalty")) return "Phạt đền";
     if (lower.includes("missed penalty")) return "Hỏng phạt đền";
@@ -1920,6 +2143,8 @@ const processedEvents = computed(() => {
 const getMatchStatus = (game) => {
     if (game.status === "finished") return "KẾT THÚC";
     if (game.status === "live") return "TRỰC TIẾP";
+    if (game.status === "postponed") return "BỊ HOÃN";
+    if (game.status === "cancelled") return "HỦY LỊCH";
     return "LỊCH THI ĐẤU";
 };
 const formatSeason = (s, country = null) => {

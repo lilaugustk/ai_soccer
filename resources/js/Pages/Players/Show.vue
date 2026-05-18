@@ -289,7 +289,7 @@ onMounted(() => {
                                     </div>
                                     <!-- Position -->
                                     <div class="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-bold uppercase tracking-widest">
-                                        {{ positionLabels[player.position] || player.position }}
+                                        {{ player.specific_position ? `${player.specific_position} (${positionLabels[player.position] || player.position})` : (positionLabels[player.position] || player.position) }}
                                     </div>
                                     <!-- Current Team -->
                                     <div v-if="team.name" class="px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-[9px] font-bold uppercase tracking-widest">

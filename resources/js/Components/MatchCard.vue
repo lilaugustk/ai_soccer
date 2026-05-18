@@ -19,11 +19,16 @@
           <!-- Score / Info -->
           <div class="flex flex-col items-center min-w-[50px] sm:min-w-[80px]">
             <div class="flex items-center gap-1 text-sm sm:text-base font-bold text-gray-900 dark:text-white tabular-nums">
-              <span>{{ game.home_score ?? '-' }}</span>
+              <span>{{ (game.status === 'postponed' || game.status === 'cancelled') ? '-' : (game.home_score ?? '-') }}</span>
               <span class="opacity-20">:</span>
-              <span>{{ game.away_score ?? '-' }}</span>
+              <span>{{ (game.status === 'postponed' || game.status === 'cancelled') ? '-' : (game.away_score ?? '-') }}</span>
             </div>
-            <span class="text-[8px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-full mt-1 border border-emerald-100/50 flex items-center justify-center leading-none">
+            <span class="text-[8px] font-bold px-2 py-1 rounded-full mt-1 border flex items-center justify-center leading-none"
+                  :class="[
+                      game.status === 'postponed' ? 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-100/50' :
+                      game.status === 'cancelled' ? 'text-rose-600 bg-rose-50 dark:bg-rose-500/10 border-rose-100/50' :
+                      'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100/50'
+                  ]">
               {{ getMatchStatus(game) }}
             </span>
           </div>
@@ -71,6 +76,8 @@ const getMatchStatus = (game) => {
   const finishedStatuses = ['FT', 'AET', 'PEN', 'finished'];
   if (finishedStatuses.includes(game.status)) return 'KẾT THÚC';
   if (game.status === 'live' || game.status === '1H' || game.status === '2H' || game.status === 'HT') return 'TRỰC TIẾP';
+  if (game.status === 'postponed') return 'BỊ HOÃN';
+  if (game.status === 'cancelled') return 'HỦY LỊCH';
   
   const matchDate = dayjs.utc(game.match_datetime || game.match_at).local();
   const isToday = matchDate.isSame(dayjs(), 'day');

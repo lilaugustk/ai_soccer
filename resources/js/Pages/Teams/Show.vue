@@ -742,7 +742,7 @@ const footLabels = {
                                             </div>
                                         </td>
                                         <td class="px-4 py-3 text-center">
-                                            <span class="text-[9px] font-medium text-gray-400 uppercase whitespace-nowrap">{{ positionLabels[p.position] || p.position }}</span>
+                                            <span class="text-[9px] font-medium text-gray-400 uppercase whitespace-nowrap">{{ p.specific_position || positionLabels[p.position] || p.position }}</span>
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex items-center gap-2.5">

@@ -7,6 +7,7 @@ use App\Models\FootballLeague;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Services\BsdSportsApiService;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -67,6 +68,28 @@ class DashboardController extends Controller
                 $shouldSync = true; 
             } elseif ($isPastDate && $hasPendingMatches && !$lastSync) {
                 $shouldSync = true; 
+            }
+        }
+
+        // Thực hiện đồng bộ trực tiếp (blocking sync) trên server nếu cần
+        if ($shouldSync) {
+            try {
+                set_time_limit(120);
+                Log::info("Dashboard: Executing blocking sync for date: {$dateStr}");
+                
+                $apiService->syncMatchesByDate($dateStr);
+                
+                // Đồng bộ cả ngày hôm trước đề phòng chênh lệch múi giờ
+                $prevDay = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
+                $apiService->syncMatchesByDate($prevDay);
+                
+                $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
+                cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
+                
+                // Query lại matches để có dữ liệu mới nhất
+                $matches = $matchesQuery->get();
+            } catch (\Exception $e) {
+                Log::error("Dashboard blocking sync failed: " . $e->getMessage());
             }
         }
 
@@ -149,6 +172,14 @@ class DashboardController extends Controller
         $status = strtolower($status);
         if ($status === 'finished' || $status === 'ft' || $status === 'full_time') {
             return 'finished';
+        }
+        
+        if ($status === 'postponed') {
+            return 'postponed';
+        }
+
+        if ($status === 'cancelled' || $status === 'abandoned') {
+            return 'cancelled';
         }
         
         $liveStatuses = ['inprogress', 'penalties', '1st_half', 'ht', '2nd_half', 'et', 'postponed_rain', 'postponed_fog'];

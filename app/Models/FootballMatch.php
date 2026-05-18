@@ -98,4 +98,9 @@ class FootballMatch extends Model
     {
         return $this->hasOne(FootballLineup::class, 'event_id');
     }
+
+    public function playerStats()
+    {
+        return $this->hasMany(FootballPlayerMatchStat::class, 'event_id');
+    }
 }

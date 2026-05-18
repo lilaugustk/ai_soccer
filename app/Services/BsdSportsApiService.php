@@ -2,6 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\FootballAveragePosition;
+use App\Models\FootballBroadcast;
+use App\Models\FootballEventMetadata;
+use App\Models\FootballEventOddsConsensus;
+use App\Models\FootballEventPrediction;
 use App\Models\FootballLeague;
 use App\Models\FootballMatch;
 use App\Models\FootballPlayer;
@@ -13,10 +18,13 @@ use App\Models\FootballIncident;
 use App\Models\FootballShotmap;
 use App\Models\FootballStanding;
 use App\Models\FootballEventStat;
+use App\Models\FootballFunfact;
 use App\Models\FootballMomentum;
 use App\Models\FootballLineup;
 use App\Models\FootballLineupPlayer;
 use App\Models\FootballLineupTeam;
+use App\Models\FootballManager;
+use App\Models\FootballManagerCareer;
 use App\Models\FootballUnavailablePlayer;
 use App\Models\FootballPlayerMatchStat;
 use Illuminate\Support\Facades\Http;
@@ -24,6 +32,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Models\FootballPlayerCareerStat;
+use App\Models\FootballPlayerNationalStat;
+use App\Models\FootballPlayerTransfer;
+use App\Models\FootballSocialPost;
+use App\Models\FootballTvChannel;
+use App\Models\FootballXgPerMinute;
 
 class BsdSportsApiService
 {
@@ -444,14 +457,14 @@ class BsdSportsApiService
         $data = $this->get("players/{$playerId}/transfers/");
         if (!$data || !isset($data['transfers'])) return [];
 
-        \App\Models\FootballPlayerTransfer::query()->where('player_id', $playerId)->delete();
+        FootballPlayerTransfer::query()->where('player_id', $playerId)->delete();
 
         $synced = [];
         foreach ($data['transfers'] as $t) {
             if (isset($t['from_team_id'])) $this->syncTeamIfNotExists($t['from_team_id'], $t['from_team_name'] ?? null);
             if (isset($t['to_team_id'])) $this->syncTeamIfNotExists($t['to_team_id'], $t['to_team_name'] ?? null);
 
-            $synced[] = \App\Models\FootballPlayerTransfer::create([
+            $synced[] = FootballPlayerTransfer::create([
                 'player_id' => $playerId,
                 'transfer_date' => $t['transfer_date'],
                 'from_team_id' => $t['from_team_id'] ?? null,
@@ -479,7 +492,7 @@ class BsdSportsApiService
             'national_team_id' => $data['national_team_id']
         ]);
 
-        return \App\Models\FootballPlayerNationalStat::updateOrCreate(
+        return FootballPlayerNationalStat::updateOrCreate(
             ['player_id' => $playerId],
             [
                 'national_team_id' => $data['national_team_id'],
@@ -595,6 +608,14 @@ class BsdSportsApiService
             $this->syncRefereeIfNotExists($item['referee_id']);
         }
 
+        // Đảm bảo Manager tồn tại
+        if (isset($item['home_coach_id'])) {
+            $this->syncManagerIfNotExists($item['home_coach_id']);
+        }
+        if (isset($item['away_coach_id'])) {
+            $this->syncManagerIfNotExists($item['away_coach_id']);
+        }
+
         return FootballMatch::updateOrCreate(
             ['id' => $item['id']],
             [
@@ -602,6 +623,8 @@ class BsdSportsApiService
                 'season_id' => $seasonId,
                 'home_team_id' => $item['home_team_id'],
                 'away_team_id' => $item['away_team_id'],
+                'home_coach_id' => $item['home_coach_id'] ?? null,
+                'away_coach_id' => $item['away_coach_id'] ?? null,
                 'venue_id' => $item['venue_id'] ?? null,
                 'referee_id' => $item['referee_id'] ?? null,
                 'event_date' => Carbon::parse($item['event_date'])->setTimezone('UTC'),
@@ -666,11 +689,17 @@ class BsdSportsApiService
                     'penalty_shootout' => $eventData['penalty_shootout'] ?? ($eventData['scores']['penalty'] ?? $match->penalty_shootout),
                     'period' => $eventData['period'] ?? $match->period,
                     'current_minute' => $eventData['current_minute'] ?? $match->current_minute,
+                    'home_coach_id' => $eventData['home_coach_id'] ?? $match->home_coach_id,
+                    'away_coach_id' => $eventData['away_coach_id'] ?? $match->away_coach_id,
                     'weather_code' => $eventData['weather']['code'] ?? $match->weather_code,
                     'weather_description' => $eventData['weather']['description'] ?? $match->weather_description,
                     'weather_wind_speed' => $eventData['weather']['wind_speed'] ?? ($eventData['weather']['wind'] ?? $match->weather_wind_speed),
                     'weather_temperature_c' => $eventData['weather']['temperature_c'] ?? ($eventData['weather']['temp'] ?? $match->weather_temperature_c),
                     'attendance' => $eventData['attendance'] ?? $match->attendance,
+                    'is_local_derby' => isset($eventData['is_local_derby']) ? (bool)$eventData['is_local_derby'] : $match->is_local_derby,
+                    'is_neutral_ground' => isset($eventData['is_neutral_ground']) ? (bool)$eventData['is_neutral_ground'] : $match->is_neutral_ground,
+                    'travel_distance_km' => $eventData['travel_distance_km'] ?? $match->travel_distance_km,
+                    'pitch_condition' => $eventData['pitch_condition'] ?? $match->pitch_condition,
                     'last_updated' => now(),
                 ]);
 
@@ -680,6 +709,12 @@ class BsdSportsApiService
                 }
                 if (isset($eventData['referee_id'])) {
                     $this->syncRefereeIfNotExists($eventData['referee_id']);
+                }
+                if (isset($eventData['home_coach_id'])) {
+                    $this->syncManagerIfNotExists($eventData['home_coach_id']);
+                }
+                if (isset($eventData['away_coach_id'])) {
+                    $this->syncManagerIfNotExists($eventData['away_coach_id']);
                 }
             }
 
@@ -738,7 +773,7 @@ class BsdSportsApiService
 
             // Momentum
             if (isset($statsData['momentum'])) {
-                \App\Models\FootballMomentum::query()->where('event_id', $matchId)->delete();
+                FootballMomentum::query()->where('event_id', $matchId)->delete();
                 $momentumData = [];
                 foreach ($statsData['momentum'] as $m) {
                     if (!is_array($m)) continue;
@@ -752,13 +787,13 @@ class BsdSportsApiService
                 }
                 
                 if (!empty($momentumData)) {
-                    \App\Models\FootballMomentum::insert($momentumData);
+                    FootballMomentum::insert($momentumData);
                 }
             }
 
             // Average Positions
             if (isset($statsData['average_positions'])) {
-                \App\Models\FootballAveragePosition::query()->where('event_id', $matchId)->delete();
+                FootballAveragePosition::query()->where('event_id', $matchId)->delete();
                 foreach (['home', 'away'] as $side) {
                     if (isset($statsData['average_positions'][$side])) {
                         foreach ($statsData['average_positions'][$side] as $p) {
@@ -767,8 +802,8 @@ class BsdSportsApiService
                             $this->syncPlayerProfile($pid, $p['name'] ?? null, $match->{$side . '_team_id'});
                             
                             // Kiểm tra sự tồn tại trước khi tạo để tránh lỗi FK
-                            if (\App\Models\FootballPlayer::query()->where('id', $pid)->exists()) {
-                                \App\Models\FootballAveragePosition::create([
+                            if (FootballPlayer::query()->where('id', $pid)->exists()) {
+                                FootballAveragePosition::create([
                                     'event_id' => $matchId,
                                     'team_id' => $match->{$side . '_team_id'},
                                     'player_id' => $pid,
@@ -783,9 +818,9 @@ class BsdSportsApiService
 
             // xG per minute
             if (isset($statsData['xg_per_minute'])) {
-                \App\Models\FootballXgPerMinute::query()->where('event_id', $matchId)->delete();
+                FootballXgPerMinute::query()->where('event_id', $matchId)->delete();
                 foreach ($statsData['xg_per_minute'] as $m) {
-                    \App\Models\FootballXgPerMinute::create([
+                    FootballXgPerMinute::create([
                         'event_id' => $matchId,
                         'minute' => $m['m'] ?? 0,
                         'xg_home' => $m['xg_home'] ?? 0,
@@ -806,7 +841,7 @@ class BsdSportsApiService
                     $teamId = $s['team_id'] ?? ($isHome ? $match->home_team_id : $match->away_team_id);
                     $this->syncPlayerProfile($pid, $s['player_name'] ?? null, $teamId);
 
-                    if (\App\Models\FootballPlayer::query()->where('id', $pid)->exists()) {
+                    if (FootballPlayer::query()->where('id', $pid)->exists()) {
                         FootballShotmap::create([
                             'event_id' => $matchId,
                             'team_id' => $teamId,
@@ -849,7 +884,7 @@ class BsdSportsApiService
                             if (!isset($p['id'])) continue;
                             $this->syncPlayerProfile($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
                             
-                            if (\App\Models\FootballPlayer::query()->where('id', $p['id'])->exists()) {
+                            if (FootballPlayer::query()->where('id', $p['id'])->exists()) {
                                 FootballLineupPlayer::create([
                                     'lineup_team_id' => $lineupTeam->id,
                                     'player_id' => $p['id'],
@@ -866,7 +901,7 @@ class BsdSportsApiService
                             $coach = $teamData['coach'];
                             // Use Manager model or sync logic if needed, but for now just update match column
                             // Check if manager exists or create
-                            \App\Models\FootballManager::updateOrCreate(
+                            FootballManager::updateOrCreate(
                                 ['id' => $coach['id']],
                                 ['name' => $coach['name']]
                             );
@@ -883,7 +918,7 @@ class BsdSportsApiService
                             if (!isset($p['id'])) continue;
                             $this->syncPlayerProfile($p['id'], $p['name'] ?? null, $match->{$side . '_team_id'});
                             
-                            if (\App\Models\FootballPlayer::query()->where('id', $p['id'])->exists()) {
+                            if (FootballPlayer::query()->where('id', $p['id'])->exists()) {
                                 FootballUnavailablePlayer::create([
                                     'lineup_id' => $lineup->id,
                                     'player_id' => $p['id'],
@@ -908,7 +943,7 @@ class BsdSportsApiService
                     $this->syncPlayerProfile($e['player_out_id'] ?? null, $e['player_out'] ?? null, $teamId);
 
                     // Kiểm tra Player ID chính
-                    if (!isset($e['player_id']) || \App\Models\FootballPlayer::query()->where('id', $e['player_id'])->exists()) {
+                    if (!isset($e['player_id']) || FootballPlayer::query()->where('id', $e['player_id'])->exists()) {
                         FootballIncident::create([
                             'event_id' => $matchId,
                             'type' => $e['type'] ?? 'unknown',
@@ -931,7 +966,7 @@ class BsdSportsApiService
                 $m = $predictionsData['markets'] ?? [];
                 $r = $predictionsData['recommendations'] ?? [];
                 
-                \App\Models\FootballEventPrediction::updateOrCreate(
+                FootballEventPrediction::updateOrCreate(
                     ['event_id' => $matchId],
                     [
                         'prob_home' => $m['match_result']['prob_home'] ?? null,
@@ -962,7 +997,7 @@ class BsdSportsApiService
             // 4.1 Odds
             if ($oddsData && isset($oddsData['odds'])) {
                 Log::info("Odds Data for Event {$matchId}: " . json_encode($oddsData['odds']));
-                \App\Models\FootballEventOddsConsensus::updateOrCreate(
+                FootballEventOddsConsensus::updateOrCreate(
                     ['event_id' => $matchId],
                     $oddsData['odds']
                 );
@@ -973,8 +1008,8 @@ class BsdSportsApiService
                 foreach ($playerStatsData['player_stats'] as $ps) {
                     $this->syncPlayerProfile($ps['player_id'], null, $ps['team_id']);
                     
-                    if (\App\Models\FootballPlayer::query()->where('id', $ps['player_id'])->exists()) {
-                        \App\Models\FootballPlayerMatchStat::updateOrCreate(
+                    if (FootballPlayer::query()->where('id', $ps['player_id'])->exists()) {
+                        FootballPlayerMatchStat::updateOrCreate(
                             ['event_id' => $matchId, 'player_id' => $ps['player_id']],
                             $ps
                         );
@@ -984,7 +1019,7 @@ class BsdSportsApiService
 
             // 5. Metadata
             if ($metaData) {
-                \App\Models\FootballEventMetadata::updateOrCreate(
+                FootballEventMetadata::updateOrCreate(
                     ['event_id' => $matchId],
                     [
                         'jerseys' => $metaData['jerseys'] ?? null,
@@ -994,9 +1029,9 @@ class BsdSportsApiService
                 );
 
                 if (isset($metaData['funfacts'])) {
-                    \App\Models\FootballFunfact::query()->where('event_id', $matchId)->delete();
+                    FootballFunfact::query()->where('event_id', $matchId)->delete();
                     foreach ($metaData['funfacts'] as $f) {
-                        \App\Models\FootballFunfact::create([
+                        FootballFunfact::create([
                             'event_id' => $matchId,
                             'type_id' => $f['type_id'],
                             'sentence' => $f['sentence'],
@@ -1012,12 +1047,12 @@ class BsdSportsApiService
             // 5.1 Broadcasts
             if ($broadcastsData && isset($broadcastsData['results'])) {
                 foreach ($broadcastsData['results'] as $b) {
-                    \App\Models\FootballTvChannel::updateOrCreate(
+                    FootballTvChannel::updateOrCreate(
                         ['id' => $b['channel_id']],
                         ['name' => $b['channel_name'], 'country_code' => $b['country_code']]
                     );
 
-                    \App\Models\FootballBroadcast::updateOrCreate(
+                    FootballBroadcast::updateOrCreate(
                         ['event_id' => $matchId, 'channel_id' => $b['channel_id']],
                         [
                             'country_code' => $b['country_code'],
@@ -1030,7 +1065,7 @@ class BsdSportsApiService
             // 5.2 Social Posts
             if ($socialData && isset($socialData['results'])) {
                 foreach ($socialData['results'] as $s) {
-                    $post = \App\Models\FootballSocialPost::updateOrCreate(
+                    $post = FootballSocialPost::updateOrCreate(
                         ['id' => $s['id']],
                         [
                             'type' => $s['type'],
@@ -1146,7 +1181,7 @@ class BsdSportsApiService
         $data = $this->get("managers/{$managerId}/");
         if (!$data) return null;
 
-        $manager = \App\Models\FootballManager::updateOrCreate(
+        $manager = FootballManager::updateOrCreate(
             ['id' => $managerId],
             [
                 'name' => $data['name'],
@@ -1190,7 +1225,7 @@ class BsdSportsApiService
                 $this->syncTeamIfNotExists($tenure['team_id'], $tenure['team_name'] ?? null);
             }
 
-            \App\Models\FootballManagerCareer::updateOrCreate(
+            FootballManagerCareer::updateOrCreate(
                 [
                     'manager_id' => $managerId,
                     'team_id' => $tenure['team_id'],
@@ -1226,12 +1261,12 @@ class BsdSportsApiService
     public function syncVenueIfNotExists($venueId)
     {
         if (!$venueId) return;
-        $venue = \App\Models\FootballVenue::query()->where('id', $venueId)->first();
+        $venue = FootballVenue::query()->where('id', $venueId)->first();
         // Cập nhật lại nếu chưa tồn tại hoặc đang là Unknown Venue
         if (!$venue || str_contains($venue->name, 'Unknown Venue')) {
             $venueData = $this->get("venues/{$venueId}/");
             if ($venueData && !isset($venueData['error']) && isset($venueData['name'])) {
-                \App\Models\FootballVenue::updateOrCreate(
+                FootballVenue::updateOrCreate(
                     ['id' => $venueData['id']],
                     [
                         'name' => $venueData['name'],
@@ -1249,7 +1284,7 @@ class BsdSportsApiService
                 );
             } else {
                 if (!$venue) {
-                    \App\Models\FootballVenue::updateOrCreate(['id' => $venueId], ['name' => 'Unknown Venue']);
+                    FootballVenue::updateOrCreate(['id' => $venueId], ['name' => 'Unknown Venue']);
                 }
             }
         }
@@ -1258,13 +1293,13 @@ class BsdSportsApiService
     public function syncRefereeIfNotExists($refereeId)
     {
         if (!$refereeId) return;
-        $referee = \App\Models\FootballReferee::query()->where('id', $refereeId)->first();
+        $referee = FootballReferee::query()->where('id', $refereeId)->first();
         
         // Cập nhật lại nếu chưa tồn tại hoặc đang là Unknown Referee
         if (!$referee || str_contains($referee->name, 'Unknown Referee')) {
             $refereeData = $this->get("referees/{$refereeId}/");
             if ($refereeData && !isset($refereeData['error']) && isset($refereeData['name'])) {
-                \App\Models\FootballReferee::updateOrCreate(
+                FootballReferee::updateOrCreate(
                     ['id' => $refereeData['id']],
                     [
                         'name' => $refereeData['name'],
@@ -1285,9 +1320,18 @@ class BsdSportsApiService
                 );
             } else {
                 if (!$referee) {
-                    \App\Models\FootballReferee::updateOrCreate(['id' => $refereeId], ['name' => 'Unknown Referee']);
+                    FootballReferee::updateOrCreate(['id' => $refereeId], ['name' => 'Unknown Referee']);
                 }
             }
+        }
+    }
+
+    public function syncManagerIfNotExists($managerId)
+    {
+        if (!$managerId) return;
+        $manager = FootballManager::query()->where('id', $managerId)->first();
+        if (!$manager || str_contains($manager->name, 'Unknown Manager')) {
+            $this->syncManager($managerId);
         }
     }
 }
