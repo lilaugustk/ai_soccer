@@ -25,7 +25,6 @@ const activeTab = ref("overview");
 const tabs = [
     { id: "overview", label: "Tổng quan" },
     { id: "matches", label: "Trận đấu" },
-    { id: "transfers", label: "Chuyển nhượng" },
 ];
 
 const changeTab = (id) => {
@@ -487,6 +486,51 @@ onMounted(() => {
                                     </table>
                                 </div>
                             </div>
+
+                            <!-- Lịch sử chuyển nhượng -->
+                            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden mt-6">
+                                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+                                    <h3 class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Lịch sử chuyển nhượng</h3>
+                                </div>
+                                <div class="p-6 space-y-4">
+                                    <div v-for="t in transfers" :key="t.id" class="bg-gray-50/30 dark:bg-gray-900/20 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-6">
+                                        <div class="flex flex-col items-center min-w-[80px]">
+                                            <span class="text-[10px] font-bold text-gray-400 uppercase">{{ formatDate(t.transfer_date) }}</span>
+                                        </div>
+                                        
+                                        <div class="flex-1 flex items-center gap-8">
+                                            <div class="flex flex-col items-end flex-1">
+                                                <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Từ</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.from_team?.name || 'Không rõ' }}</span>
+                                                    <img v-if="t.from_team?.logo_url" :src="t.from_team.logo_url" class="w-5 h-5 object-contain" />
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="text-gray-300 dark:text-gray-700">
+                                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                                            </div>
+                                            
+                                            <div class="flex flex-col items-start flex-1">
+                                                <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Đến</span>
+                                                <div class="flex items-center gap-2">
+                                                    <img v-if="t.to_team?.logo_url" :src="t.to_team.logo_url" class="w-5 h-5 object-contain" />
+                                                    <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.to_team?.name || 'Không rõ' }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="flex flex-col items-end min-w-[100px]">
+                                            <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Loại</span>
+                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.type || 'Chuyển nhượng' }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div v-if="transfers.length === 0" class="py-12 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest border border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
+                                        Không có dữ liệu lịch sử chuyển nhượng
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
 
@@ -528,46 +572,6 @@ onMounted(() => {
                             
                             <div v-if="matchHistory.length === 0" class="py-20 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest border border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
                                 Không có dữ liệu trận đấu gần đây
-                            </div>
-                        </div>
-
-                        <!-- TRANSFERS TAB -->
-                        <div v-else-if="activeTab === 'transfers'" class="space-y-4">
-                            <div v-for="t in transfers" :key="t.id" class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm flex items-center gap-6">
-                                <div class="flex flex-col items-center min-w-[80px]">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase">{{ formatDate(t.transfer_date) }}</span>
-                                </div>
-                                
-                                <div class="flex-1 flex items-center gap-8">
-                                    <div class="flex flex-col items-end flex-1">
-                                        <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Từ</span>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.from_team?.name || 'Không rõ' }}</span>
-                                            <img v-if="t.from_team?.logo_url" :src="t.from_team.logo_url" class="w-5 h-5 object-contain" />
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="text-gray-300 dark:text-gray-700">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                                    </div>
-                                    
-                                    <div class="flex flex-col items-start flex-1">
-                                        <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Đến</span>
-                                        <div class="flex items-center gap-2">
-                                            <img v-if="t.to_team?.logo_url" :src="t.to_team.logo_url" class="w-5 h-5 object-contain" />
-                                            <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.to_team?.name || 'Không rõ' }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex flex-col items-end min-w-[100px]">
-                                    <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Loại</span>
-                                    <span class="text-[11px] font-bold text-gray-900 dark:text-white uppercase">{{ t.type || 'Chuyển nhượng' }}</span>
-                                </div>
-                            </div>
-                            
-                            <div v-if="transfers.length === 0" class="py-20 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest border border-dashed border-gray-100 dark:border-gray-800 rounded-2xl">
-                                Không có dữ liệu lịch sử chuyển nhượng
                             </div>
                         </div>
                     </div>

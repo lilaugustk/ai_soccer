@@ -74,7 +74,7 @@ class TeamController extends Controller
         ->whereHas('lineup.teams', function($q) use ($id) {
             $q->where('team_id', $id)->has('players');
         })
-        ->with(['lineup.teams.players.player'])
+        ->with(['lineup.teams.players.player', 'playerStats'])
         ->orderBy('event_date', 'desc')
         ->first();
 
@@ -89,31 +89,40 @@ class TeamController extends Controller
                 $startXI = $players->where('is_substitute', false);
                 $substitutes = $players->where('is_substitute', true);
 
+                // Build lookup for actual player stats ratings for this match
+                $playerStatsLookup = $lastMatchWithLineup->playerStats->keyBy('player_id');
+
                 // Synthesize grids for Start XI
                 $gridXI = $this->synthesizeGrids($startXI, $formation);
 
                 $teamLineup = [
                     'formation' => $formation,
-                    'startXI' => $gridXI->map(fn($p) => [
-                        'player' => [
-                            'id' => $p['player_id'], 
-                            'name' => $p['name'], 
-                            'number' => $p['number'], 
-                            'pos' => $p['pos'], 
-                            'grid' => $p['grid'],
-                            'rating' => $p['rating'] ? number_format($p['rating'] * 10, 1) : null
-                        ],
-                    ])->values()->all(),
-                    'substitutes' => $substitutes->map(fn($p) => [
-                        'player' => [
-                            'id' => $p->player_id, 
-                            'name' => $p->player?->name, 
-                            'number' => $p->jersey_number, 
-                            'pos' => $p->player?->specific_position ?? $p->position, 
-                            'grid' => null,
-                            'rating' => $p->ai_score ? number_format($p->ai_score * 10, 1) : null
-                        ],
-                    ])->values()->all(),
+                    'startXI' => $gridXI->map(function($p) use ($playerStatsLookup) {
+                        $stat = $playerStatsLookup->get($p['player_id']);
+                        return [
+                            'player' => [
+                                'id' => $p['player_id'], 
+                                'name' => $p['name'], 
+                                'number' => $p['number'], 
+                                'pos' => $p['pos'], 
+                                'grid' => $p['grid'],
+                                'rating' => $stat?->rating
+                            ],
+                        ];
+                    })->values()->all(),
+                    'substitutes' => $substitutes->map(function($p) use ($playerStatsLookup) {
+                        $stat = $playerStatsLookup->get($p->player_id);
+                        return [
+                            'player' => [
+                                'id' => $p->player_id, 
+                                'name' => $p->player?->name, 
+                                'number' => $p->jersey_number, 
+                                'pos' => $p->player?->specific_position ?? $p->position, 
+                                'grid' => null,
+                                'rating' => $stat?->rating
+                            ],
+                        ];
+                    })->values()->all(),
                 ];
             }
         }
@@ -341,7 +350,7 @@ class TeamController extends Controller
                 'number' => $p->jersey_number,
                 'pos' => $p->player?->specific_position ?? $p->position,
                 'grid' => (!empty($p->grid)) ? $p->grid : "1:1",
-                'rating' => $p->ai_score
+                'rating' => null
             ]);
         }
 
@@ -358,7 +367,7 @@ class TeamController extends Controller
                         'number' => $p->jersey_number,
                         'pos' => $p->player?->specific_position ?? $p->position,
                         'grid' => (!empty($p->grid)) ? $p->grid : ($rowIdx + 1) . ":" . $colIdx,
-                        'rating' => $p->ai_score
+                        'rating' => null
                     ]);
                     $playerIdx++;
                 }
@@ -374,7 +383,7 @@ class TeamController extends Controller
                 'number' => $p->jersey_number,
                 'pos' => $p->player?->specific_position ?? $p->position,
                 'grid' => (!empty($p->grid)) ? $p->grid : "5:1",
-                'rating' => $p->ai_score
+                'rating' => null
             ]);
             $playerIdx++;
         }

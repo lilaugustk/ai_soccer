@@ -222,7 +222,7 @@ class GameController extends Controller
                     $stat = $playerStatsLookup->get($p->player_id);
                     return [
                         'id' => $p->player_id,
-                        'rating' => $stat?->rating ?? $p->ai_score,
+                        'rating' => $stat?->rating,
                         'minutes_played' => $stat?->minutes_played ?? 0,
                         'goals' => $stat?->goals ?? 0,
                         'assists' => $stat?->goal_assist ?? 0,
@@ -496,14 +496,89 @@ class GameController extends Controller
                         'id' => $p->player_id, 
                         'name' => $p->player?->name, 
                         'number' => $p->jersey_number, 
-                        'pos' => $p->player?->specific_position ?? $p->position, 
+                        'pos' => $this->cleanPosition($p->player?->specific_position, $p->position), 
                         'grid' => null,
-                        'rating' => $p->ai_score
+                        'rating' => null
                     ],
                 ])->values()->all(),
             ];
         }
         return $result;
+    }
+
+    private function cleanPosition($specificPosition, $generalPosition)
+    {
+        $specificPosition = strtoupper(trim($specificPosition ?? ''));
+        $genericPositions = ['G', 'D', 'M', 'F', 'GK', 'DEF', 'MID', 'FW', 'ATT', 'SUB', 'UNKNOWN'];
+        
+        if (!empty($specificPosition) && !in_array($specificPosition, $genericPositions) && strlen($specificPosition) <= 4) {
+            return $specificPosition;
+        }
+        
+        $gen = strtoupper(trim($generalPosition ?? ''));
+        return match($gen) {
+            'G', 'GK', 'POR', 'GOL', 'GOALKEEPER' => 'GK',
+            'D', 'DEF', 'DEFENDER' => 'DF',
+            'M', 'MID', 'MIDFIELDER' => 'MF',
+            'F', 'FW', 'ATT', 'FORWARD', 'STRIKER' => 'FW',
+            default => !empty($gen) ? $gen : 'DF'
+        };
+    }
+
+    private function getSpecificPlayingPosition($player, $generalPos, $colIdx, $rowSize)
+    {
+        $dbSpecific = strtoupper(trim($player->player?->specific_position ?? ''));
+        $genericPositions = ['G', 'D', 'M', 'F', 'GK', 'DEF', 'MID', 'FW', 'ATT', 'SUB', 'UNKNOWN'];
+        
+        if (!empty($dbSpecific) && !in_array($dbSpecific, $genericPositions)) {
+            return $dbSpecific;
+        }
+
+        $generalPos = strtoupper(trim($generalPos));
+        if ($generalPos === 'G' || $generalPos === 'GK' || $generalPos === 'GOALKEEPER') {
+            return 'GK';
+        }
+
+        if ($generalPos === 'D' || $generalPos === 'DEF' || $generalPos === 'DEFENDER') {
+            if ($rowSize <= 2) {
+                return 'CB';
+            }
+            if ($colIdx === 1) {
+                return $rowSize >= 5 ? 'LWB' : 'LB';
+            }
+            if ($colIdx === $rowSize) {
+                return $rowSize >= 5 ? 'RWB' : 'RB';
+            }
+            return 'CB';
+        }
+
+        if ($generalPos === 'M' || $generalPos === 'MID' || $generalPos === 'MIDFIELDER') {
+            if ($rowSize <= 1) {
+                return 'CM';
+            }
+            if ($colIdx === 1) {
+                return 'LM';
+            }
+            if ($colIdx === $rowSize) {
+                return 'RM';
+            }
+            return 'CM';
+        }
+
+        if ($generalPos === 'F' || $generalPos === 'FW' || $generalPos === 'FORWARD' || $generalPos === 'ATT' || $generalPos === 'STRIKER') {
+            if ($rowSize <= 1) {
+                return 'ST';
+            }
+            if ($colIdx === 1) {
+                return 'LW';
+            }
+            if ($colIdx === $rowSize) {
+                return 'RW';
+            }
+            return 'ST';
+        }
+
+        return $generalPos;
     }
 
     private function synthesizeGrids($players, $formation)
@@ -557,9 +632,9 @@ class GameController extends Controller
                 'player_id' => $p->player_id,
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
-                'pos' => $p->player?->specific_position ?? $p->position,
+                'pos' => 'GK',
                 'grid' => (!empty($p->grid)) ? $p->grid : "1:1",
-                'rating' => $p->ai_score
+                'rating' => null
             ]);
         }
 
@@ -570,13 +645,16 @@ class GameController extends Controller
             for ($colIdx = 1; $colIdx <= $countInRow; $colIdx++) {
                 if ($playerIdx < $outfieldPlayers->count()) {
                     $p = $outfieldPlayers[$playerIdx];
+                    $cat = $normalize($p->position);
+                    $specificPos = $this->getSpecificPlayingPosition($p, $cat, $colIdx, $countInRow);
+                    
                     $result->push([
                         'player_id' => $p->player_id,
                         'name' => $p->player?->name,
                         'number' => $p->jersey_number,
-                        'pos' => $p->player?->specific_position ?? $p->position,
+                        'pos' => $specificPos,
                         'grid' => (!empty($p->grid)) ? $p->grid : ($rowIdx + 1) . ":" . $colIdx,
-                        'rating' => $p->ai_score
+                        'rating' => null
                     ]);
                     $playerIdx++;
                 }
@@ -586,13 +664,15 @@ class GameController extends Controller
         // Remaining players fallback
         while ($playerIdx < $outfieldPlayers->count()) {
             $p = $outfieldPlayers[$playerIdx];
+            $cat = $normalize($p->position);
+            $specificPos = $this->getSpecificPlayingPosition($p, $cat, 1, 1);
             $result->push([
                 'player_id' => $p->player_id,
                 'name' => $p->player?->name,
                 'number' => $p->jersey_number,
-                'pos' => $p->player?->specific_position ?? $p->position,
+                'pos' => $specificPos,
                 'grid' => (!empty($p->grid)) ? $p->grid : "5:1",
-                'rating' => $p->ai_score
+                'rating' => null
             ]);
             $playerIdx++;
         }
@@ -668,6 +748,10 @@ class GameController extends Controller
     {
         set_time_limit(120);
         // 1. Xóa cache
+        $validTabs = ['lineups', 'stats', 'h2h', 'standings', 'timeline', 'analysis'];
+        foreach ($validTabs as $t) {
+            Cache::forget("match_display_v24_{$id}_{$t}");
+        }
         Cache::forget("match_display_v22_{$id}");
         Cache::forget("match_display_v23_{$id}");
 

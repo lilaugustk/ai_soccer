@@ -109,9 +109,28 @@ class BsdSportsApiService
     {
         if (empty($playerId)) return;
         
-        if (isset($this->playerExistsCache[$playerId])) return;
+        $hasCache = isset($this->playerExistsCache[$playerId]);
+        if ($hasCache) {
+            if (!empty($name) && $name !== 'Unknown Player') {
+                $player = FootballPlayer::query()->find($playerId);
+                if ($player && $player->name !== $name) {
+                    $player->update(['name' => $name]);
+                }
+            }
+            return;
+        }
 
         $player = FootballPlayer::query()->find($playerId);
+        
+        if ($player) {
+            $updates = [];
+            if (!empty($name) && $player->name !== $name && $name !== 'Unknown Player') {
+                $updates['name'] = $name;
+            }
+            if (!empty($updates)) {
+                $player->update($updates);
+            }
+        }
         
         // 1. Kiểm tra xem có cần đồng bộ sâu không
         $needsDeepSync = !$player 
@@ -135,12 +154,22 @@ class BsdSportsApiService
             
             // Xử lý lưu dữ liệu
             if ($playerData && !isset($playerData['error'])) {
+                $currentTeamId = $playerData['current_team_id'] ?? $teamId;
+                if (!empty($currentTeamId)) {
+                    $this->syncTeamIfNotExists($currentTeamId, null);
+                }
+
+                $nationalTeamId = $playerData['national_team_id'] ?? null;
+                if (!empty($nationalTeamId)) {
+                    $this->syncTeamIfNotExists($nationalTeamId, null);
+                }
+
                 FootballPlayer::updateOrCreate(
                     ['id' => $playerId],
                     [
-                        'name' => $playerData['name'] ?? $name ?? 'Unknown Player',
+                        'name' => $name ?? $playerData['name'] ?? 'Unknown Player',
                         'short_name' => $playerData['short_name'] ?? null,
-                        'current_team_id' => $playerData['current_team_id'] ?? $teamId,
+                        'current_team_id' => $currentTeamId,
                         'position' => $playerData['position'] ?? null,
                         'specific_position' => $playerData['specific_position'] ?? null,
                         'jersey_number' => $playerData['jersey_number'] ?? null,
@@ -150,13 +179,16 @@ class BsdSportsApiService
                         'preferred_foot' => $playerData['preferred_foot'] ?? null,
                         'nationality' => $playerData['nationality'] ?? null,
                         'nationality_code' => $playerData['nationality_code'] ?? $playerData['country_code'] ?? null,
-                        'national_team_id' => $playerData['national_team_id'] ?? null,
+                        'national_team_id' => $nationalTeamId,
                         'market_value_eur' => $playerData['market_value_eur'] ?? null,
                         'contract_until' => $playerData['contract_until'] ?? null,
                         'availability' => $playerData['availability'] ?? 'available',
                     ]
                 );
             } elseif (!$player) {
+                if (!empty($teamId)) {
+                    $this->syncTeamIfNotExists($teamId, null);
+                }
                 // Nếu chưa có player và không sync được chi tiết, tạo stub tối thiểu
                 FootballPlayer::create([
                     'id' => $playerId,

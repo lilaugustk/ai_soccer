@@ -24,7 +24,7 @@
                 Danh sách trận đấu
             </Link>
 
-            <!-- Scoreboard Header (Premium) -->
+            <!-- Scoreboard Header -->
             <div
                 class="bg-white dark:bg-gray-800 rounded-[1.5rem] shadow-lg p-5 md:p-6 mb-6 border border-gray-100 dark:border-gray-700 relative overflow-hidden"
             >
@@ -309,7 +309,7 @@
                                             </div>
                                             <!-- Rating (Top Right) -->
                                             <div
-                                                v-if="p.rating"
+                                                v-if="p.rating && parseFloat(p.rating) > 0"
                                                 class="absolute -top-1.5 -right-3 w-7 h-5 rounded-lg text-[9px] font-bold flex items-center justify-center shadow-xl border-2 border-white/20 z-30"
                                                 :class="getRatingClass(p.rating)"
                                             >
@@ -360,7 +360,7 @@
                                             </div>
                                             <!-- Rating (Top Left for Away) -->
                                             <div
-                                                v-if="p.rating"
+                                                v-if="p.rating && parseFloat(p.rating) > 0"
                                                 class="absolute -top-1.5 -left-2 w-7 h-5 rounded-lg text-[9px] font-bold flex items-center justify-center shadow-xl border-2 border-white/20 z-40"
                                                 :class="
                                                     getRatingClass(p.rating)
@@ -481,7 +481,7 @@
                                                     <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
                                                         <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover rounded-full" />
                                                     </div>
-                                                    <div v-if="p.rating" class="absolute -top-1.5 -right-3 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-30" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
+                                                    <div v-if="p.rating && parseFloat(p.rating) > 0" class="absolute -top-1.5 -right-3 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-30" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
                                                 </div>
                                                 <div class="bg-black/50 px-2.5 py-1 rounded backdrop-blur-sm border border-white/10">
                                                     <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name?.split(' ')?.pop() ?? '?' }}</span>
@@ -496,7 +496,7 @@
                                                     <div class="w-14 h-14 rounded-full border-2 border-white/10 bg-slate-900/50 shadow-2xl overflow-hidden">
                                                         <img v-if="p.id" :src="`https://sports.bzzoiro.com/img/player/${p.id}/`" class="w-full h-full object-cover rounded-full" />
                                                     </div>
-                                                    <div v-if="p.rating" class="absolute -top-1.5 -left-2 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-40" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
+                                                    <div v-if="p.rating && parseFloat(p.rating) > 0" class="absolute -top-1.5 -left-2 w-8 h-5 rounded-lg text-[9px] font-black flex items-center justify-center shadow-xl border-2 border-white/20 z-40" :class="getRatingClass(p.rating)">{{ p.rating }}</div>
                                                 </div>
                                                 <div class="bg-black/50 px-2.5 py-1 rounded backdrop-blur-sm border border-white/10">
                                                     <span class="text-[11px] font-bold text-white tracking-tight drop-shadow-lg truncate max-w-[90px] block">{{ p.name?.split(' ')?.pop() ?? '?' }}</span>
@@ -553,8 +553,14 @@
                                     <!-- Key Stats Overview Grid -->
                                     <div class="grid grid-cols-3 gap-2 px-8 py-4 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100 dark:border-gray-800">
                                         <div class="text-center py-2">
-                                            <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Bàn thắng</div>
-                                            <div class="text-xl font-bold text-gray-950 dark:text-white mt-1">{{ selectedPlayerStats.goals }}</div>
+                                            <template v-if="selectedPlayerStats.pos?.toUpperCase() === 'GK' || selectedPlayerStats.pos?.toUpperCase() === 'GOALKEEPER'">
+                                                <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cứu thua</div>
+                                                <div class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ selectedPlayerStats.saves }}</div>
+                                            </template>
+                                            <template v-else>
+                                                <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Bàn thắng</div>
+                                                <div class="text-xl font-bold text-gray-950 dark:text-white mt-1">{{ selectedPlayerStats.goals }}</div>
+                                            </template>
                                         </div>
                                         <div class="text-center py-2 border-x border-gray-100 dark:border-gray-800">
                                             <div class="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Kiến tạo</div>
@@ -569,7 +575,7 @@
                                     <!-- Stats Body -->
                                     <div class="p-8 space-y-5 max-h-[48vh] overflow-y-auto no-scrollbar">
                                         <!-- Attacking & xG Section -->
-                                        <div class="bg-gray-50/40 dark:bg-gray-800/20 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800/40">
+                                        <div v-if="selectedPlayerStats.pos?.toUpperCase() !== 'GK' && selectedPlayerStats.pos?.toUpperCase() !== 'GOALKEEPER'" class="bg-gray-50/40 dark:bg-gray-800/20 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800/40">
                                             <div class="flex items-center justify-between px-5 py-3">
                                                 <span class="text-xs text-gray-500 dark:text-gray-400">Tổng số cú sút</span>
                                                 <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ selectedPlayerStats.total_shots }}</span>
@@ -703,7 +709,7 @@
                                                 C
                                             </div>
                                             <div
-                                                v-if="p.rating"
+                                                v-if="p.rating && parseFloat(p.rating) > 0"
                                                 class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
@@ -759,7 +765,7 @@
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
-                                                v-if="p.rating"
+                                                v-if="p.rating && parseFloat(p.rating) > 0"
                                                 class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
@@ -838,7 +844,7 @@
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
-                                                v-if="p.rating"
+                                                v-if="p.rating && parseFloat(p.rating) > 0"
                                                 class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
@@ -900,7 +906,7 @@
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <div
-                                                v-if="p.rating"
+                                                v-if="p.rating && parseFloat(p.rating) > 0"
                                                 class="w-8 h-6 flex items-center justify-center rounded-lg text-[10px] font-bold border border-white dark:border-gray-800 shadow-sm"
                                                 :class="
                                                     getRatingClass(p.rating)
@@ -1159,12 +1165,33 @@
                     </div>
                     <div
                         v-else
-                        class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
+                        class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-[2rem] border border-dashed border-gray-200 dark:border-gray-700 shadow-sm"
                     >
-                        <p
-                            class="text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest"
+                        <div
+                            class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-gray-400"
                         >
-                            Dữ liệu thống kê đang được xử lý...
+                            <svg
+                                class="w-8 h-8"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                />
+                            </svg>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-widest mb-2">
+                            {{ game.status === 'scheduled' ? 'Trận đấu chưa bắt đầu' : 'Thống kê chưa sẵn sàng' }}
+                        </h4>
+                        <p class="text-xs text-slate-400 dark:text-gray-500 font-medium max-w-sm mx-auto">
+                            {{ game.status === 'scheduled' 
+                                ? 'Các chỉ số thống kê chi tiết (sút bóng, kiểm soát bóng, phạt góc...) sẽ được cập nhật trực tiếp khi trận đấu diễn ra.' 
+                                : 'Dữ liệu thống kê đang được hệ thống tự động xử lý và đồng bộ.' 
+                            }}
                         </p>
                     </div>
                 </div>
@@ -1332,7 +1359,7 @@
                 <!-- Timeline Tab (Premium Style) -->
                 <div v-else-if="activeTab === 'timeline'" class="pb-4">
                     <div
-                        v-if="processedEvents.length"
+                        v-if="processedEvents.some(e => !e.isMarker)"
                         class="bg-white dark:bg-[#0a1921] rounded-[2rem] shadow-xl dark:shadow-2xl overflow-hidden min-h-[400px] border border-gray-100 dark:border-white/5"
                     >
                         <div v-for="(event, idx) in processedEvents" :key="idx">
@@ -1449,6 +1476,37 @@
                             </div>
                         </div>
                     </div>
+                    <div
+                        v-else
+                        class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-[2rem] border border-dashed border-gray-200 dark:border-gray-700 shadow-sm"
+                    >
+                        <div
+                            class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-gray-400"
+                        >
+                            <svg
+                                class="w-8 h-8"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                            </svg>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-widest mb-2">
+                            {{ game.status === 'scheduled' ? 'Trận đấu chưa bắt đầu' : 'Chưa có diễn biến trận đấu' }}
+                        </h4>
+                        <p class="text-xs text-slate-400 dark:text-gray-500 font-medium max-w-sm mx-auto">
+                            {{ game.status === 'scheduled' 
+                                ? 'Diễn biến trận đấu (bàn thắng, thẻ phạt, thay người...) sẽ được cập nhật trực tiếp tại đây khi trận đấu bắt đầu.' 
+                                : 'Diễn biến trận đấu hiện chưa có dữ liệu. Hệ thống đang tự động đồng bộ khi có diễn biến mới nhất.' 
+                            }}
+                        </p>
+                    </div>
                 </div>
 
 
@@ -1466,10 +1524,26 @@
                         </div>
                         <StandingTable :standings="standings" :league-id="game.league?.id" />
                     </div>
-                    <div v-else class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                        <p class="text-sm font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest">
-                            Chưa có dữ liệu bảng xếp hạng cho mùa giải này
-                        </p>
+                    <div v-else class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-[2rem] border border-dashed border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div
+                            class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center mx-auto mb-6 text-gray-400"
+                        >
+                            <svg
+                                class="w-8 h-8"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
+                            </svg>
+                        </div>
+                        <h4 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-widest mb-2">Bảng xếp hạng chưa sẵn sàng</h4>
+                        <p class="text-xs text-slate-400 dark:text-gray-500 font-medium max-w-sm mx-auto">Chưa có dữ liệu bảng xếp hạng cho mùa giải này hoặc giải đấu không sử dụng thể thức đấu vòng tròn tính điểm.</p>
                     </div>
                 </div>
 
@@ -1495,48 +1569,6 @@
 
                     <div v-if="prediction" class="space-y-6">
 
-                        <!-- Probability Chart -->
-                        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
-                            <div class="flex items-center justify-between mb-6">
-                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Xác suất kết quả</h3>
-                            </div>
-
-                            <div class="space-y-6">
-                                <!-- Multi-segment Ratio Bar (Matching H2H style) -->
-                                <div class="flex h-2.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/5 shadow-inner">
-                                    <div 
-                                        class="bg-emerald-500 h-full transition-all duration-1000 ease-out"
-                                        :style="{ width: prediction.predictions.percent.home }"
-                                    ></div>
-                                    <div 
-                                        class="bg-gray-300 dark:bg-gray-600 h-full transition-all duration-1000 ease-out"
-                                        :style="{ width: prediction.predictions.percent.draw }"
-                                    ></div>
-                                    <div 
-                                        class="bg-blue-500 h-full transition-all duration-1000 ease-out"
-                                        :style="{ width: prediction.predictions.percent.away }"
-                                    ></div>
-                                </div>
-
-                                <!-- Legend -->
-                                <div class="grid grid-cols-3 items-center">
-                                    <div class="flex flex-col">
-                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ prediction.predictions.percent.home }}</span>
-                                        <span class="text-[8px] font-bold text-emerald-500 uppercase tracking-tighter truncate">{{ game.home_team.name }}</span>
-                                    </div>
-                                    <div class="flex flex-col items-center">
-                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ prediction.predictions.percent.draw }}</span>
-                                        <span class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Hòa</span>
-                                    </div>
-                                    <div class="flex flex-col items-end text-right">
-                                        <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ prediction.predictions.percent.away }}</span>
-                                        <span class="text-[8px] font-bold text-blue-500 uppercase tracking-tighter truncate text-right">{{ game.away_team.name }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
                     </div>
                     <div v-else class="py-20 text-center">
                         <div v-if="isRefreshing" class="flex flex-col items-center gap-3">
@@ -1557,8 +1589,8 @@
                         </div>
                     </div>
                 </div>
-                </div> <!-- Closes v-else -->
-            </div> <!-- Closes tab contents wrapper -->
+                </div> 
+            </div>
             <LeagueSidebar />
         </div>
     </MainLayout>
@@ -1803,7 +1835,9 @@ const getLineupWithPositions = (lineupXI, formation = '4-3-3', isAway = false) =
         
         // Tính toán vị trí Top (hàng dọc)
         const dynamicGap = currentRowSize > 4 ? 17 : currentRowSize > 3 ? 19 : 21;
-        const top = 50 + (colIdx - (currentRowSize - 1) / 2) * dynamicGap;
+        const top = isAway
+            ? 50 - (colIdx - (currentRowSize - 1) / 2) * dynamicGap
+            : 50 + (colIdx - (currentRowSize - 1) / 2) * dynamicGap;
 
         processed.push({
             ...(p.player || {}),

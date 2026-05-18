@@ -1,4 +1,7 @@
 <?php
+
+use App\Http\Controllers\WorldCupController;
+use App\Models\FootballMatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -12,9 +15,9 @@ Route::get('/matches/sync-states', function (Request $request) {
         return response()->json([]);
     }
     
-    return \App\Models\FootballMatch::with(['homeTeam', 'awayTeam'])
+    return FootballMatch::with(['homeTeam', 'awayTeam'])
         ->whereIn('id', $ids)
         ->get();
 });
 
-Route::get('/world-cup/live', [\App\Http\Controllers\WorldCupController::class, 'getLiveMatch']);
+Route::get('/world-cup/live', [WorldCupController::class, 'getLiveMatch']);

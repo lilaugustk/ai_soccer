@@ -126,18 +126,7 @@ class PlayerController extends Controller
             }
         }
 
-        // Re-extract ratings from newly hydrated lineups
-        foreach ($matchHistory as $stat) {
-            if ($stat->rating <= 0 && $stat->match && $stat->match->lineup) {
-                foreach ($stat->match->lineup->teams as $lTeam) {
-                    $lp = $lTeam->players->first();
-                    if ($lp && $lp->ai_score > 0) {
-                        $stat->rating = (float)$lp->ai_score;
-                        $stat->save();
-                    }
-                }
-            }
-        }
+
 
         // Latest season stat for quick stats panel
         $latestStat = $seasonStats->firstWhere('season_id', $requestedSeason) ?: $seasonStats->first();
