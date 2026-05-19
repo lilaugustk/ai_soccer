@@ -10,6 +10,7 @@ use App\Services\StatisticalModelService;
 use App\Services\BsdSportsApiService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use Inertia\Inertia;
 
@@ -182,7 +183,10 @@ class GameController extends Controller
                 
                 // Lazy loaded tab specific data
                 'statistics' => $activeTab === 'stats' ? $this->shimStatistics($match) : [],
-                'momentum' => $activeTab === 'stats' ? ($match->momentum->sortBy('minute')->pluck('value')->toArray()) : [],
+                'momentum' => $activeTab === 'stats' ? ($match->momentum->sortBy('minute')->values()->map(fn($m) => [
+                    'minute' => (int)$m->minute,
+                    'value' => (int)$m->value,
+                ])->toArray()) : [],
                 'shotmap' => $activeTab === 'stats' ? $match->shotmap->map(fn($s) => [
                     'id' => $s->id,
                     'x' => ($s->team_id == $match->home_team_id) ? (100 - (float)$s->x) : (float)$s->x,
@@ -274,14 +278,43 @@ class GameController extends Controller
             if ($activeTab === 'analysis') {
                 $predModel = FootballEventPrediction::query()->where('event_id', $id)->first();
                 if ($predModel) {
+                    $toPercent = function ($val) {
+                        if ($val === null) return null;
+                        return ($val <= 1 ? number_format($val * 100, 0) : number_format($val, 0)) . '%';
+                    };
+
                     $gameData['prediction'] = [
                         'predictions' => [
                             'percent' => [
-                                'home' => $predModel->prob_home ? (number_format($predModel->prob_home * 100, 0) . '%') : '0%',
-                                'draw' => $predModel->prob_draw ? (number_format($predModel->prob_draw * 100, 0) . '%') : '0%',
-                                'away' => $predModel->prob_away ? (number_format($predModel->prob_away * 100, 0) . '%') : '0%',
+                                'home' => $toPercent($predModel->prob_home) ?? '0%',
+                                'draw' => $toPercent($predModel->prob_draw) ?? '0%',
+                                'away' => $toPercent($predModel->prob_away) ?? '0%',
                             ]
                         ],
+                        'expected_goals' => [
+                            'home' => $predModel->expected_home_goals !== null ? number_format($predModel->expected_home_goals, 2) : null,
+                            'away' => $predModel->expected_away_goals !== null ? number_format($predModel->expected_away_goals, 2) : null,
+                        ],
+                        'prob_over' => [
+                            'over_15' => $toPercent($predModel->prob_over_15),
+                            'over_25' => $toPercent($predModel->prob_over_25),
+                            'over_35' => $toPercent($predModel->prob_over_35),
+                        ],
+                        'prob_btts' => $toPercent($predModel->prob_btts_yes),
+                        'most_likely_score' => $predModel->most_likely_score,
+                        'favorite' => $predModel->favorite,
+                        'favorite_prob' => $toPercent($predModel->favorite_prob),
+                        'predicted_result' => $predModel->predicted_result,
+                        'recommendations' => [
+                            'bet_favorite' => (bool)$predModel->bet_favorite,
+                            'over_15' => (bool)$predModel->over_15,
+                            'over_25' => (bool)$predModel->over_25,
+                            'over_35' => (bool)$predModel->over_35,
+                            'btts' => (bool)$predModel->btts,
+                            'winner' => (bool)$predModel->winner,
+                        ],
+                        'confidence' => $toPercent($predModel->confidence),
+                        'model_version' => $predModel->model_version,
                         'comparison' => [
                             'total' => ['home' => '50%', 'away' => '50%'],
                             'form' => ['home' => '50%', 'away' => '50%'],
@@ -412,7 +445,9 @@ class GameController extends Controller
             $data['aiInsights'] = null;
             if ($activeTab === 'analysis') {
                 $metaModel = FootballEventMetadata::query()->where('event_id', $id)->first();
-                $data['aiInsights'] = $metaModel?->ai_preview_text;
+                if ($metaModel && $metaModel->ai_preview_text) {
+                    $data['aiInsights'] = $this->getTranslatedInsights($id, $metaModel->ai_preview_text);
+                }
             }
 
             // Cache data conditionally
@@ -836,6 +871,7 @@ class GameController extends Controller
         }
         Cache::forget("match_display_v22_{$id}");
         Cache::forget("match_display_v23_{$id}");
+        Cache::forget("match_{$id}_ai_insights_vi");
 
         // 2. Ép buộc call API lấy chi tiết
         $apiService->hydrateMatch($id);
@@ -847,6 +883,61 @@ class GameController extends Controller
         }
 
         return back()->with('success', 'Dữ liệu đã được cập nhật!');
+    }
+
+    protected function getTranslatedInsights($matchId, $originalText)
+    {
+        if (empty($originalText)) {
+            return null;
+        }
+
+        $cacheKey = "match_{$matchId}_ai_insights_vi";
+        
+        // If we already have it in cache, return it
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $apiKey = config('services.groq.key');
+        if (empty($apiKey)) {
+            return $originalText;
+        }
+
+        try {
+            $response = Http::withoutVerifying()
+                ->withToken($apiKey)
+                ->timeout(15)
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => 'llama-3.3-70b-versatile',
+                    'messages' => [
+                        [
+                            'role' => 'system',
+                            'content' => "You are a professional sports translator. Translate the following football analysis and match preview to natural, fluent Vietnamese. Maintain all markdown formatting (bolding, lists, bullet points, numbers) exactly as in the original text. Do not output any notes, introductory phrases, or explanations; return ONLY the translated Vietnamese text."
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => $originalText
+                        ]
+                    ],
+                    'temperature' => 0.2,
+                ]);
+
+            if ($response->successful()) {
+                $translated = $response->json('choices.0.message.content');
+                if (!empty($translated)) {
+                    $translated = trim($translated);
+                    // Cache forever since it succeeded
+                    Cache::forever($cacheKey, $translated);
+                    return $translated;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to translate AI Insights via Groq for match {$matchId}: " . $e->getMessage());
+        }
+
+        // Cache for 5 minutes on failure to prevent spamming
+        Cache::put($cacheKey, $originalText, now()->addMinutes(5));
+        return $originalText;
     }
 }
      

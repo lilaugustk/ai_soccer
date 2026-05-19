@@ -168,7 +168,7 @@
                     v-for="tab in tabs"
                     :key="tab.id"
                     @click="setActiveTab(tab.id)"
-                    class="relative py-4 text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 whitespace-nowrap"
+                    class="relative py-4 text-[11px] font-bold uppercase transition-all duration-300 whitespace-nowrap"
                     :class="
                         activeTab === tab.id
                             ? 'text-emerald-600 dark:text-emerald-400'
@@ -1553,11 +1553,6 @@
                     <div v-if="aiInsights" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm relative overflow-hidden">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                </div>
                                 <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">AI Tactical Analysis</h3>
                             </div>
                         </div>
@@ -1567,8 +1562,289 @@
                         </div>
                     </div>
 
-                    <div v-if="prediction" class="space-y-6">
+                    <div v-if="prediction && hasPredictionData" class="space-y-8 animate-fade-in text-slate-900 dark:text-white">
+                        <!-- AI Match Outcome Probability (1X2) -->
+                        <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Xác suất kết quả</h3>
+                                </div>
+                            </div>
 
+                            <!-- Segmented progress bar -->
+                            <div class="h-6 bg-slate-100 dark:bg-black/30 rounded-xl overflow-hidden flex mb-6 p-0.5 border border-slate-200/50 dark:border-white/5 shadow-inner">
+                                <div 
+                                    class="h-full bg-emerald-500 transition-all duration-1000 ease-out flex items-center justify-center text-[10px] font-bold text-white rounded-lg shadow-sm shrink-0"
+                                    :style="{ width: prediction.predictions?.percent?.home }"
+                                    v-if="prediction.predictions?.percent?.home && parseFloat(prediction.predictions.percent.home) > 0"
+                                    :key="'home-' + prediction.predictions?.percent?.home"
+                                >
+                                    <span>{{ prediction.predictions.percent.home }}</span>
+                                </div>
+                                <div 
+                                    class="h-full bg-slate-400 transition-all duration-1000 ease-out flex items-center justify-center text-[10px] font-bold text-white rounded-lg shadow-sm shrink-0 mx-0.5"
+                                    :style="{ width: prediction.predictions?.percent?.draw }"
+                                    v-if="prediction.predictions?.percent?.draw && parseFloat(prediction.predictions.percent.draw) > 0"
+                                    :key="'draw-' + prediction.predictions?.percent?.draw"
+                                >
+                                    <span>{{ prediction.predictions.percent.draw }}</span>
+                                </div>
+                                <div 
+                                    class="h-full bg-blue-500 transition-all duration-1000 ease-out flex items-center justify-center text-[10px] font-bold text-white rounded-lg shadow-sm shrink-0"
+                                    :style="{ width: prediction.predictions?.percent?.away }"
+                                    v-if="prediction.predictions?.percent?.away && parseFloat(prediction.predictions.percent.away) > 0"
+                                    :key="'away-' + prediction.predictions?.percent?.away"
+                                >
+                                    <span>{{ prediction.predictions.percent.away }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Team Details underneath -->
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="flex items-center gap-3 bg-white dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-50 dark:border-white/5 shadow-sm">
+                                    <img v-if="game.home_team?.logo_url" :src="game.home_team.logo_url" class="w-7 h-7 object-contain shrink-0" />
+                                    <div class="flex flex-col truncate">
+                                        <span class="text-[9px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest">Chủ nhà</span>
+                                        <span class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ game.home_team?.name }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-center justify-center bg-white dark:bg-gray-800/50 p-2 rounded-2xl border border-dashed border-gray-200 dark:border-white/5">
+                                    <span class="text-[9px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-0.5">Hòa</span>
+                                    <span class="text-sm font-bold text-slate-900 dark:text-white">Xác suất {{ prediction.predictions?.percent?.draw || '0%' }}</span>
+                                </div>
+                                <div class="flex items-center justify-end gap-3 bg-white dark:bg-gray-800/50 p-3 rounded-2xl border border-gray-50 dark:border-white/5 shadow-sm">
+                                    <div class="flex flex-col items-end truncate text-right">
+                                        <span class="text-[9px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest">Khách</span>
+                                        <span class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ game.away_team?.name }}</span>
+                                    </div>
+                                    <img v-if="game.away_team?.logo_url" :src="game.away_team.logo_url" class="w-7 h-7 object-contain shrink-0" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Core AI Forecast Grid (Minimalist & consistent) -->
+                        <div class="grid md:grid-cols-3 gap-6">
+                            <!-- Card 1: Scoreboard Capsule for Most Likely Score & xG -->
+                            <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-6">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tỉ số dự kiến</span>
+                                </div>
+
+                                <div class="my-auto py-2 flex flex-col items-center">
+                                    <div class="flex items-center gap-4 mb-2">
+                                        <img v-if="game.home_team?.logo_url" :src="game.home_team.logo_url" class="w-6 h-6 object-contain shrink-0" />
+                                        <span class="text-2xl font-bold tracking-widest text-slate-900 dark:text-white tabular-nums bg-slate-100 dark:bg-gray-900/50 px-5 py-1.5 rounded-xl border border-slate-200/50 dark:border-white/5">
+                                            {{ prediction?.most_likely_score || 'N/A' }}
+                                        </span>
+                                        <img v-if="game.away_team?.logo_url" :src="game.away_team.logo_url" class="w-6 h-6 object-contain shrink-0" />
+                                    </div>
+                                    <span class="text-[9px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest">Tỉ số khả thi nhất</span>
+                                </div>
+
+                                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-white/5">
+                                    <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+                                        <span>Bàn thắng kỳ vọng (xG)</span>
+                                        <span class="tabular-nums font-bold text-slate-900 dark:text-white text-sm normal-case tracking-normal shrink-0">
+                                            {{ prediction.expected_goals?.home || '0.00' }} - {{ prediction.expected_goals?.away || '0.00' }}
+                                        </span>
+                                    </div>
+                                    <!-- Dynamic xG progress track -->
+                                    <div class="flex gap-2 items-center h-1 px-1">
+                                        <div class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full bg-emerald-500 transition-all duration-1000 float-right"
+                                                :style="{ 
+                                                    width: (prediction.expected_goals?.home || prediction.expected_goals?.away) 
+                                                        ? (parseFloat(prediction.expected_goals?.home || 0) / (parseFloat(prediction.expected_goals?.home || 0) + parseFloat(prediction.expected_goals?.away || 0)) * 100) + '%'
+                                                        : '50%'
+                                                }"
+                                            ></div>
+                                        </div>
+                                        <div class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full bg-blue-500 transition-all duration-1000"
+                                                :style="{ 
+                                                    width: (prediction.expected_goals?.home || prediction.expected_goals?.away) 
+                                                        ? (parseFloat(prediction.expected_goals?.away || 0) / (parseFloat(prediction.expected_goals?.home || 0) + parseFloat(prediction.expected_goals?.away || 0)) * 100) + '%'
+                                                        : '50%'
+                                                }"
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 2: AI Favorite Shield -->
+                            <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-6">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Đội cửa trên dự báo</span>
+                                </div>
+
+                                <div class="my-auto py-2 flex flex-col items-center text-center">
+                                    <template v-if="prediction?.favorite === 'home'">
+                                        <div class="w-12 h-12 bg-gray-50/50 dark:bg-gray-900 rounded-full border border-gray-100 dark:border-white/5 flex items-center justify-center mb-2 p-1.5 shadow-sm">
+                                            <img v-if="game.home_team?.logo_url" :src="game.home_team.logo_url" class="w-full h-full object-contain shrink-0" />
+                                        </div>
+                                        <span class="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">{{ game.home_team?.name }}</span>
+                                    </template>
+                                    <template v-else-if="prediction?.favorite === 'away'">
+                                        <div class="w-12 h-12 bg-gray-50/50 dark:bg-gray-900 rounded-full border border-gray-100 dark:border-white/5 flex items-center justify-center mb-2 p-1.5 shadow-sm">
+                                            <img v-if="game.away_team?.logo_url" :src="game.away_team.logo_url" class="w-full h-full object-contain shrink-0" />
+                                        </div>
+                                        <span class="text-sm font-bold text-slate-900 dark:text-white line-clamp-1">{{ game.away_team?.name }}</span>
+                                    </template>
+                                    <template v-else>
+                                        <div class="w-10 h-10 rounded-full bg-gray-50/50 dark:bg-gray-900 flex items-center justify-center mb-2 text-slate-400">
+                                            —
+                                        </div>
+                                        <span class="text-sm font-bold text-slate-900 dark:text-white">Cân bằng thế trận</span>
+                                    </template>
+                                </div>
+
+                                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                    <span>Xác suất chiến thắng</span>
+                                    <span class="tabular-nums text-slate-900 dark:text-white text-sm font-bold normal-case tracking-normal shrink-0">
+                                        {{ prediction?.favorite_prob || 'N/A' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Goals Index (Minimalist linear progress bars instead of SVG circular gauges) -->
+                            <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm flex flex-col justify-between">
+                                <div class="flex items-center gap-2 mb-6">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Chỉ số bàn thắng</span>
+                                </div>
+
+                                <div class="space-y-3.5 my-auto">
+                                    <!-- Goal Row 1: Over 1.5 -->
+                                    <div class="space-y-1.5">
+                                        <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                            <span>Tài 1.5 bàn</span>
+                                            <span class="tabular-nums font-bold text-slate-900 dark:text-white text-sm normal-case tracking-normal shrink-0">{{ prediction.prob_over?.over_15 || '—' }}</span>
+                                        </div>
+                                        <div class="h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full bg-emerald-500 transition-all duration-1000"
+                                                :style="{ width: prediction.prob_over?.over_15 }"
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Goal Row 2: Over 2.5 -->
+                                    <div class="space-y-1.5">
+                                        <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                            <span>Tài 2.5 bàn</span>
+                                            <span class="tabular-nums font-bold text-slate-900 dark:text-white text-sm normal-case tracking-normal shrink-0">{{ prediction.prob_over?.over_25 || '—' }}</span>
+                                        </div>
+                                        <div class="h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full bg-emerald-500 transition-all duration-1000"
+                                                :style="{ width: prediction.prob_over?.over_25 }"
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Goal Row 3: BTTS -->
+                                    <div class="space-y-1.5">
+                                        <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                            <span>Hai đội ghi bàn (BTTS)</span>
+                                            <span class="tabular-nums font-bold text-slate-900 dark:text-white text-sm normal-case tracking-normal shrink-0">{{ prediction?.prob_btts || '—' }}</span>
+                                        </div>
+                                        <div class="h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full bg-emerald-500 transition-all duration-1000"
+                                                :style="{ width: prediction?.prob_btts }"
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                    <span>Tài 3.5 bàn (Over 3.5)</span>
+                                    <span class="tabular-nums text-slate-900 dark:text-white text-sm font-bold normal-case tracking-normal shrink-0">
+                                        {{ prediction.prob_over?.over_35 || 'N/A' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Tactical Alerts / Betting Recommendations (Minimalist clean look) -->
+                        <div 
+                            v-if="prediction?.recommendations && Object.values(prediction.recommendations).some(Boolean)"
+                            class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm"
+                        >
+                            <div class="mb-6">
+                                <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Khuyến nghị chiến thuật AI</h3>
+                                <p class="text-[9px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mt-1">Đề xuất vị thế tối ưu dựa trên dữ liệu định lượng</p>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div 
+                                    v-if="prediction.recommendations?.bet_favorite" 
+                                    class="bg-white dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-50 dark:border-white/5 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tín hiệu: Tin cậy Đội cửa trên</p>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-500 dark:text-gray-400 pl-3 leading-relaxed">Mô hình định lượng xác thực đội bóng cửa trên sở hữu sức mạnh áp đảo đáng kể ở trận cầu này.</p>
+                                </div>
+                                <div 
+                                    v-if="prediction.recommendations?.winner" 
+                                    class="bg-white dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-50 dark:border-white/5 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tín hiệu: Phân định Thắng Thua</p>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-500 dark:text-gray-400 pl-3 leading-relaxed">Xác suất hòa cực thấp, kịch bản hai đội đá thực dụng và quyết liệt hướng tới 3 điểm trọn vẹn.</p>
+                                </div>
+
+                                <div 
+                                    v-if="prediction.recommendations?.over_15" 
+                                    class="bg-white dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-50 dark:border-white/5 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tín hiệu: Tài 1.5 Bàn Thắng</p>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-500 dark:text-gray-400 pl-3 leading-relaxed">Dự toán kịch bản ghi nhận tối thiểu 2 bàn thắng sở hữu tỷ lệ bùng nổ vô cùng cao.</p>
+                                </div>
+
+                                <div 
+                                    v-if="prediction.recommendations?.over_25" 
+                                    class="bg-white dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-50 dark:border-white/5 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tín hiệu: Tài 2.5 Bàn Thắng (Mở)</p>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-500 dark:text-gray-400 pl-3 leading-relaxed">Lối đá cởi mở từ cả hai CLB được dự đoán sẽ tạo nên bữa tiệc tấn công sôi động nhiều bàn thắng.</p>
+                                </div>
+
+                                <div 
+                                    v-if="prediction.recommendations?.over_35" 
+                                    class="bg-white dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-50 dark:border-white/5 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tín hiệu: Tài 3.5 Bàn</p>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-500 dark:text-gray-400 pl-3 leading-relaxed">Kỳ vọng trận cầu rượt đuổi tỷ số kịch tính vượt mốc 4 bàn thắng có xác suất đáng lưu tâm.</p>
+                                </div>
+
+                                <div 
+                                    v-if="prediction.recommendations?.btts" 
+                                    class="bg-white dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-50 dark:border-white/5 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Tín hiệu: Cả Hai Đội Cùng Ghi Bàn (BTTS)</p>
+                                    </div>
+                                    <p class="text-[11px] font-medium text-slate-500 dark:text-gray-400 pl-3 leading-relaxed">Hàng thủ mỏng manh và hàng công hiệu quả của cả hai bên tạo ra niềm tin đều sẽ lập công.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div v-else class="py-20 text-center">
                         <div v-if="isRefreshing" class="flex flex-col items-center gap-3">
@@ -1581,10 +1857,16 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Dữ liệu đang được xử lý</h3>
-                            <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto">
-                                Hệ thống đang tự động đồng bộ thông tin mới nhất cho bạn.
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Phân tích AI chưa sẵn sàng</h3>
+                            <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto leading-relaxed">
+                                Chưa có dữ liệu dự báo phân tích AI cho trận đấu này từ hệ thống hoặc trận đấu đã diễn ra quá lâu.
                             </p>
+                            <button 
+                                @click="refreshMatchData" 
+                                class="mt-6 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95"
+                            >
+                                Cập nhật dữ liệu
+                            </button>
                         </div>
                         </div>
                     </div>
@@ -1706,6 +1988,8 @@ onMounted(() => {
     if (activeTab.value === 'lineups' && isNotScheduled && !hasLineups) {
         isDataMissing = true;
     } else if (activeTab.value === 'stats' && isNotScheduled && (!hasStats || !hasShotmap)) {
+        isDataMissing = true;
+    } else if (activeTab.value === 'analysis' && (!prediction.value || !hasPredictionData.value)) {
         isDataMissing = true;
     }
 
@@ -2037,6 +2321,22 @@ const matchStatsGroups = computed(() => {
 
 // Phân tích AI
 const prediction = computed(() => props.game.prediction);
+
+const hasPredictionData = computed(() => {
+    if (!prediction.value) return false;
+    const homePercent = prediction.value.predictions?.percent?.home;
+    const drawPercent = prediction.value.predictions?.percent?.draw;
+    const awayPercent = prediction.value.predictions?.percent?.away;
+    
+    if (!homePercent || homePercent === '0%' || homePercent === '0.0%' || homePercent === 'N/A') {
+        if (!drawPercent || drawPercent === '0%' || drawPercent === '0.0%' || drawPercent === 'N/A') {
+            if (!awayPercent || awayPercent === '0%' || awayPercent === '0.0%' || awayPercent === 'N/A') {
+                return false;
+            }
+        }
+    }
+    return true;
+});
 
 // Sắp xếp H2H theo thời gian mới nhất
 const sortedH2H = computed(() => {

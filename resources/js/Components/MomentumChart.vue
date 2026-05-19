@@ -20,39 +20,33 @@
 
             <!-- Momentum Bars -->
             <div 
-                v-for="(val, index) in momentum" 
+                v-for="(item, index) in normalizedMomentum" 
                 :key="index"
                 class="flex-1 relative group"
                 :style="{ height: '100%' }"
             >
                 <!-- Home Momentum (Up) -->
                 <div 
-                    v-if="val > 0"
+                    v-if="item.value > 0"
                     class="absolute bottom-1/2 left-0 right-0 bg-emerald-500/60 group-hover:bg-emerald-500 transition-all rounded-t-sm"
-                    :style="{ height: `calc(${(val / maxVal * 45)}% + 1px)` }"
+                    :style="{ height: `calc(${(item.value / maxVal * 45)}% + 1px)` }"
                 >
                     <div class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-50">
-                        Phút {{ index + 1 }}: +{{ val }}
+                        Phút {{ item.minute }}: +{{ item.value }}
                     </div>
                 </div>
 
                 <!-- Away Momentum (Down) -->
                 <div 
-                    v-if="val < 0"
+                    v-if="item.value < 0"
                     class="absolute top-1/2 left-0 right-0 bg-blue-500/60 group-hover:bg-blue-500 transition-all rounded-b-sm"
-                    :style="{ height: `calc(${(Math.abs(val) / maxVal * 45)}% + 1px)` }"
+                    :style="{ height: `calc(${(Math.abs(item.value) / maxVal * 45)}% + 1px)` }"
                 >
                     <div class="opacity-0 group-hover:opacity-100 absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-50">
-                        Phút {{ index + 1 }}: {{ val }}
+                        Phút {{ item.minute }}: {{ item.value }}
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="flex justify-between mt-4">
-            <span class="text-[8px] font-bold text-gray-400">0'</span>
-            <span class="text-[8px] font-bold text-gray-400">45'</span>
-            <span class="text-[8px] font-bold text-gray-400">90'</span>
         </div>
     </div>
 </template>
@@ -67,10 +61,37 @@ const props = defineProps({
     }
 });
 
+// Normalize the momentum prop to always be an array of {minute, value} objects.
+// This provides backward-compatibility if old number-only arrays are loaded from cache.
+const normalizedMomentum = computed(() => {
+    return props.momentum.map((item, index) => {
+        if (typeof item === 'object' && item !== null) {
+            return {
+                minute: item.minute !== undefined ? item.minute : index + 1,
+                value: item.value !== undefined ? Number(item.value) : 0
+            };
+        }
+        return {
+            minute: index + 1,
+            value: Number(item) || 0
+        };
+    });
+});
+
 const maxVal = computed(() => {
-    if (!props.momentum.length) return 100;
-    const max = Math.max(...props.momentum.map(v => Math.abs(v)));
+    if (!normalizedMomentum.value.length) return 100;
+    const max = Math.max(...normalizedMomentum.value.map(item => Math.abs(item.value)));
     return max > 0 ? max : 100;
+});
+
+const index45 = computed(() => {
+    if (!normalizedMomentum.value.length) return -1;
+    return normalizedMomentum.value.findIndex(item => item.minute === 45);
+});
+
+const index90 = computed(() => {
+    if (!normalizedMomentum.value.length) return -1;
+    return normalizedMomentum.value.findIndex(item => item.minute === 90);
 });
 </script>
 

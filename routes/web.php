@@ -27,7 +27,7 @@ Route::get('/matches', function () {
 });
 Route::get('/matches/{id}', [GameController::class, 'show'])->name('games.show');
 Route::post('/matches/{id}/sync', [GameController::class, 'sync'])->name('games.sync');
-Route::get('/matches/{id}/sync', [App\Http\Controllers\GameController::class, 'syncMatch']);
+Route::get('/matches/{id}/sync', [GameController::class, 'sync']);
 
 Route::get('/super-sync', function(Request $request, BsdSportsApiService $api) {
     $leagueId = $request->input('league_id', 1);
