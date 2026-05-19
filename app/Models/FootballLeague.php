@@ -14,6 +14,10 @@ class FootballLeague extends Model
     // Chỉ giữ lại các cột thực tế trong DB
     protected $fillable = ['id', 'name', 'country', 'is_women', 'is_active'];
 
+    protected $casts = [
+        'is_women' => 'boolean',
+    ];
+
     // Khai báo các thuộc tính ảo muốn gửi lên Frontend
     protected $appends = ['logo', 'logo_url', 'country_code'];
 

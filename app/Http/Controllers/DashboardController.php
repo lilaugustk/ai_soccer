@@ -145,10 +145,12 @@ class DashboardController extends Controller
                 'home_score' => $match->home_score,
                 'away_score' => $match->away_score,
                 'league' => [
+                    'id' => $match->league->id,
                     'name' => $match->league->name,
                     'logo_url' => $match->league->logo_url,
                     'country' => $match->league->country,
                     'country_code' => $match->league->country_code,
+                    'is_women' => (bool)$match->league->is_women,
                 ]
             ];
         })->groupBy(function($game) {
@@ -164,6 +166,7 @@ class DashboardController extends Controller
             'id' => $m->league->id,
             'name' => $m->league->name,
             'logo_url' => $m->league->logo_url,
+            'is_women' => (bool)$m->league->is_women,
         ])->unique('id')->values();
     }
 

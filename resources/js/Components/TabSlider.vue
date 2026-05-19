@@ -30,7 +30,8 @@
                         itemClass
                     ]">
                 <img v-if="item.logo_url || item.logo" :src="item.logo_url || item.logo" class="w-3 h-3 object-contain" />
-                {{ item.name || item.label || item.id }}
+                <span>{{ item.name || item.label || item.id }}</span>
+                <span v-if="item.is_women" class="shrink-0 text-[6px] font-extrabold uppercase bg-pink-500/10 text-pink-500 px-1 rounded border border-pink-400/10 leading-normal">NỮ</span>
             </button>
         </div>
     </div>

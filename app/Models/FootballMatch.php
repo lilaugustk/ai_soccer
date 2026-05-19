@@ -103,4 +103,15 @@ class FootballMatch extends Model
     {
         return $this->hasMany(FootballPlayerMatchStat::class, 'event_id');
     }
+
+    public function funfacts()
+    {
+        return $this->hasMany(FootballFunfact::class, 'event_id');
+    }
+
+    public function socialPosts()
+    {
+        return $this->belongsToMany(FootballSocialPost::class, 'social_post_events', 'event_id', 'social_post_id');
+    }
 }
+

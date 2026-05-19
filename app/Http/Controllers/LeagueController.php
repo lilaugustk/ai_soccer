@@ -102,6 +102,8 @@ class LeagueController extends Controller
                 'topRedCards' => [],
                 'matches' => [],
                 'season' => $year,
+                'season_start_date' => null,
+                'season_end_date' => null,
                 'availableSeasons' => $availableSeasons ?: [2024, 2023, 2022]
             ]);
         }
@@ -223,6 +225,8 @@ class LeagueController extends Controller
             'standings' => $standings,
             'matches' => $matches,
             'season' => $year,
+            'season_start_date' => $seasonRecord ? $seasonRecord->start_date : null,
+            'season_end_date' => $seasonRecord ? $seasonRecord->end_date : null,
             'availableSeasons' => $availableSeasons
         ]);
     }

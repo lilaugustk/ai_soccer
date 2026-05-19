@@ -36,9 +36,19 @@
                     <div class="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-bold uppercase tracking-widest">
                         {{ league.type === 'League' ? 'Hạng đấu' : 'Giải đấu' }}
                     </div>
+                    <div v-if="league.is_women" class="flex items-center gap-1 px-3 py-1 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-full text-[9px] font-bold uppercase tracking-widest animate-fade-in shadow-sm border border-pink-500/10">
+                        <svg class="w-3.5 h-3.5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4a6 6 0 100 12 6 6 0 000-12zM12 16v6M9 19h6" />
+                        </svg>
+                        <span>Giải đấu Nữ</span>
+                    </div>
                 </div>
                 
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">{{ league.name }}</h1>
+                
+                <div v-if="season_start_date && season_end_date" class="flex flex-wrap items-center justify-center md:justify-start gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <span class="text-gray-800 dark:text-gray-200 bg-gray-105 rounded"> Thời gian diễn ra: {{ formatDate(season_start_date) }} đến {{ formatDate(season_end_date) }}</span>
+                </div>
                 
                 <div class="flex items-center justify-center md:justify-start gap-4">
                 </div>
@@ -54,7 +64,7 @@
                       <button v-for="tab in tabs" :key="tab.id"
                               @click="switchTab(tab.id)"
                               :class="activeTab === tab.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-                              class="relative pb-4 px-1 text-[11px] font-bold uppercase tracking-[0.2em] transition-all whitespace-nowrap outline-none">
+                              class="relative pb-4 px-1 text-[11px] font-bold uppercase transition-all whitespace-nowrap outline-none">
                           {{ tab.name }}
                           <!-- Active Underline Indicator -->
                           <div v-if="activeTab === tab.id" 
@@ -67,7 +77,7 @@
                   <div class="relative season-dropdown pb-4 transition-all duration-200" 
                        :class="activeTab === 'standings' ? 'opacity-100' : 'opacity-0 pointer-events-none'">
                         <button @click="isSeasonOpen = !isSeasonOpen" 
-                                class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
+                                class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg text-[11px] font-bold uppercase transition-all hover:bg-gray-100 dark:hover:bg-gray-700">
                             Mùa giải: {{ formatSeason(season, league.country) }}
                             <svg :class="['w-2.5 h-2.5 transition-transform', isSeasonOpen ? 'rotate-180' : '']" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
                         </button>
@@ -139,6 +149,8 @@ const props = defineProps({
   standings: Array,
   matches: Array,
   season: [Number, String],
+  season_start_date: String,
+  season_end_date: String,
   availableSeasons: Array
 });
 
@@ -283,6 +295,14 @@ const formatSeason = (s, country = null) => {
 
     // Mặc định cho các giải Thu-Xuân (Châu Âu, Saudi, Việt Nam mới...)
     return `${year}-${year + 1}`;
+};
+const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
 };
 </script>
 

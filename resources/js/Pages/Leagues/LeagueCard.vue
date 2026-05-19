@@ -30,6 +30,7 @@
             <p class="text-[9px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em] truncate">
                 {{ league.country_name || 'Quốc tế' }}
             </p>
+            <span v-if="league.is_women" class="shrink-0 text-[7px] font-extrabold uppercase bg-pink-500/10 text-pink-500 px-1.5 py-0.5 rounded border border-pink-400/20">NỮ</span>
         </div>
     </div>
 

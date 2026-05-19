@@ -58,9 +58,12 @@
                                     </div>
 
                                     <div class="flex flex-col min-w-0">
-                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover/item:text-emerald-600 transition-colors">
-                                            {{ leagueName.includes(' (') ? leagueName.split(' (')[0] : leagueName }}
-                                        </span>
+                                        <div class="flex items-center gap-1.5 min-w-0">
+                                            <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover/item:text-emerald-600 transition-colors truncate">
+                                                {{ leagueName.includes(' (') ? leagueName.split(' (')[0] : leagueName }}
+                                            </span>
+                                            <span v-if="games[0].league.is_women" class="shrink-0 text-[6px] font-extrabold uppercase bg-pink-500/10 text-pink-500 px-1 rounded border border-pink-400/10 leading-normal">NỮ</span>
+                                        </div>
                                         <span v-if="leagueName.includes(' (')" class="text-[8px] font-bold text-gray-400 dark:text-white uppercase tracking-widest">
                                             {{ translateCountry(leagueName.split(' (')[1].replace(')', '')) }}
                                         </span>
@@ -80,11 +83,12 @@
                         <!-- League Title -->
                         <div class="flex items-center gap-2 mb-4">
                             <div class="w-1 h-4 bg-emerald-500 rounded-full"></div>
-                            <h2 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                            <h2 class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex flex-wrap items-center gap-2">
                                 <span class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                                     <span class="text-gray-900 dark:text-white">{{ leagueName.includes(' (') ? leagueName.split(' (')[0] : leagueName }}</span>
                                     <span v-if="leagueName.includes(' (')" class="text-gray-400 dark:text-white font-medium">({{ translateCountry(leagueName.split(' (')[1].replace(')', '')) }})</span>
                                 </span>
+                                <span v-if="games[0].league.is_women" class="shrink-0 text-[6px] font-extrabold uppercase bg-pink-500/10 text-pink-500 px-1 py-0.5 rounded border border-pink-400/10 leading-normal">GIẢI NỮ</span>
                                 <span class="text-[9px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-white/10 rounded-md text-gray-600 dark:text-white flex items-center justify-center min-w-[18px]">
                                     {{ games.length }}
                                 </span>

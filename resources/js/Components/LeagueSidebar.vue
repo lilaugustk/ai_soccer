@@ -41,7 +41,10 @@
                             <span v-else class="text-[10px] font-bold text-emerald-600">{{ league.name.substring(0,2).toUpperCase() }}</span>
                         </div>
                         <div class="flex flex-col min-w-0">
-                            <span class="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{{ league.name }}</span>
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="text-xs font-bold text-gray-700 dark:text-gray-200 truncate">{{ league.name }}</span>
+                                <span v-if="league.is_women" class="shrink-0 text-[6px] font-extrabold uppercase bg-pink-500/10 text-pink-500 px-1 rounded border border-pink-400/10 leading-normal">NỮ</span>
+                            </div>
                             <span class="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{{ getLocalizedCountryName(league.country_name) }}</span>
                         </div>
                     </Link>
@@ -104,7 +107,10 @@
                                     <img v-if="league.logo_url" :src="league.logo_url" class="w-full h-full object-contain" />
                                     <span v-else class="text-[10px] font-bold text-emerald-600">{{ league.name.substring(0,2).toUpperCase() }}</span>
                                 </div>
-                                <span class="text-xs font-bold text-gray-600 dark:text-gray-400 group-hover/item:text-emerald-600 transition-colors truncate">{{ league.name }}</span>
+                                <div class="flex items-center gap-1.5 min-w-0">
+                                    <span class="text-xs font-bold text-gray-600 dark:text-gray-400 group-hover/item:text-emerald-600 transition-colors truncate">{{ league.name }}</span>
+                                    <span v-if="league.is_women" class="shrink-0 text-[6px] font-extrabold uppercase bg-pink-500/10 text-pink-500 px-1 rounded border border-pink-400/10 leading-normal">NỮ</span>
+                                </div>
                             </Link>
                             <button @click="togglePin(league.id)" 
                                     :class="[

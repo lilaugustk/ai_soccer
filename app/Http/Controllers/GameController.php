@@ -21,7 +21,7 @@ class GameController extends Controller
         set_time_limit(120);
 
         $activeTab = request()->query('tab', 'lineups');
-        $validTabs = ['lineups', 'stats', 'h2h', 'standings', 'timeline', 'analysis'];
+        $validTabs = ['lineups', 'stats', 'h2h', 'standings', 'timeline', 'analysis', 'social'];
         if (!in_array($activeTab, $validTabs)) {
             $activeTab = 'lineups';
         }
@@ -42,7 +42,7 @@ class GameController extends Controller
         // Cheap DB exist checks to see if we are missing data for the active tab
         $isMissingData = false;
         if ($activeTab === 'lineups') {
-            $isMissingData = !$match->lineup()->exists();
+            $isMissingData = !$match->lineup()->exists() || ($status === 'finished' && !$match->playerStats()->exists());
         } elseif ($activeTab === 'stats') {
             $isMissingData = !$match->stats()->exists() || !$match->shotmap()->exists();
         } elseif ($activeTab === 'timeline') {
@@ -110,6 +110,14 @@ class GameController extends Controller
             $tabRelations = [
                 'incidents.player', 'incidents.playerIn', 'incidents.playerOut'
             ];
+        } elseif ($activeTab === 'analysis') {
+            $tabRelations = [
+                'funfacts'
+            ];
+        } elseif ($activeTab === 'social') {
+            $tabRelations = [
+                'socialPosts'
+            ];
         }
 
         // Refresh and load base relations + conditional tab relations
@@ -169,6 +177,8 @@ class GameController extends Controller
                     'wind' => $match->weather_wind_speed,
                 ],
                 'season' => $match->season->year ?? $match->season_id,
+                'season_start_date' => $match->season?->start_date,
+                'season_end_date' => $match->season?->end_date,
                 
                 // Lazy loaded tab specific data
                 'statistics' => $activeTab === 'stats' ? $this->shimStatistics($match) : [],
@@ -213,6 +223,24 @@ class GameController extends Controller
                 'odds' => [], 
                 'metadata' => [], 
                 'prediction' => null,
+                'funfacts' => $activeTab === 'analysis' ? $match->funfacts->map(fn($f) => [
+                    'id' => $f->id,
+                    'type_id' => $f->type_id,
+                    'sentence' => $f->sentence
+                ])->toArray() : [],
+                'social_posts' => $activeTab === 'social' ? $match->socialPosts()->orderBy('published_at', 'desc')->get()->map(fn($p) => [
+                    'id' => $p->id,
+                    'type' => $p->type,
+                    'url' => $p->url,
+                    'text' => $p->text,
+                    'title' => $p->title,
+                    'thumbnail' => $p->thumbnail,
+                    'media' => $p->media,
+                    'account_handle' => $p->account_handle,
+                    'account_name' => $p->account_name,
+                    'account_verified' => $p->account_verified,
+                    'published_at' => $p->published_at ? $p->published_at->toIso8601String() : null,
+                ])->toArray() : [],
             ];
 
             // Build player stats lookup on demand
@@ -329,6 +357,54 @@ class GameController extends Controller
                         ->orderBy('position', 'asc')
                         ->get();
                 }
+
+                // 4.1 Lấy 5 trận gần nhất của giải đấu này cho mỗi đội để hiển thị chi tiết trong tooltip
+                $teamIds = $standings->pluck('team_id');
+                $allMatches = FootballMatch::query()->where('league_id', $match->league_id)
+                    ->where('season_id', $match->season_id)
+                    ->where(function($q) use ($teamIds) {
+                        $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
+                    })
+                    ->where('status', 'finished')
+                    ->orderBy('event_date', 'desc')
+                    ->with(['homeTeam', 'awayTeam'])
+                    ->get();
+
+                $matchesByTeam = [];
+                foreach ($allMatches as $m) {
+                    foreach ([$m->home_team_id, $m->away_team_id] as $tId) {
+                        if ($teamIds->contains($tId)) {
+                            if (!isset($matchesByTeam[$tId])) $matchesByTeam[$tId] = [];
+                            if (count($matchesByTeam[$tId]) < 5) {
+                                // Tính toán kết quả cho đội này (W/L/D)
+                                $res = 'D';
+                                if ($m->home_score > $m->away_score) {
+                                    $res = ($tId == $m->home_team_id) ? 'W' : 'L';
+                                } elseif ($m->home_score < $m->away_score) {
+                                    $res = ($tId == $m->away_team_id) ? 'W' : 'L';
+                                }
+
+                                $matchesByTeam[$tId][] = [
+                                    'date' => optional($m->event_date)->format('d/m'),
+                                    'home' => optional($m->homeTeam)->name ?? 'Unknown',
+                                    'away' => optional($m->awayTeam)->name ?? 'Unknown',
+                                    'score' => "{$m->home_score} - {$m->away_score}",
+                                    'res' => $res
+                                ];
+                            }
+                        }
+                    }
+                }
+
+                $standings->map(function($s) use ($matchesByTeam) {
+                    if ($s->team) {
+                        $s->team->logo_url = $s->team->logo_url ?: 'https://via.placeholder.com/150?text=' . urlencode($s->team->name);
+                    }
+                    // Gán 5 trận gần nhất, đảo ngược để khớp với thứ tự form từ cũ đến mới (trái sang phải)
+                    $s->recent_matches = array_reverse($matchesByTeam[$s->team_id] ?? []);
+                    return $s;
+                });
+
                 $data['standings'] = $standings->toArray();
             }
 
@@ -683,7 +759,10 @@ class GameController extends Controller
 
     private function shimEvents($match)
     {
-        $incidents = $match->incidents->sortBy('minute');
+        $incidents = $match->incidents->sortBy(function($e) {
+            $extra = $e->payload['added_time'] ?? ($e->payload['extra'] ?? 0);
+            return $e->minute * 1000 + (int)$extra;
+        });
         if ($incidents->isEmpty()) return [];
         
         return array_values($incidents->filter(function($e) {
@@ -695,7 +774,10 @@ class GameController extends Controller
             $playerOut = $e->playerOut;
 
             return [
-                'time' => ['elapsed' => $e->minute ?? 0, 'extra' => $e->payload['extra'] ?? null],
+                'time' => [
+                    'elapsed' => $e->minute ?? 0, 
+                    'extra' => $e->payload['added_time'] ?? ($e->payload['extra'] ?? null)
+                ],
                 'team' => ['id' => $e->is_home ? $match->home_team_id : $match->away_team_id],
                 'player' => [
                     'id' => $e->player_id, 

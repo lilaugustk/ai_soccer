@@ -190,6 +190,53 @@ class TeamController extends Controller
                     ->orderBy('position', 'asc')
                     ->get();
             }
+
+            // Populate 5 recent matches for each team (for tooltip & correct display)
+            $teamIds = $standings->pluck('team_id');
+            $allMatches = FootballMatch::query()->where('league_id', $leagueId)
+                ->where('season_id', $seasonId)
+                ->where(function($q) use ($teamIds) {
+                    $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
+                })
+                ->where('status', 'finished')
+                ->orderBy('event_date', 'desc')
+                ->with(['homeTeam', 'awayTeam'])
+                ->get();
+
+            $matchesByTeam = [];
+            foreach ($allMatches as $m) {
+                foreach ([$m->home_team_id, $m->away_team_id] as $tId) {
+                    if ($teamIds->contains($tId)) {
+                        if (!isset($matchesByTeam[$tId])) $matchesByTeam[$tId] = [];
+                        if (count($matchesByTeam[$tId]) < 5) {
+                            // Tính toán kết quả cho đội này (W/L/D)
+                            $res = 'D';
+                            if ($m->home_score > $m->away_score) {
+                                $res = ($tId == $m->home_team_id) ? 'W' : 'L';
+                            } elseif ($m->home_score < $m->away_score) {
+                                $res = ($tId == $m->away_team_id) ? 'W' : 'L';
+                            }
+
+                            $matchesByTeam[$tId][] = [
+                                'date' => optional($m->event_date)->format('d/m'),
+                                'home' => optional($m->homeTeam)->name ?? 'Unknown',
+                                'away' => optional($m->awayTeam)->name ?? 'Unknown',
+                                'score' => "{$m->home_score} - {$m->away_score}",
+                                'res' => $res
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $standings->map(function($s) use ($matchesByTeam) {
+                if ($s->team) {
+                    $s->team->logo_url = $s->team->logo_url ?: 'https://via.placeholder.com/150?text=' . urlencode($s->team->name);
+                }
+                // Gán 5 trận gần nhất, đảo ngược để khớp với thứ tự form từ cũ đến mới (trái sang phải)
+                $s->recent_matches = array_reverse($matchesByTeam[$s->team_id] ?? []);
+                return $s;
+            });
         }
 
         // 5. Thống kê cầu thủ mùa giải
@@ -277,7 +324,16 @@ class TeamController extends Controller
                 'avg_goals_scored' => $career->manager->avg_goals_scored,
                 'avg_goals_conceded' => $career->manager->avg_goals_conceded,
             ];
-        });
+        })
+        ->groupBy(function($item) {
+            return $item['name'] . '_' . $item['display_season'];
+        })
+        ->map(function($group) {
+            return $group->sortByDesc('matches')->first();
+        })
+        ->values()
+        ->sortBy('date_from')
+        ->values();
 
         $isFavorite = false;
         if ($request->user()) {

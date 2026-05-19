@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
                             'id' => $l->id,
                             'name' => $l->name,
                             'logo_url' => $l->logo_url,
+                            'is_women' => (bool)$l->is_women,
                         ];
                     })->values(),
                 ];
