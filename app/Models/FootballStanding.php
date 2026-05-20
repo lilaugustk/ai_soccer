@@ -11,7 +11,7 @@ class FootballStanding extends Model
     protected $fillable = [
         'league_id', 'season_id', 'team_id', 'position', 'played',
         'won', 'drawn', 'lost', 'gf', 'ga', 'gd', 'pts',
-        'xgf', 'xga', 'xgd', 'form', 'is_live'
+        'xgf', 'xga', 'xgd', 'form', 'is_live', 'description'
     ];
 
     public function team()

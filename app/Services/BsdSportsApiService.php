@@ -164,8 +164,14 @@ class BsdSportsApiService
                     $this->syncTeamIfNotExists($nationalTeamId, null);
                 }
 
+                // Use the real player ID returned by the API if it differs from the requested $playerId
+                $actualId = $playerData['id'] ?? $playerId;
+                // Nếu ID thực khác PID, ghi log để theo dõi
+                if ($actualId !== $playerId) {
+                    Log::info("syncPlayerProfile: Mapping temporary pid {$playerId} to real player id {$actualId}");
+                }
                 FootballPlayer::updateOrCreate(
-                    ['id' => $playerId],
+                    ['id' => $actualId],
                     [
                         'name' => $name ?? $playerData['name'] ?? 'Unknown Player',
                         'short_name' => $playerData['short_name'] ?? null,
@@ -185,16 +191,14 @@ class BsdSportsApiService
                         'availability' => $playerData['availability'] ?? 'available',
                     ]
                 );
+                // Đánh dấu cache cho cả pid và id thực
+                $this->playerExistsCache[$playerId] = true;
+                $this->playerExistsCache[$actualId] = true;
             } elseif (!$player) {
-                if (!empty($teamId)) {
-                    $this->syncTeamIfNotExists($teamId, null);
-                }
-                // Nếu chưa có player và không sync được chi tiết, tạo stub tối thiểu
-                FootballPlayer::create([
-                    'id' => $playerId,
-                    'name' => $name ?? 'Unknown Player',
-                    'current_team_id' => $teamId,
-                ]);
+                // Không tạo stub player để tránh tạo cầu thủ rác/trùng lặp khi API thất bại.
+                // Log để theo dõi và bỏ qua. Các bản ghi liên quan (lineup, incident...) 
+                // sẽ không được tạo do kiểm tra FootballPlayer::exists() ở bước sau.
+                Log::warning("syncPlayerProfile: Không thể tạo player {$playerId}" . ($name ? " ({$name})" : '') . " - API thất bại hoặc trả về lỗi. Bỏ qua.");
             }
         }
         
@@ -208,14 +212,12 @@ class BsdSportsApiService
 
         if (!FootballTeam::query()->where('id', $teamId)->exists()) {
             $teamName = $name;
-            $logoUrl = null;
 
             if (!$teamName) {
                 // Try to fetch team details from API
                 $data = $this->get("teams/{$teamId}/");
                 if ($data && !isset($data['error'])) {
                     $teamName = $data['name'] ?? $data['short_name'] ?? 'Unknown Team';
-                    $logoUrl = $data['logo_url'] ?? null;
                 }
             }
 
@@ -223,7 +225,6 @@ class BsdSportsApiService
                 FootballTeam::create([
                     'id' => $teamId,
                     'name' => $teamName ?? 'Unknown Team',
-                    'logo_url' => $logoUrl
                 ]);
             } catch (\Exception $e) {
                 Log::error("Failed to create team {$teamId}: " . $e->getMessage());
@@ -677,7 +678,7 @@ class BsdSportsApiService
      */
     public function hydrateMatch($matchId)
     {
-        set_time_limit(120);
+        set_time_limit(0);
         return DB::transaction(function () use ($matchId) {
             $match = FootballMatch::query()->find($matchId);
             if (!$match) return null;
@@ -1160,19 +1161,20 @@ class BsdSportsApiService
                 ['league_id' => $leagueId, 'season_id' => $seasonId, 'team_id' => $s['team_id']],
                 [
                     'position' => $s['position'],
-                    'played' => $s['played'],
-                    'won' => $s['won'],
-                    'drawn' => $s['drawn'],
-                    'lost' => $s['lost'],
-                    'gf' => $s['gf'],
-                    'ga' => $s['ga'],
-                    'gd' => $s['gd'],
-                    'pts' => $s['pts'],
-                    'xgf' => $s['xgf'] ?? null,
-                    'xga' => $s['xga'] ?? null,
-                    'xgd' => $s['xgd'] ?? null,
-                    'form' => $s['form'] ?? null,
-                    'is_live' => $s['live'] ?? false,
+                    'played'   => $s['played'],
+                    'won'      => $s['won'],
+                    'drawn'    => $s['drawn'],
+                    'lost'     => $s['lost'],
+                    'gf'       => $s['gf'],
+                    'ga'       => $s['ga'],
+                    'gd'       => $s['gd'],
+                    'pts'      => $s['pts'],
+                    'xgf'      => $s['xgf'] ?? null,
+                    'xga'      => $s['xga'] ?? null,
+                    'xgd'      => $s['xgd'] ?? null,
+                    'form'     => $s['form'] ?? null,
+                    'is_live'  => $s['live'] ?? false,
+                    'description' => $s['description'] ?? $s['group_name'] ?? null,
                 ]
             );
         }

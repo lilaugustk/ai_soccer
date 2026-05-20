@@ -71,11 +71,11 @@ class DashboardController extends Controller
             }
         }
 
-        // Thực hiện đồng bộ trực tiếp (blocking sync) trên server nếu cần
-        if ($shouldSync) {
+        // Thực hiện đồng bộ TRỰC TIẾP (blocking) CHỈ KHI database trống hoàn toàn
+        if ($matches->isEmpty()) {
             try {
                 set_time_limit(120);
-                Log::info("Dashboard: Executing blocking sync for date: {$dateStr}");
+                Log::info("Dashboard: Executing blocking sync for empty date: {$dateStr}");
                 
                 $apiService->syncMatchesByDate($dateStr);
                 
@@ -86,8 +86,9 @@ class DashboardController extends Controller
                 $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
                 cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
                 
-                // Query lại matches để có dữ liệu mới nhất
+                // Query lại matches để hiển thị dữ liệu vừa đồng bộ
                 $matches = $matchesQuery->get();
+                $shouldSync = false; // Đã sync trực tiếp xong nên không cần báo frontend sync ngầm nữa
             } catch (\Exception $e) {
                 Log::error("Dashboard blocking sync failed: " . $e->getMessage());
             }
@@ -111,19 +112,33 @@ class DashboardController extends Controller
     {
         $dateStr = $request->input('date', now()->toDateString());
         $cacheKey = "last_sync_v2_{$dateStr}";
+        $lockKey = "last_sync_lock_{$dateStr}";
 
-        // Thực hiện đồng bộ
-        $apiService->syncMatchesByDate($dateStr);
-        
-        $prevDay = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
-        $apiService->syncMatchesByDate($prevDay);
+        // Tránh đồng bộ trùng lặp song song bằng Cache Lock thủ công (hỗ trợ mọi cache driver)
+        if (cache()->add($lockKey, true, now()->addSeconds(60))) {
+            try {
+                Log::info("Dashboard: Executing background sync for date: {$dateStr}");
+                // Thực hiện đồng bộ
+                $apiService->syncMatchesByDate($dateStr);
+                
+                $prevDay = \Carbon\Carbon::parse($dateStr)->subDay()->toDateString();
+                $apiService->syncMatchesByDate($prevDay);
 
-        $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
-        cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
+                $cooldown = \Carbon\Carbon::parse($dateStr)->isToday() ? 2 : 10;
+                cache()->put($cacheKey, now()->toDateTimeString(), now()->addMinutes($cooldown));
+            } finally {
+                cache()->forget($lockKey);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dữ liệu đã được cập nhật ngầm thành công.'
+            ]);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Dữ liệu đã được cập nhật ngầm thành công.'
+            'success' => false,
+            'message' => 'Hệ thống đang đồng bộ dữ liệu này rồi, vui lòng đợi.'
         ]);
     }
 

@@ -304,7 +304,6 @@ const footLabels = {
                     <div class="flex-1 text-center md:text-left space-y-3">
                         <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
                             <div v-if="team.country" class="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700/50 rounded-full text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-300">
-                                <img :src="getCountryFlag(team.country)" class="w-3 h-2.5 object-cover rounded-sm" v-if="getCountryFlag(team.country)" />
                                 {{ translateCountry(team.country) }}
                             </div>
                             <div class="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-bold uppercase tracking-widest">

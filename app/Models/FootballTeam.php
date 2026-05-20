@@ -11,7 +11,7 @@ class FootballTeam extends Model
     public $timestamps = true;
     const UPDATED_AT = null;
 
-    protected $fillable = ['id', 'name', 'short_name', 'country', 'country_code', 'venue_id', 'is_women', 'logo_url'];
+    protected $fillable = ['id', 'name', 'short_name', 'country', 'country_code', 'venue_id', 'is_women'];
 
     // Khai báo các thuộc tính ảo gửi lên Frontend
     protected $appends = ['logo', 'logo_url'];

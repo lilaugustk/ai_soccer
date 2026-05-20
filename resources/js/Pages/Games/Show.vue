@@ -327,9 +327,7 @@
                                                     }}</span
                                                 >
                                             </div>
-                                            <span
-                                                class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
-                                                >{{ p.number }}</span>
+
                                             <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-bold text-emerald-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
                                         </div>
                                     </div>
@@ -380,9 +378,7 @@
                                                     }}</span
                                                 >
                                             </div>
-                                            <span
-                                                class="text-[8px] font-bold text-white/75 uppercase tracking-widest mt-0.5 drop-shadow-md"
-                                                >{{ p.number }}</span>
+
                                             <span v-if="p.isSubstitutedIn && lineupView === 'end'" class="text-[7px] font-bold text-blue-400 uppercase tracking-tighter -mt-1 leading-none">Sub</span>
                                         </div>
                                     </div>
@@ -657,7 +653,7 @@
                     </Teleport>
 
                     <!-- Lineup Lists & Substitutes -->
-                    <div class="grid lg:grid-cols-2 gap-8">
+                    <div v-if="processedHomeLineup.length > 0 || processedAwayLineup.length > 0" class="grid lg:grid-cols-2 gap-8">
                         <!-- Home Detailed -->
                         <div class="space-y-6">
                             <h4
@@ -1018,57 +1014,7 @@
                     <MomentumChart v-if="momentum && momentum.length" :momentum="momentum" class="mb-6" />
 
                     <!-- Shotmap & Heatmap (BSD v2 Exclusive) -->
-                    <ShotMap :shots="shotmap" :home-team="game.home_team" :away-team="game.away_team" />
-
-                    <!-- Detailed Comparison Stats (Moved from Analysis) -->
-                    <div v-if="prediction && prediction.comparison" class="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-white/5 shadow-sm">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500">So sánh chỉ số chi tiết</h3>
-                        </div>
-
-                        <div class="space-y-6">
-                            <!-- Radar Chart Visualization -->
-                            <div class="py-4 border-b border-gray-50 dark:border-white/5 mb-6">
-                                <RadarChart :data="prediction.comparison" />
-                            </div>
-
-                            <div v-for="(val, key) in {
-                                total: 'Sức mạnh tổng thể',
-                                form: 'Phong độ hiện tại',
-                                att: 'Khả năng tấn công',
-                                def: 'Khả năng phòng ngự',
-                                poisson_distribution: 'Dự đoán Poisson',
-                                h2h: 'Thành tích đối đầu',
-                                goals: 'Hiệu suất ghi bàn'
-                            }" :key="key" class="space-y-3">
-                                <div class="flex justify-between items-end">
-                                    <div class="flex items-baseline gap-1.5 w-28">
-                                        <span class="text-sm font-bold text-emerald-500 tabular-nums leading-none">{{ prediction.comparison[key]?.home }}</span>
-                                    </div>
-                                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 text-center flex-1 pb-1">{{ val }}</span>
-                                    <div class="flex justify-end items-baseline gap-1.5 w-28">
-                                        <span class="text-sm font-bold text-blue-500 tabular-nums leading-none">{{ prediction.comparison[key]?.away }}</span>
-                                    </div>
-                                </div>
-                                <!-- side-by-side Progress Bars (Matching Stats style) -->
-                                <div class="flex gap-2 items-center h-1 px-1">
-                                    <div class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                        <div
-                                            class="h-full bg-emerald-500 transition-all duration-1000 float-right"
-                                            :style="{ width: prediction.comparison[key]?.home }"
-                                        ></div>
-                                    </div>
-                                    <div class="flex-1 h-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                        <div
-                                            class="h-full bg-blue-500 transition-all duration-1000"
-                                            :style="{ width: prediction.comparison[key]?.away }"
-                                        ></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    <ShotMap v-if="shotmap && shotmap.length > 0" :shots="shotmap" :home-team="game.home_team" :away-team="game.away_team" />
 
                     <div v-if="matchStatsGroups.length" class="space-y-6">
                         <div
@@ -1522,7 +1468,7 @@
                             </h3>
                             <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mùa giải {{ formatSeason(game.season, game.league?.country_name) }}</span>
                         </div>
-                        <StandingTable :standings="standings" :league-id="game.league?.id" />
+                        <StandingTable :standings="standings" :league-id="game.league?.id" :season="game.season" />
                     </div>
                     <div v-else class="text-center py-24 bg-gray-50/50 dark:bg-gray-800/20 rounded-[2rem] border border-dashed border-gray-200 dark:border-gray-700 shadow-sm">
                         <div
@@ -1879,6 +1825,19 @@
             </div>
             <LeagueSidebar />
         </div>
+
+        <!-- Sync Background Toast — hiện khi job đang chạy ngầm -->
+        <Teleport to="body">
+            <Transition name="toast-slide">
+                <div
+                    v-if="syncToastVisible"
+                    class="fixed bottom-5 right-5 z-[9999] flex items-center gap-2.5 px-4 py-2.5 bg-gray-950 dark:bg-white text-white dark:text-gray-950 rounded-2xl shadow-2xl border border-white/10 dark:border-gray-200"
+                >
+                    <div class="w-3.5 h-3.5 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin flex-shrink-0"></div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">Đang cập nhật dữ liệu...</span>
+                </div>
+            </Transition>
+        </Teleport>
     </MainLayout>
 </template>
 
@@ -1890,9 +1849,10 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import StandingTable from "../../Components/StandingTable.vue";
 import LeagueSidebar from "../../Components/LeagueSidebar.vue";
-import RadarChart from "../../Components/RadarChart.vue";
+
 import MomentumChart from "../../Components/MomentumChart.vue";
 import ShotMap from "../../Components/ShotMap.vue";
+import axios from "axios";
 
 dayjs.extend(utc);
 
@@ -1902,13 +1862,17 @@ const formatDateTime = (val) => {
 };
 
 const props = defineProps({
-    game: { type: Object, required: true },
-    h2hMatches: { type: Array, default: () => [] },
-    standings: { type: Array, default: () => [] },
-    aiInsights: { type: String, default: null },
-    momentum: { type: Array, default: () => [] },
-    shotmap: { type: Array, default: () => [] },
-    activeTab: { type: String, default: "lineups" },
+    game:            { type: Object,  required: true },
+    h2hMatches:      { type: Array,   default: () => [] },
+    standings:       { type: Array,   default: () => [] },
+    aiInsights:      { type: String,  default: null },
+    momentum:        { type: Array,   default: () => [] },
+    shotmap:         { type: Array,   default: () => [] },
+    activeTab:       { type: String,  default: 'lineups' },
+    // Flags từ server — cho biết có cần polling không
+    syncDispatched:  { type: Boolean, default: false },
+    isSyncing:       { type: Boolean, default: false },
+    lastHydratedAt:  { type: String,  default: null },
 });
 
 const isRecentlyFinished = computed(() => {
@@ -1934,7 +1898,6 @@ const showPlayerStatsModal = ref(false);
 const openPlayerStats = (player) => {
     if (!props.game.player_stats) return;
     const fullStat = props.game.player_stats.find(ps => ps.id == player.id);
-    
     selectedPlayerStats.value = {
         id: player.id,
         name: player.name,
@@ -1959,13 +1922,14 @@ const openPlayerStats = (player) => {
     };
     showPlayerStatsModal.value = true;
 };
+
 const tabs = [
-    { id: "lineups", label: "Đội hình" },
-    { id: "stats", label: "Thống kê" },
-    { id: "h2h", label: "Đối đầu" },
-    { id: "standings", label: "Bảng xếp hạng" },
-    { id: "timeline", label: "Diễn biến" },
-    { id: "analysis", label: "Phân tích AI" },
+    { id: 'lineups',   label: 'Đội hình' },
+    { id: 'stats',     label: 'Thống kê' },
+    { id: 'h2h',       label: 'Đối đầu' },
+    { id: 'standings', label: 'Bảng xếp hạng' },
+    { id: 'timeline',  label: 'Diễn biến' },
+    { id: 'analysis',  label: 'Phân tích AI' },
 ];
 
 watch(() => props.activeTab, (newVal) => {
@@ -1974,7 +1938,6 @@ watch(() => props.activeTab, (newVal) => {
 
 const setActiveTab = (tabId) => {
     if (tabId === activeTab.value) return;
-    
     isLoadingTab.value = true;
     router.get(
         `/matches/${props.game.id}`,
@@ -1982,94 +1945,167 @@ const setActiveTab = (tabId) => {
         {
             preserveScroll: true,
             preserveState: true,
-            only: ['game', 'h2hMatches', 'standings', 'aiInsights', 'momentum', 'shotmap', 'activeTab'],
+            only: ['game', 'h2hMatches', 'standings', 'aiInsights', 'momentum', 'shotmap',
+                   'activeTab', 'syncDispatched', 'isSyncing', 'lastHydratedAt'],
             onFinish: () => {
                 isLoadingTab.value = false;
                 activeTab.value = tabId;
-            }
+            },
         }
     );
 };
 
-let refreshInterval = null;
+// --- SMART POLLING STATE ---
+const isRefreshing = ref(false);
+const isSyncingBg  = ref(props.isSyncing || props.syncDispatched);
+const syncToastVisible = ref(false); // nhỏ toast "đang cập nhật"
 
-onMounted(() => {
-    // Tự động sync nếu thiếu dữ liệu quan trọng
-    const hasLineups = props.game.lineups && props.game.lineups.length > 0;
-    const hasStats = props.game.statistics && props.game.statistics.length > 0;
-    const hasShotmap = props.shotmap && props.shotmap.length > 0;
-    const isNotScheduled = props.game.status !== 'scheduled';
-    const syncLock = sessionStorage.getItem(`sync_match_${props.game.id}`);
+// Polling interval ref — nhớ clear khi unmount / chuyển tab
+let statusPollInterval  = null; // poll /api/matches/{id}/sync-status
+let liveRefreshInterval = null; // refresh data khi trận live
 
-    let isDataMissing = false;
-    if (activeTab.value === 'lineups' && isNotScheduled && !hasLineups) {
-        isDataMissing = true;
-    } else if (activeTab.value === 'stats' && isNotScheduled && (!hasStats || !hasShotmap)) {
-        isDataMissing = true;
-    } else if (activeTab.value === 'analysis' && (!prediction.value || !hasPredictionData.value)) {
-        isDataMissing = true;
+/**
+ * Dừng tất cả interval — gọi khi unmount hoặc không cần nữa
+ */
+const stopAllPolling = () => {
+    if (statusPollInterval)  { clearInterval(statusPollInterval);  statusPollInterval  = null; }
+    if (liveRefreshInterval) { clearInterval(liveRefreshInterval); liveRefreshInterval = null; }
+};
+
+/**
+ * Reload Inertia partial — chỉ các trường cần thiết, không reload toàn trang
+ */
+const reloadMatchData = () => {
+    if (!window.location.pathname.includes(`/matches/${props.game.id}`)) {
+        stopAllPolling();
+        return;
     }
+    isRefreshing.value = true;
+    router.reload({
+        preserveScroll: true,
+        preserveState: true,
+        only: ['game', 'shotmap', 'momentum', 'aiInsights', 'h2hMatches', 'standings',
+               'syncDispatched', 'isSyncing', 'lastHydratedAt'],
+        onFinish: () => {
+            isRefreshing.value = false;
+            // Nếu server báo không còn sync, dừng poll trạng thái
+            if (!props.syncDispatched && !props.isSyncing) {
+                isSyncingBg.value = false;
+                syncToastVisible.value = false;
+                stopAllPolling();
+            }
+        },
+    });
+};
 
-    if (!syncLock && isDataMissing) {
-        sessionStorage.setItem(`sync_match_${props.game.id}`, 'true');
-        refreshMatchData();
-    }
+/**
+ * Bắt đầu polling nhẹ vào /api/matches/{id}/sync-status.
+ * Khi job xong (is_syncing = false) → reload data 1 lần rồi dừng.
+ */
+const startStatusPolling = () => {
+    if (statusPollInterval) return; // đã chạy rồi
 
-    // Thiết lập polling 30s nếu trận đấu đang LIVE hoặc vừa kết thúc gần đây mà thiếu dữ liệu quan trọng/rating
-    const liveStatuses = ['live', 'in_progress', 'halftime', '1st_half', '2nd_half', 'et', 'penalties'];
-    const isLive = liveStatuses.includes(props.game.status?.toLowerCase());
-    const shouldPoll = isLive || (isRecentlyFinished.value && (isDataMissing || isMissingPlayerRatings.value));
-    
-    if (shouldPoll) {
-        refreshInterval = setInterval(() => {
-            if (!isRefreshing.value) {
-                // Kiểm tra lại xem còn thiếu rating không
-                const currentMissingRatings = props.game.status === 'finished' && 
-                    (!props.game.player_stats || props.game.player_stats.length === 0 || props.game.player_stats.every(p => !p.rating || parseFloat(p.rating) <= 0));
-                
-                // Kiểm tra lại xem còn thiếu dữ liệu tab không
-                const currentHasLineups = props.game.lineups && props.game.lineups.length > 0;
-                const currentHasStats = props.game.statistics && props.game.statistics.length > 0;
-                const currentHasShotmap = props.shotmap && props.shotmap.length > 0;
-                
-                let currentMissingData = false;
-                if (activeTab.value === 'lineups' && isNotScheduled && !currentHasLineups) {
-                    currentMissingData = true;
-                } else if (activeTab.value === 'stats' && isNotScheduled && (!currentHasStats || !currentHasShotmap)) {
-                    currentMissingData = true;
-                } else if (activeTab.value === 'analysis' && (!prediction.value || !hasPredictionData.value)) {
-                    currentMissingData = true;
-                }
+    let pollCount = 0;
+    const MAX_POLLS = 30; // tối đa 2 phút (30 * 4s)
+    let previousHydrated = props.lastHydratedAt;
 
-                if (isLive || (isRecentlyFinished.value && (currentMissingData || currentMissingRatings))) {
-                    refreshMatchData();
+    statusPollInterval = setInterval(async () => {
+        // Nếu user rời trang — dừng ngay
+        if (!window.location.pathname.includes(`/matches/${props.game.id}`)) {
+            stopAllPolling();
+            return;
+        }
+
+        pollCount++;
+        if (pollCount > MAX_POLLS) {
+            // Quá thời gian chờ, dừng polling
+            clearInterval(statusPollInterval);
+            statusPollInterval = null;
+            isSyncingBg.value = false;
+            syncToastVisible.value = false;
+            return;
+        }
+
+        try {
+            const { data } = await axios.get(`/api/matches/${props.game.id}/sync-status`);
+
+            if (!data.is_syncing) {
+                // Job đã xong
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
+
+                // Reload nếu:
+                // 1. last_hydrated thay đổi (có data mới), HOẶC
+                // 2. Trang hiện tại vẫn thiếu data (lineups/stats rỗng)
+                const currentlyMissingData = (
+                    activeTab.value === 'lineups' && (!props.game.lineups || props.game.lineups.length === 0)
+                ) || (
+                    activeTab.value === 'stats' && (!props.game.statistics || props.game.statistics.length === 0)
+                ) || (
+                    activeTab.value === 'timeline' && (!props.game.events || props.game.events.length === 0)
+                );
+
+                if (data.last_hydrated && data.last_hydrated !== previousHydrated) {
+                    reloadMatchData();
+                } else if (currentlyMissingData && data.last_hydrated) {
+                    // Có last_hydrated nhưng giá trị không đổi → vẫn reload vì trang chưa có data
+                    reloadMatchData();
                 } else {
-                    // Nếu đã có đủ dữ liệu thì dừng polling
-                    if (refreshInterval) {
-                        clearInterval(refreshInterval);
-                        refreshInterval = null;
-                    }
+                    isSyncingBg.value = false;
+                    syncToastVisible.value = false;
                 }
             }
-        }, 30000);
+        } catch (err) {
+            console.warn('[SyncStatus] Poll failed:', err?.message);
+        }
+    }, 4000); // poll mỗi 4 giây
+};
+
+/**
+ * Bắt đầu polling live — dùng cho trận đang chạy (30s/lần)
+ */
+const startLivePolling = () => {
+    if (liveRefreshInterval) return;
+    liveRefreshInterval = setInterval(() => {
+        if (!window.location.pathname.includes(`/matches/${props.game.id}`)) {
+            stopAllPolling();
+            return;
+        }
+        reloadMatchData();
+    }, 30000);
+};
+
+onMounted(() => {
+    const liveStatuses = ['live', 'in_progress', 'halftime', '1st_half', '2nd_half', 'et', 'penalties'];
+    const isLive = liveStatuses.includes(props.game.status?.toLowerCase());
+
+    // 1. Nếu server dispatch job — bắt đầu polling trạng thái
+    if (props.syncDispatched || props.isSyncing) {
+        isSyncingBg.value  = true;
+        syncToastVisible.value = true;
+        startStatusPolling();
+    }
+
+    // 2. Nếu trận live — bắt đầu live polling (30s)
+    if (isLive) {
+        startLivePolling();
     }
 });
 
 onUnmounted(() => {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-    }
+    // Dừng tất cả polling — không để "orphan" intervals chạy ngầm
+    stopAllPolling();
 });
 
-const isRefreshing = ref(false);
+// --- Legacy refreshMatchData (vẫn giữ cho compatibility với các nơi gọi thủ công) ---
 const refreshMatchData = () => {
     isRefreshing.value = true;
-    router.post(`/matches/${props.game.id}/sync`, {}, {
-        preserveScroll: true,
-        onFinish: () => {
+    axios.post(`/matches/${props.game.id}/sync`)
+        .then(() => reloadMatchData())
+        .catch((err) => {
+            console.error('Match sync failed:', err);
             isRefreshing.value = false;
-        }
-    });
+        });
 };
 
 // Helper lấy rating của cầu thủ từ dữ liệu statistics
@@ -2164,8 +2200,8 @@ const getLineupWithPositions = (lineupXI, formation = '4-3-3', isAway = false) =
         // Tính toán vị trí Top (hàng dọc)
         const dynamicGap = currentRowSize > 4 ? 17 : currentRowSize > 3 ? 19 : 21;
         const top = isAway
-            ? 50 - (colIdx - (currentRowSize - 1) / 2) * dynamicGap
-            : 50 + (colIdx - (currentRowSize - 1) / 2) * dynamicGap;
+            ? 50 + (colIdx - (currentRowSize - 1) / 2) * dynamicGap
+            : 50 - (colIdx - (currentRowSize - 1) / 2) * dynamicGap;
 
         processed.push({
             ...(p.player || {}),
@@ -2565,5 +2601,16 @@ const formatSeason = (s, country = null) => {
 .modal-fade-leave-to {
     opacity: 0;
     transform: scale(0.97);
+}
+
+/* Toast slide-up transition */
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
 }
 </style>

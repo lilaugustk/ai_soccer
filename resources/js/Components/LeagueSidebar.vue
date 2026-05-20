@@ -133,7 +133,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { getFullDisplay } from '../Constants/countries';
+import { getFullDisplay, getCountryCode } from '../Constants/countries';
 
 const page = usePage();
 const props = defineProps({
@@ -218,24 +218,8 @@ const toggleCountry = (name) => {
 
 const getFlagUrl = (rawName, countryCode) => {
     if (!rawName && !countryCode) return '';
-    
-    const mapping = {
-        'England': 'gb-eng', 'Scotland': 'gb-sct', 'Wales': 'gb-wls',
-        'Germany': 'de', 'Spain': 'es', 'Italy': 'it', 'France': 'fr',
-        'Vietnam': 'vn', 'Brazil': 'br', 'Argentina': 'ar', 'Portugal': 'pt',
-        'Netherlands': 'nl', 'Belgium': 'be', 'Switzerland': 'ch', 'Turkey': 'tr',
-        'Saudi Arabia': 'sa', 'USA': 'us', 'Mexico' : 'mx', 'Poland': 'pl',
-        'Bulgaria': 'bg', 'Romania': 'ro', 'Greece': 'gr', 'Tunisia': 'tn',
-        'Japan': 'jp', 'South Korea': 'kr', 'China': 'cn', 'Morocco': 'ma',
-        'Norway': 'no', 'Finland': 'fi', 'Nigeria': 'ng', 'Sweden': 'se',
-        'Africa': 'un', 'Europe': 'eu', 'International': 'un', 'World': 'un', 'South America': 'un'
-    };
-    
-    if (mapping[rawName]) return `https://flagcdn.com/w80/${mapping[rawName]}.png`;
     if (countryCode) return `https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`;
-    
-    const flagCode = rawName.toLowerCase().substring(0, 2);
-    return `https://flagcdn.com/w80/${flagCode}.png`;
+    return `https://flagcdn.com/w80/${getCountryCode(rawName)}.png`;
 };
 
 const getLocalizedCountryName = (rawName) => {

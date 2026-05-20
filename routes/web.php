@@ -22,6 +22,17 @@ Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::post('/api/dashboard/sync', [DashboardController::class, 'syncMatches'])->name('api.dashboard.sync');
 Route::get('/api/search', [SearchController::class, 'index'])->name('api.search');
 
+// Endpoint nhẹ — frontend polling kiểm tra trạng thái sync job
+Route::get('/api/matches/{id}/sync-status', function ($id) {
+    $isSyncing      = \Illuminate\Support\Facades\Cache::has("hydrate_match_job_{$id}");
+    $lastHydratedAt = \Illuminate\Support\Facades\Cache::get("match_hydrated_{$id}");
+    return response()->json([
+        'id'            => (int) $id,
+        'is_syncing'    => $isSyncing,
+        'last_hydrated' => $lastHydratedAt,
+    ]);
+});
+
 Route::get('/matches', function () {
     return redirect()->route('dashboard');
 });

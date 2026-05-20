@@ -46,6 +46,7 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { getCountryCode } from '../../Constants/countries';
 
 const props = defineProps({
   league: Object,
@@ -53,17 +54,6 @@ const props = defineProps({
 });
 
 const getFlagUrl = (countryName) => {
-    if (!countryName || countryName === 'Quốc tế' || countryName === 'World') return 'https://flagcdn.com/w40/un.png';
     return `https://flagcdn.com/w40/${getCountryCode(countryName)}.png`;
-};
-
-const getCountryCode = (name) => {
-    const map = {
-        'England': 'gb-eng', 'Spain': 'es', 'Germany': 'de', 'Italy': 'it', 'France': 'fr',
-        'Vietnam': 'vn', 'Japan': 'jp', 'South Korea': 'kr', 'Brazil': 'br', 'Argentina': 'ar',
-        'Portugal': 'pt', 'Netherlands': 'nl', 'Belgium': 'be', 'Russia': 'ru', 'USA': 'us',
-        'Scotland': 'gb-sct', 'Wales': 'gb-wls', 'Northern-Ireland': 'gb-nir'
-    };
-    return map[name] || name.toLowerCase().substring(0, 2);
 };
 </script>

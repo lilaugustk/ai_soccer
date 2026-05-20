@@ -54,7 +54,7 @@ const submit = () => {
                             required
                             autofocus
                             autocomplete="username"
-                            placeholder="ten@congty.com"
+                            placeholder="Email"
                         />
                     </div>
                     <div v-if="form.errors.email" class="mt-2 text-sm text-rose-500">

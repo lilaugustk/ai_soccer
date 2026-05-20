@@ -252,3 +252,47 @@ export const getFullDisplay = (natString) => {
     const names = getCountryNames(natString);
     return names.vi;
 };
+
+export const getCountryCode = (natString) => {
+    if (!natString) return 'un';
+    const input = natString.toLowerCase().trim();
+    
+    const specialMapping = {
+        'england': 'gb-eng',
+        'scotland': 'gb-sct',
+        'wales': 'gb-wls',
+        'eng': 'gb-eng',
+        'sct': 'gb-sct',
+        'wls': 'gb-wls',
+        'quốc tế': 'un',
+        'world': 'un',
+        'international': 'un',
+        'europe': 'eu',
+        'africa': 'un',
+        'south-america': 'un'
+    };
+
+    if (specialMapping[input]) {
+        return specialMapping[input];
+    }
+
+    if (COUNTRY_MAP[input]) {
+        return input;
+    }
+
+    const foundEntryEn = Object.entries(COUNTRY_MAP).find(
+        ([key, val]) => val.en.toLowerCase() === input
+    );
+    if (foundEntryEn) {
+        return foundEntryEn[0];
+    }
+
+    const foundEntryVi = Object.entries(COUNTRY_MAP).find(
+        ([key, val]) => val.vi.toLowerCase() === input
+    );
+    if (foundEntryVi) {
+        return foundEntryVi[0];
+    }
+    
+    return input.substring(0, 2);
+};

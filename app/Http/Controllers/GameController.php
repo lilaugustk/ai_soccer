@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\HydrateMatchJob;
 use App\Models\FootballEventMetadata;
 use App\Models\FootballEventPrediction;
 use App\Models\FootballMatch;
@@ -36,7 +37,11 @@ class GameController extends Controller
 
         $status = $this->mapStatus($match->status);
         $isLive = $status === 'live';
-        $isUpcoming = $status === 'scheduled' && $match->event_date && $match->event_date->diffInMinutes(now(), false) > -60;
+        // Chỉ upcoming nếu trận CHƯA diễn ra VÀ sẽ bắt đầu trong vòng 60 phút tới
+        $isUpcoming = $status === 'scheduled'
+            && $match->event_date
+            && $match->event_date->isFuture()
+            && $match->event_date->diffInMinutes(now()) <= 60;
         $isRecentlyFinished = $status === 'finished' && $match->event_date && $match->event_date->diffInHours(now()) < 24;
         $isFinishedOrScheduled = in_array($status, ['finished', 'scheduled']);
         
@@ -58,7 +63,7 @@ class GameController extends Controller
             $isShotmapIncomplete = ($status === 'finished' || $status === 'live') && $totalShotsInStats > 0 && ($shotmapCount === 0 || ($totalShotsInStats > 5 && $shotmapCount < 2));
         }
         
-        // --- LOGIC SO SÁNH & CẬP NHẬT ---
+        // --- LOGIC DISPATCH JOB (NON-BLOCKING) ---
         $isMissingPlayerStats = $status === 'finished' && !$match->playerStats()->exists();
         $shouldFetchApi = request()->has('force') 
             || $isMissingData 
@@ -68,31 +73,35 @@ class GameController extends Controller
             || ($isRecentlyFinished && $activeTab === 'stats' && $match->shotmap()->count() === 0) 
             || $isShotmapIncomplete;
 
-        $isCurrentlyFetching = false;
-        if ($shouldFetchApi) {
-            $lockKey = "api_fetch_lock_{$id}";
-            $hasLock = cache()->has($lockKey);
+        // Kiểm tra xem job có đang chạy không (lock từ HydrateMatchJob)
+        $isCurrentlyFetching = Cache::has("hydrate_match_job_{$id}");
+        // Thời điểm lần cuối data được hydrate thành công
+        $lastHydratedAt = Cache::get("match_hydrated_{$id}");
+
+        // syncDispatched = true: báo cho frontend biết data đang được cập nhật ngầm
+        $syncDispatched = false;
+
+        if ($shouldFetchApi && !$isCurrentlyFetching) {
+            Log::info("[Match {$id}] Dispatching HydrateMatchJob for tab {$activeTab}. Missing={$isMissingData}, Live={$isLive}");
             
-            if (!$hasLock || $isLive || request()->has('force')) {
-                Log::info("[Match {$id}] Fetching API data for tab {$activeTab}. Missing={$isMissingData}, Live={$isLive}");
-                cache()->put($lockKey, true, now()->addSeconds(30));
-                
-                try {
-                    $this->fetchAndCompare($id, $apiService, $match);
-                    
-                    // Clear cache for ALL tabs since new data has been fetched
-                    foreach ($validTabs as $t) {
-                        Cache::forget("match_display_v24_{$id}_{$t}");
-                    }
-                } catch (\Exception $e) {
-                    Log::error("[Match {$id}] Error fetching API data: " . $e->getMessage());
-                } finally {
-                    cache()->forget($lockKey);
-                }
-            } else {
-                $isCurrentlyFetching = true;
-                Log::info("[Match {$id}] API fetch locked by another request.");
+            // Xóa cache trước khi dispatch để đảm bảo sau khi job xong dữ liệu mới được build
+            foreach ($validTabs as $t) {
+                Cache::forget("match_display_v24_{$id}_{$t}");
             }
+
+            // dispatchAfterResponse: chạy ngay sau khi HTTP response gửi xong,
+            // KHÔNG cần queue worker riêng (php artisan queue:work)
+            // Lưu ý: KHÔNG tự đặt lock ở đây — để HydrateMatchJob tự quản lý qua Cache::add()
+            HydrateMatchJob::dispatchAfterResponse((int)$id, $activeTab);
+            $syncDispatched = true;
+            // isCurrentlyFetching = false ở thời điểm gửi response (job chưa start)
+            // Nhưng ta đảnh dấu để chủ nhuần không dispatch thêm
+            $isCurrentlyFetching = true;
+
+        } elseif ($isCurrentlyFetching) {
+            // Job đang chạy (do request trước dispatch)
+            $syncDispatched = true;
+            Log::info("[Match {$id}] HydrateMatchJob already running.");
         }
 
         // Load relations conditionally based on the active tab
@@ -277,13 +286,23 @@ class GameController extends Controller
             }
 
             // Build prediction details on demand
-            if ($activeTab === 'analysis') {
+            if ($activeTab === 'analysis' || $activeTab === 'stats') {
                 $predModel = FootballEventPrediction::query()->where('event_id', $id)->first();
                 if ($predModel) {
                     $toPercent = function ($val) {
                         if ($val === null) return null;
                         return ($val <= 1 ? number_format($val * 100, 0) : number_format($val, 0)) . '%';
                     };
+
+                    $hProb = (float)($predModel->prob_home ?? 33.3);
+                    $aProb = (float)($predModel->prob_away ?? 33.3);
+                    $totalProb = $hProb + $aProb ?: 1;
+
+                    $hXg = (float)($predModel->expected_home_goals ?? 1.5);
+                    $aXg = (float)($predModel->expected_away_goals ?? 1.5);
+                    $totalXg = $hXg + $aXg ?: 1;
+
+                    $confidence = (float)($predModel->confidence ?? 0.5);
 
                     $gameData['prediction'] = [
                         'predictions' => [
@@ -317,15 +336,6 @@ class GameController extends Controller
                         ],
                         'confidence' => $toPercent($predModel->confidence),
                         'model_version' => $predModel->model_version,
-                        'comparison' => [
-                            'total' => ['home' => '50%', 'away' => '50%'],
-                            'form' => ['home' => '50%', 'away' => '50%'],
-                            'att' => ['home' => '50%', 'away' => '50%'],
-                            'def' => ['home' => '50%', 'away' => '50%'],
-                            'poisson_distribution' => ['home' => '50%', 'away' => '50%'],
-                            'h2h' => ['home' => '50%', 'away' => '50%'],
-                            'goals' => ['home' => '50%', 'away' => '50%'],
-                        ]
                     ];
                 }
             }
@@ -461,23 +471,33 @@ class GameController extends Controller
                     || ($activeTab === 'analysis' && !empty($data['aiInsights']));
 
             if ($isLive) {
+                // Live: cache ngắn 1 phút để cập nhật liên tục
                 Cache::put($displayCacheKey, $data, now()->addMinute());
-            } elseif ($hasData || $isFinishedOrScheduled) {
+            } elseif ($hasData) {
+                // Có data thật → cache 60 phút
                 Cache::put($displayCacheKey, $data, now()->addMinutes(60));
+            } elseif ($status === 'scheduled') {
+                // Chưa diễn ra, chưa có data → cache ngắn 5 phút thôi
+                Cache::put($displayCacheKey, $data, now()->addMinutes(5));
             }
+            // finished mà chưa có data → KHÔNG cache, để lần sau vào vẫn dispatch job
         }
 
         $response = Inertia::render('Games/Show', [
-            'game' => $data['game'],
-            'h2hMatches' => $data['h2hMatches'] ?? [],
-            'standings' => $data['standings'] ?? [],
-            'aiInsights' => $data['aiInsights'] ?? null,
-            'momentum' => $data['game']['momentum'] ?? [],
-            'shotmap' => $data['game']['shotmap'] ?? [],
-            'activeTab' => $activeTab,
+            'game'           => $data['game'],
+            'h2hMatches'     => $data['h2hMatches'] ?? [],
+            'standings'      => $data['standings'] ?? [],
+            'aiInsights'     => $data['aiInsights'] ?? null,
+            'momentum'       => $data['game']['momentum'] ?? [],
+            'shotmap'        => $data['game']['shotmap'] ?? [],
+            'activeTab'      => $activeTab,
+            // Flags để frontend biết có cần polling hay không
+            'syncDispatched' => $syncDispatched,
+            'isSyncing'      => $isCurrentlyFetching,
+            'lastHydratedAt' => $lastHydratedAt,
         ]);
 
-        Log::info("[Match {$id}] Rendering Show page for tab {$activeTab}");
+        Log::info("[Match {$id}] Rendering Show page for tab={$activeTab}, syncDispatched={$syncDispatched}");
         return $response;
     }
 
@@ -882,6 +902,13 @@ class GameController extends Controller
         $match = FootballMatch::query()->find($id);
         if ($match && $match->league_id && $match->season_id) {
             $apiService->syncStandings($match->league_id, $match->season_id);
+        }
+
+        if (request()->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Dữ liệu đã được cập nhật!'
+            ]);
         }
 
         return back()->with('success', 'Dữ liệu đã được cập nhật!');

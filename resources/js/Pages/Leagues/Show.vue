@@ -15,7 +15,7 @@
           <nav class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               <Link href="/" class="hover:text-emerald-500">Trang chủ</Link>
               <span>/</span>
-              <span>{{ league.country }}</span>
+              <span>{{ getLocalizedCountryName(league.country) }}</span>
               <span>/</span>
               <span class="text-gray-900 dark:text-gray-200">{{ league.name }}</span>
           </nav>
@@ -30,8 +30,7 @@
               <div class="flex-1 text-center md:text-left space-y-3">
                 <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
                     <div class="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700/50 rounded-full text-[9px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-300">
-                        <img :src="getFlagUrl(league.country)" class="w-3 h-2.5 object-cover rounded-sm" />
-                        {{ league.country }}
+                        {{ getLocalizedCountryName(league.country) }}
                     </div>
                     <div class="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-bold uppercase tracking-widest">
                         {{ league.type === 'League' ? 'Hạng đấu' : 'Giải đấu' }}
@@ -143,6 +142,15 @@ import MainLayout from '@/Layouts/MainLayout.vue';
 import StandingTable from '@/Components/StandingTable.vue';
 import LeagueSidebar from '@/Components/LeagueSidebar.vue';
 import MatchCard from '@/Components/MatchCard.vue';
+import { getCountryCode, getFullDisplay } from '../../Constants/countries';
+
+const getLocalizedCountryName = (rawName) => {
+    try {
+        return getFullDisplay(rawName) || rawName;
+    } catch (e) {
+        return rawName;
+    }
+};
 
 const props = defineProps({
   league: Object,
@@ -203,13 +211,7 @@ const changeSeason = (s) => {
 };
 
 const getFlagUrl = (countryName) => {
-    if (!countryName || countryName === 'Quốc tế' || countryName === 'World') return 'https://flagcdn.com/w40/un.png';
-    const mapping = {
-        'England': 'gb-eng', 'Spain': 'es', 'Germany': 'de', 'Italy': 'it', 'France': 'fr',
-        'Vietnam': 'vn', 'Brazil': 'br', 'Argentina': 'ar', 'Portugal': 'pt', 'Netherlands': 'nl'
-    };
-    const code = mapping[countryName] || countryName.toLowerCase().substring(0, 2);
-    return `https://flagcdn.com/w40/${code}.png`;
+    return `https://flagcdn.com/w40/${getCountryCode(countryName)}.png`;
 };
 
 const availableRounds = computed(() => {

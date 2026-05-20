@@ -43,49 +43,47 @@ class LeagueController extends Controller
                 return redirect()->route('dashboard')->with('error', 'Không tìm thấy giải đấu này.');
             }
         }
-        $year = $request->input('season', 2025);
-        
-        // Nếu không truyền season, tìm season hiện tại (is_current) hoặc mới nhất trong DB
+        $year = $request->input('season');
+
+        // Đồng bộ toàn bộ danh sách mùa giải từ API (cache 12h để không gọi quá nhiều)
+        $cacheKey = "seasons_synced_{$id}";
+        if (!Cache::has($cacheKey)) {
+            $apiService = app(BsdSportsApiService::class);
+            $apiService->syncSeasons($id);
+            Cache::put($cacheKey, true, now()->addHours(12));
+        }
+
+        // Nếu không truyền season, lấy mùa hiện tại hoặc mới nhất trong DB
         if (!$year) {
             $defaultSeason = FootballSeason::query()->where('league_id', $id)
                 ->where('is_current', true)
                 ->first();
-            
+
             if (!$defaultSeason) {
                 $defaultSeason = FootballSeason::query()->where('league_id', $id)
                     ->orderBy('year', 'desc')
                     ->first();
             }
 
-            $year = $defaultSeason ? $defaultSeason->year : 2024;
+            $year = $defaultSeason ? $defaultSeason->year : date('Y');
         }
-        
+
         // Tìm season_id thực tế từ year
         $seasonRecord = FootballSeason::query()->where('league_id', $id)
             ->where('year', $year)
             ->first();
 
-        // Nếu chưa có trong DB, thử đồng bộ danh sách mùa giải từ API BSD
-        if (!$seasonRecord) {
-            $apiService = app(BsdSportsApiService::class);
-            $apiService->syncSeasons($id);
-            
+        // Nếu year chọn không tồn tại trong DB, dùng mùa mới nhất
+        if (!$seasonRecord && $request->has('season')) {
             $seasonRecord = FootballSeason::query()->where('league_id', $id)
-                ->where('year', $year)
+                ->orderBy('year', 'desc')
                 ->first();
-            
-            // Nếu vẫn chưa có và đây là request mặc định (không truyền season), lấy cái mới nhất vừa sync xong
-            if (!$seasonRecord && !$request->has('season')) {
-                $seasonRecord = FootballSeason::query()->where('league_id', $id)
-                    ->orderBy('year', 'desc')
-                    ->first();
-                if ($seasonRecord) {
-                    $year = $seasonRecord->year;
-                }
+            if ($seasonRecord) {
+                $year = $seasonRecord->year;
             }
         }
-            
-        // Lấy danh sách mùa giải có sẵn cho dropdown
+
+        // Lấy danh sách mùa giải cho dropdown
         $availableSeasons = FootballSeason::query()->where('league_id', $id)
             ->orderBy('year', 'desc')
             ->pluck('year')

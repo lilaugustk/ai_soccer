@@ -22,6 +22,21 @@
                     @update:selectedDate="val => changeDate(val)"
                     v-model:isLeagueIndexVisible="isLeagueIndexVisible"
                 />
+
+                <!-- Background Syncing Indicator -->
+                <transition
+                    enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="opacity-0 -translate-y-2"
+                    enter-to-class="opacity-100 translate-y-0"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-from-class="opacity-100 translate-y-0"
+                    leave-to-class="opacity-0 -translate-y-2"
+                >
+                    <div v-if="isSyncing" class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-2.5 rounded-2xl flex items-center gap-3 text-xs font-bold uppercase tracking-wider shadow-sm">
+                        <span class="inline-block w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></span>
+                        Đang đồng bộ dữ liệu trận đấu mới nhất...
+                    </div>
+                </transition>
             </div>
 
             <!-- Row 2: League Filter Slider (Reusable Component) -->
@@ -134,6 +149,7 @@ import LeagueSidebar from '@/Components/LeagueSidebar.vue';
 import GamesFilter from '@/Components/GamesFilter.vue';
 import TabSlider from '@/Components/TabSlider.vue';
 import dayjs from "dayjs";
+import axios from 'axios';
 
 const props = defineProps({
     groupedGames: { type: Object, default: () => ({}) },
@@ -146,7 +162,49 @@ const props = defineProps({
         }),
     },
     availableLeagues: { type: Array, default: () => [] },
-    dateStr: String
+    dateStr: String,
+    shouldSync: { type: Boolean, default: false }
+});
+
+const isSyncing = ref(false);
+let syncAbortController = null;
+
+const triggerBackgroundSync = async () => {
+    if (!props.shouldSync || isSyncing.value) return;
+
+    isSyncing.value = true;
+    syncAbortController = new AbortController();
+
+    try {
+        await axios.post('/api/dashboard/sync', {
+            date: props.filters.date
+        }, {
+            signal: syncAbortController.signal
+        });
+        
+        router.reload({
+            preserveScroll: true,
+            preserveState: true,
+            only: ['groupedGames', 'availableLeagues']
+        });
+    } catch (error) {
+        if (axios.isCancel(error)) {
+            console.log('Background sync cancelled.');
+        } else {
+            console.error('Background sync failed:', error);
+        }
+    } finally {
+        isSyncing.value = false;
+        syncAbortController = null;
+    }
+};
+
+watch(() => props.filters.date, () => {
+    if (syncAbortController) {
+        syncAbortController.abort();
+        isSyncing.value = false;
+    }
+    triggerBackgroundSync();
 });
 
 const mainTabs = [
@@ -249,6 +307,8 @@ const scrollToLeague = (leagueName) => {
 let dashboardInterval = null;
 
 onMounted(() => {
+    triggerBackgroundSync();
+
     // Polling mỗi 60 giây để cập nhật tỉ số các trận đang diễn ra
     dashboardInterval = setInterval(() => {
         const hasLiveMatches = Object.values(props.groupedGames).some(league => 
@@ -266,6 +326,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    if (syncAbortController) {
+        syncAbortController.abort();
+    }
     if (dashboardInterval) {
         clearInterval(dashboardInterval);
     }
