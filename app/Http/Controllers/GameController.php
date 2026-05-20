@@ -59,10 +59,12 @@ class GameController extends Controller
         }
         
         // --- LOGIC SO SÁNH & CẬP NHẬT ---
+        $isMissingPlayerStats = $status === 'finished' && !$match->playerStats()->exists();
         $shouldFetchApi = request()->has('force') 
             || $isMissingData 
             || $isLive 
             || $isUpcoming 
+            || ($isRecentlyFinished && $isMissingPlayerStats)
             || ($isRecentlyFinished && $activeTab === 'stats' && $match->shotmap()->count() === 0) 
             || $isShotmapIncomplete;
 

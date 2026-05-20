@@ -1745,6 +1745,22 @@
                                     </div>
 
                                     <!-- Goal Row 3: BTTS -->
+                                                                         <div class="space-y-1.5">
+                                        <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                            <span>Tài 3.5 bàn (Over 3.5)</span>
+                                            <span class="tabular-nums font-bold text-slate-900 dark:text-white text-sm normal-case tracking-normal shrink-0">{{ prediction?.prob_btts || '—' }}</span>
+                                        </div>
+                                        <div class="h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                class="h-full bg-emerald-500 transition-all duration-1000"
+                                                :style="{ width: prediction.prob_over?.over_35 }"
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Goal Row 4: BTTS -->
+
+  
                                     <div class="space-y-1.5">
                                         <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
                                             <span>Hai đội ghi bàn (BTTS)</span>
@@ -1759,12 +1775,6 @@
                                     </div>
                                 </div>
 
-                                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                                    <span>Tài 3.5 bàn (Over 3.5)</span>
-                                    <span class="tabular-nums text-slate-900 dark:text-white text-sm font-bold normal-case tracking-normal shrink-0">
-                                        {{ prediction.prob_over?.over_35 || 'N/A' }}
-                                    </span>
-                                </div>
                             </div>
                         </div>
 
@@ -1861,12 +1871,6 @@
                             <p class="text-gray-400 text-sm mt-2 max-w-xs mx-auto leading-relaxed">
                                 Chưa có dữ liệu dự báo phân tích AI cho trận đấu này từ hệ thống hoặc trận đấu đã diễn ra quá lâu.
                             </p>
-                            <button 
-                                @click="refreshMatchData" 
-                                class="mt-6 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow active:scale-95"
-                            >
-                                Cập nhật dữ liệu
-                            </button>
                         </div>
                         </div>
                     </div>
@@ -1905,6 +1909,19 @@ const props = defineProps({
     momentum: { type: Array, default: () => [] },
     shotmap: { type: Array, default: () => [] },
     activeTab: { type: String, default: "lineups" },
+});
+
+const isRecentlyFinished = computed(() => {
+    if (props.game.status !== 'finished' || !props.game.match_datetime) return false;
+    const matchTime = dayjs.utc(props.game.match_datetime);
+    const hoursSinceMatch = dayjs.utc().diff(matchTime, 'hour');
+    return hoursSinceMatch >= 0 && hoursSinceMatch < 24;
+});
+
+const isMissingPlayerRatings = computed(() => {
+    if (props.game.status !== 'finished') return false;
+    if (!props.game.player_stats || props.game.player_stats.length === 0) return true;
+    return props.game.player_stats.every(p => !p.rating || parseFloat(p.rating) <= 0);
 });
 
 const activeTab = ref(props.activeTab);
@@ -1998,14 +2015,41 @@ onMounted(() => {
         refreshMatchData();
     }
 
-    // Thiết lập polling 30s nếu trận đấu đang LIVE
+    // Thiết lập polling 30s nếu trận đấu đang LIVE hoặc vừa kết thúc gần đây mà thiếu dữ liệu quan trọng/rating
     const liveStatuses = ['live', 'in_progress', 'halftime', '1st_half', '2nd_half', 'et', 'penalties'];
     const isLive = liveStatuses.includes(props.game.status?.toLowerCase());
+    const shouldPoll = isLive || (isRecentlyFinished.value && (isDataMissing || isMissingPlayerRatings.value));
     
-    if (isLive) {
+    if (shouldPoll) {
         refreshInterval = setInterval(() => {
             if (!isRefreshing.value) {
-                refreshMatchData();
+                // Kiểm tra lại xem còn thiếu rating không
+                const currentMissingRatings = props.game.status === 'finished' && 
+                    (!props.game.player_stats || props.game.player_stats.length === 0 || props.game.player_stats.every(p => !p.rating || parseFloat(p.rating) <= 0));
+                
+                // Kiểm tra lại xem còn thiếu dữ liệu tab không
+                const currentHasLineups = props.game.lineups && props.game.lineups.length > 0;
+                const currentHasStats = props.game.statistics && props.game.statistics.length > 0;
+                const currentHasShotmap = props.shotmap && props.shotmap.length > 0;
+                
+                let currentMissingData = false;
+                if (activeTab.value === 'lineups' && isNotScheduled && !currentHasLineups) {
+                    currentMissingData = true;
+                } else if (activeTab.value === 'stats' && isNotScheduled && (!currentHasStats || !currentHasShotmap)) {
+                    currentMissingData = true;
+                } else if (activeTab.value === 'analysis' && (!prediction.value || !hasPredictionData.value)) {
+                    currentMissingData = true;
+                }
+
+                if (isLive || (isRecentlyFinished.value && (currentMissingData || currentMissingRatings))) {
+                    refreshMatchData();
+                } else {
+                    // Nếu đã có đủ dữ liệu thì dừng polling
+                    if (refreshInterval) {
+                        clearInterval(refreshInterval);
+                        refreshInterval = null;
+                    }
+                }
             }
         }, 30000);
     }
