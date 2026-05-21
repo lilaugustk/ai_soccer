@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\HydrateMatchJob;
 use App\Models\FootballEventMetadata;
 use App\Models\FootballEventPrediction;
 use App\Models\FootballMatch;
 use App\Models\FootballStanding;
 use App\Services\StatisticalModelService;
 use App\Services\BsdSportsApiService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
@@ -30,8 +30,14 @@ class GameController extends Controller
 
         // 1. Load match with basic relations first (extremely fast)
         $match = FootballMatch::with([
-            'league', 'homeTeam', 'awayTeam', 'venue', 'season',
-            'referee', 'homeCoach', 'awayCoach'
+            'league',
+            'homeTeam',
+            'awayTeam',
+            'venue',
+            'season',
+            'referee',
+            'homeCoach',
+            'awayCoach'
         ])->find($id);
         if (!$match) abort(404);
 
@@ -44,7 +50,7 @@ class GameController extends Controller
             && $match->event_date->diffInMinutes(now()) <= 60;
         $isRecentlyFinished = $status === 'finished' && $match->event_date && $match->event_date->diffInHours(now()) < 24;
         $isFinishedOrScheduled = in_array($status, ['finished', 'scheduled']);
-        
+
         // Cheap DB exist checks to see if we are missing data for the active tab
         $isMissingData = false;
         if ($activeTab === 'lineups') {
@@ -62,15 +68,15 @@ class GameController extends Controller
             $shotmapCount = $match->shotmap()->count();
             $isShotmapIncomplete = ($status === 'finished' || $status === 'live') && $totalShotsInStats > 0 && ($shotmapCount === 0 || ($totalShotsInStats > 5 && $shotmapCount < 2));
         }
-        
+
         // --- LOGIC DISPATCH JOB (NON-BLOCKING) ---
         $isMissingPlayerStats = $status === 'finished' && !$match->playerStats()->exists();
-        $shouldFetchApi = request()->has('force') 
-            || $isMissingData 
-            || $isLive 
-            || $isUpcoming 
+        $shouldFetchApi = request()->has('force')
+            || $isMissingData
+            || $isLive
+            || $isUpcoming
             || ($isRecentlyFinished && $isMissingPlayerStats)
-            || ($isRecentlyFinished && $activeTab === 'stats' && $match->shotmap()->count() === 0) 
+            || ($isRecentlyFinished && $activeTab === 'stats' && $match->shotmap()->count() === 0)
             || $isShotmapIncomplete;
 
         // Kiểm tra xem job có đang chạy không (lock từ HydrateMatchJob)
@@ -82,22 +88,28 @@ class GameController extends Controller
         $syncDispatched = false;
 
         if ($shouldFetchApi && !$isCurrentlyFetching) {
-            Log::info("[Match {$id}] Dispatching HydrateMatchJob for tab {$activeTab}. Missing={$isMissingData}, Live={$isLive}");
-            
-            // Xóa cache trước khi dispatch để đảm bảo sau khi job xong dữ liệu mới được build
+            Log::info("[Match {$id}] Fetching API data for tab {$activeTab}. Missing={$isMissingData}, Live={$isLive}");
+
+            // Xóa cache trước khi fetch để đảm bảo dữ liệu mới được build
             foreach ($validTabs as $t) {
                 Cache::forget("match_display_v24_{$id}_{$t}");
             }
 
-            // dispatchAfterResponse: chạy ngay sau khi HTTP response gửi xong,
-            // KHÔNG cần queue worker riêng (php artisan queue:work)
-            // Lưu ý: KHÔNG tự đặt lock ở đây — để HydrateMatchJob tự quản lý qua Cache::add()
-            HydrateMatchJob::dispatchAfterResponse((int)$id, $activeTab);
-            $syncDispatched = true;
-            // isCurrentlyFetching = false ở thời điểm gửi response (job chưa start)
-            // Nhưng ta đảnh dấu để chủ nhuần không dispatch thêm
-            $isCurrentlyFetching = true;
+            // Set lock để tránh duplicate requests
+            Cache::add("hydrate_match_job_{$id}", true, 300); // 5 minutes lock
 
+            // Gọi API trực tiếp thay vì dispatch job để user chờ data load xong
+            // Tránh hiển thị "Unknown Player" do load trước khi có data
+            try {
+                $apiService->hydrateMatch($id);
+                Cache::put("match_hydrated_{$id}", now());
+            } catch (\Exception $e) {
+                Log::error("[Match {$id}] Failed to hydrate: " . $e->getMessage());
+                Cache::forget("hydrate_match_job_{$id}");
+            }
+
+            $syncDispatched = false; // Data đã load xong, không cần sync background
+            $isCurrentlyFetching = false;
         } elseif ($isCurrentlyFetching) {
             // Job đang chạy (do request trước dispatch)
             $syncDispatched = true;
@@ -110,7 +122,9 @@ class GameController extends Controller
             $tabRelations = [
                 'lineup.teams.players.player',
                 'playerStats',
-                'incidents.player', 'incidents.playerIn', 'incidents.playerOut'
+                'incidents.player',
+                'incidents.playerIn',
+                'incidents.playerOut'
             ];
         } elseif ($activeTab === 'stats') {
             $tabRelations = [
@@ -120,7 +134,9 @@ class GameController extends Controller
             ];
         } elseif ($activeTab === 'timeline') {
             $tabRelations = [
-                'incidents.player', 'incidents.playerIn', 'incidents.playerOut'
+                'incidents.player',
+                'incidents.playerIn',
+                'incidents.playerOut'
             ];
         } elseif ($activeTab === 'analysis') {
             $tabRelations = [
@@ -134,8 +150,14 @@ class GameController extends Controller
 
         // Refresh and load base relations + conditional tab relations
         $match->refresh()->load(array_merge([
-            'league', 'homeTeam', 'awayTeam', 'venue', 'season',
-            'referee', 'homeCoach', 'awayCoach'
+            'league',
+            'homeTeam',
+            'awayTeam',
+            'venue',
+            'season',
+            'referee',
+            'homeCoach',
+            'awayCoach'
         ], $tabRelations));
 
         Log::info("[Match {$id}] Tab={$activeTab}. Loaded.");
@@ -143,10 +165,10 @@ class GameController extends Controller
         // 2. Build & cache display data per tab
         $displayCacheKey = "match_display_v24_{$id}_{$activeTab}";
         $data = Cache::get($displayCacheKey);
-        
+
         if (!$data) {
             Log::info("[Match {$id}] Cache miss for tab {$activeTab}. Building display data.");
-            
+
             $gameData = [
                 'id' => $match->id,
                 'match_datetime' => optional($match->event_date)->toIso8601String(),
@@ -191,7 +213,7 @@ class GameController extends Controller
                 'season' => $match->season->year ?? $match->season_id,
                 'season_start_date' => $match->season?->start_date,
                 'season_end_date' => $match->season?->end_date,
-                
+
                 // Lazy loaded tab specific data
                 'statistics' => $activeTab === 'stats' ? $this->shimStatistics($match) : [],
                 'momentum' => $activeTab === 'stats' ? ($match->momentum->sortBy('minute')->values()->map(fn($m) => [
@@ -204,7 +226,7 @@ class GameController extends Controller
                     'y' => (float)$s->y,
                     'xg' => (float)$s->xg,
                     'type' => $s->is_goal ? 'goal' : $s->shot_type,
-                    'type_label' => $s->is_goal ? 'Bàn thắng' : match($s->shot_type) {
+                    'type_label' => $s->is_goal ? 'Bàn thắng' : match ($s->shot_type) {
                         'save' => 'Cản phá',
                         'miss' => 'Sút ra ngoài',
                         'block' => 'Bị chặn',
@@ -215,13 +237,13 @@ class GameController extends Controller
                     'team_id' => $s->team_id,
                     'team_name' => ($s->team_id == $match->home_team_id) ? $match->homeTeam?->name : $match->awayTeam?->name,
                     'team_logo' => ($s->team_id == $match->home_team_id) ? $match->homeTeam?->logo_url : $match->awayTeam?->logo_url,
-                    'body_part' => match($s->body_part) {
+                    'body_part' => match ($s->body_part) {
                         'right-foot' => 'Chân phải',
                         'left-foot' => 'Chân trái',
                         'head', 'header' => 'Đánh đầu',
                         default => $s->body_part
                     },
-                    'situation' => match($s->situation) {
+                    'situation' => match ($s->situation) {
                         'assisted' => 'Phối hợp',
                         'regular' => 'Thường',
                         'fast-break' => 'Phản công',
@@ -231,12 +253,12 @@ class GameController extends Controller
                         default => $s->situation
                     },
                 ])->toArray() : [],
-                'lineups' => $activeTab === 'lineups' ? $this->shimLineups($match) : [],
+                'lineups' => $activeTab === 'lineups' ? $this->shimLineups($match, $apiService) : [],
                 'player_stats' => [],
                 'events' => ($activeTab === 'timeline' || $activeTab === 'lineups') ? $this->shimEvents($match) : [],
                 'injuries' => $activeTab === 'lineups' ? $this->shimInjuries($match) : [],
-                'odds' => [], 
-                'metadata' => [], 
+                'odds' => [],
+                'metadata' => [],
                 'prediction' => null,
                 'funfacts' => $activeTab === 'analysis' ? $match->funfacts->map(fn($f) => [
                     'id' => $f->id,
@@ -261,7 +283,7 @@ class GameController extends Controller
             // Build player stats lookup on demand
             if ($activeTab === 'lineups' && $match->lineup) {
                 $playerStatsLookup = $match->playerStats->keyBy('player_id');
-                $gameData['player_stats'] = $match->lineup->teams->flatMap->players->map(function($p) use ($playerStatsLookup) {
+                $gameData['player_stats'] = $match->lineup->teams->flatMap->players->map(function ($p) use ($playerStatsLookup) {
                     $stat = $playerStatsLookup->get($p->player_id);
                     return [
                         'id' => $p->player_id,
@@ -347,12 +369,12 @@ class GameController extends Controller
             if ($activeTab === 'h2h') {
                 $homeId = (int)$gameData['home_team']['id'];
                 $awayId = (int)$gameData['away_team']['id'];
-                
+
                 $data['h2hMatches'] = FootballMatch::with(['homeTeam', 'awayTeam', 'league'])
-                    ->where(function($q) use ($homeId, $awayId) {
+                    ->where(function ($q) use ($homeId, $awayId) {
                         $q->where('home_team_id', $homeId)->where('away_team_id', $awayId);
                     })
-                    ->orWhere(function($q) use ($homeId, $awayId) {
+                    ->orWhere(function ($q) use ($homeId, $awayId) {
                         $q->where('home_team_id', $awayId)->where('away_team_id', $homeId);
                     })
                     ->orderBy('event_date', 'desc')
@@ -360,22 +382,22 @@ class GameController extends Controller
                     ->get()
                     ->map(fn($m) => [
                         'fixture' => [
-                            'id' => $m->id, 
+                            'id' => $m->id,
                             'date' => $m->event_date ? $m->event_date->toIso8601String() : null
                         ],
                         'league' => [
-                            'name' => $m->league?->name, 
+                            'name' => $m->league?->name,
                             'logo_url' => $m->league?->logo_url
                         ],
                         'teams' => [
                             'home' => [
-                                'id' => $m->home_team_id, 
-                                'name' => $m->homeTeam?->name, 
+                                'id' => $m->home_team_id,
+                                'name' => $m->homeTeam?->name,
                                 'logo_url' => $m->homeTeam?->logo_url
                             ],
                             'away' => [
-                                'id' => $m->away_team_id, 
-                                'name' => $m->awayTeam?->name, 
+                                'id' => $m->away_team_id,
+                                'name' => $m->awayTeam?->name,
                                 'logo_url' => $m->awayTeam?->logo_url
                             ],
                         ],
@@ -407,7 +429,7 @@ class GameController extends Controller
                 $teamIds = $standings->pluck('team_id');
                 $allMatches = FootballMatch::query()->where('league_id', $match->league_id)
                     ->where('season_id', $match->season_id)
-                    ->where(function($q) use ($teamIds) {
+                    ->where(function ($q) use ($teamIds) {
                         $q->whereIn('home_team_id', $teamIds)->orWhereIn('away_team_id', $teamIds);
                     })
                     ->where('status', 'finished')
@@ -441,7 +463,7 @@ class GameController extends Controller
                     }
                 }
 
-                $standings->map(function($s) use ($matchesByTeam) {
+                $standings->map(function ($s) use ($matchesByTeam) {
                     if ($s->team) {
                         $s->team->logo_url = $s->team->logo_url ?: 'https://via.placeholder.com/150?text=' . urlencode($s->team->name);
                     }
@@ -463,12 +485,12 @@ class GameController extends Controller
             }
 
             // Cache data conditionally
-            $hasData = ($activeTab === 'lineups' && !empty($data['game']['lineups'])) 
-                    || ($activeTab === 'stats' && !empty($data['game']['statistics']))
-                    || ($activeTab === 'h2h' && !empty($data['h2hMatches']))
-                    || ($activeTab === 'standings' && !empty($data['standings']))
-                    || ($activeTab === 'timeline' && !empty($data['game']['events']))
-                    || ($activeTab === 'analysis' && !empty($data['aiInsights']));
+            $hasData = ($activeTab === 'lineups' && !empty($data['game']['lineups']))
+                || ($activeTab === 'stats' && !empty($data['game']['statistics']))
+                || ($activeTab === 'h2h' && !empty($data['h2hMatches']))
+                || ($activeTab === 'standings' && !empty($data['standings']))
+                || ($activeTab === 'timeline' && !empty($data['game']['events']))
+                || ($activeTab === 'analysis' && !empty($data['aiInsights']));
 
             if ($isLive) {
                 // Live: cache ngắn 1 phút để cập nhật liên tục
@@ -527,7 +549,7 @@ class GameController extends Controller
         if ($status === 'finished' || $status === 'ft' || $status === 'full_time') {
             return 'finished';
         }
-        
+
         if ($status === 'postponed') {
             return 'postponed';
         }
@@ -535,10 +557,10 @@ class GameController extends Controller
         if ($status === 'cancelled' || $status === 'abandoned') {
             return 'cancelled';
         }
-        
+
         $liveStatuses = ['inprogress', 'penalties', '1st_half', 'ht', '2nd_half', 'et', 'postponed_rain', 'postponed_fog'];
         if (in_array($status, $liveStatuses) || str_contains($status, 'half') || str_contains($status, 'time')) {
-             return 'live';
+            return 'live';
         }
 
         return 'scheduled';
@@ -548,12 +570,12 @@ class GameController extends Controller
     {
         $stats = $match->stats;
         if ($stats->isEmpty()) return [];
-        
+
         $formatted = [];
         foreach (['home', 'away'] as $side) {
             $teamId = $match->{$side . '_team_id'};
             $s = $stats->where('team_id', $teamId)->first();
-            
+
             if (!$s) {
                 $formatted[] = [
                     'team' => ['id' => $teamId, 'name' => optional($match->{$side . 'Team'})->name ?? "N/A"],
@@ -592,9 +614,27 @@ class GameController extends Controller
         return $formatted;
     }
 
-    private function shimLineups($match)
+    private function shimLineups($match, BsdSportsApiService $apiService)
     {
-        if (!$match->lineup) return [];
+        // Nếu không có lineup trong DB, hoặc lineup trong DB là predicted và trận chưa kết thúc
+        // thì fetch từ API để hiển thị predicted lineups mới nhất
+        $shouldFetchFromApi = !$match->lineup ||
+            ($match->lineup->lineup_status === 'predicted' && !in_array($match->status, ['finished', 'played', 'FT']));
+
+        if ($shouldFetchFromApi) {
+            $lineupsData = $apiService->get("events/{$match->id}/lineups/");
+            if ($lineupsData && isset($lineupsData['lineups'])) {
+                Log::info("[Match {$match->id}] Fetching lineup from API, status: " . ($lineupsData['lineup_status'] ?? 'unknown'));
+                return $this->formatLineupFromApi($lineupsData, $match);
+            }
+            Log::info("[Match {$match->id}] No lineup data from API");
+            return [];
+        }
+
+        // lineup_status: 'confirmed' | 'predicted' | null
+        $lineupStatus = $match->lineup->lineup_status ?? 'confirmed';
+
+        Log::info("[Match {$match->id}] Using lineup from DB, status: {$lineupStatus}");
 
         $result = [];
         foreach (['home', 'away'] as $side) {
@@ -604,7 +644,7 @@ class GameController extends Controller
 
             $formation = $lt->formation ?? '4-4-2';
             $players = $lt->players->sortBy('is_substitute');
-            
+
             $startXI = $players->where('is_substitute', false);
             $substitutes = $players->where('is_substitute', true);
 
@@ -614,24 +654,85 @@ class GameController extends Controller
             $result[] = [
                 'team' => ['id' => $teamId, 'name' => optional($match->{$side . 'Team'})->name ?? "N/A"],
                 'formation' => $formation,
+                'lineup_status' => $lineupStatus,
+                'confidence' => $lt->confidence ?? null,
                 'startXI' => $gridXI->map(fn($p) => [
                     'player' => [
-                        'id' => $p['player_id'], 
-                        'name' => $p['name'], 
-                        'number' => $p['number'], 
-                        'pos' => $p['pos'], 
+                        'id' => $p['player_id'],
+                        'name' => $p['name'],
+                        'number' => $p['number'],
+                        'pos' => $p['pos'],
                         'grid' => $p['grid'],
                         'rating' => $p['rating'] ?? null
                     ],
                 ])->values()->all(),
                 'substitutes' => $substitutes->map(fn($p) => [
                     'player' => [
-                        'id' => $p->player_id, 
-                        'name' => $p->player?->name, 
-                        'number' => $p->jersey_number, 
-                        'pos' => $this->cleanPosition($p->player?->specific_position, $p->position), 
+                        'id' => $p->player_id,
+                        'name' => $p->player?->name,
+                        'number' => $p->jersey_number,
+                        'pos' => $this->cleanPosition($p->player?->specific_position, $p->position),
                         'grid' => null,
                         'rating' => null
+                    ],
+                ])->values()->all(),
+            ];
+        }
+        return $result;
+    }
+
+    private function formatLineupFromApi($lineupsData, $match)
+    {
+        $data = $lineupsData['lineups'];
+        $lineupStatus = $lineupsData['lineup_status'] ?? 'predicted';
+
+        Log::info("[Match {$match->id}] formatLineupFromApi called, status: {$lineupStatus}");
+
+        $result = [];
+        foreach (['home', 'away'] as $side) {
+            if (!isset($data[$side])) continue;
+
+            $teamData = $data[$side];
+            $formation = $teamData['formation'] ?? '4-4-2';
+
+            $players = $teamData['players'] ?? [];
+            $substitutes = $teamData['substitutes'] ?? [];
+
+            Log::info("[Match {$match->id}] Side {$side}: " . count($players) . " players, " . count($substitutes) . " substitutes");
+
+            // Synthesize grids for Start XI - convert to objects to match synthesizeGrids expectations
+            $startXI = collect($players)->map(fn($p) => (object)[
+                'player_id' => $p['id'],
+                'name' => $p['name'],
+                'number' => $p['jersey_number'],
+                'position' => $p['position'],
+                'rating' => $p['rating'] ?? null,
+            ]);
+            $gridXI = $this->synthesizeGrids($startXI, $formation);
+
+            $result[] = [
+                'team' => ['id' => $match->{$side . '_team_id'}, 'name' => optional($match->{$side . 'Team'})->name ?? "N/A"],
+                'formation' => $formation,
+                'lineup_status' => $lineupStatus,
+                'confidence' => $teamData['confidence'] ?? null,
+                'startXI' => $gridXI->map(fn($p) => [
+                    'player' => [
+                        'id' => $p->player_id,
+                        'name' => $p->name,
+                        'number' => $p->number,
+                        'pos' => $p->pos,
+                        'grid' => $p->grid,
+                        'rating' => $p->rating ?? null
+                    ],
+                ])->values()->all(),
+                'substitutes' => collect($substitutes)->map(fn($p) => [
+                    'player' => [
+                        'id' => $p['id'],
+                        'name' => $p['name'],
+                        'number' => $p['jersey_number'],
+                        'pos' => $p['position'],
+                        'grid' => null,
+                        'rating' => $p['rating'] ?? null
                     ],
                 ])->values()->all(),
             ];
@@ -643,13 +744,13 @@ class GameController extends Controller
     {
         $specificPosition = strtoupper(trim($specificPosition ?? ''));
         $genericPositions = ['G', 'D', 'M', 'F', 'GK', 'DEF', 'MID', 'FW', 'ATT', 'SUB', 'UNKNOWN'];
-        
+
         if (!empty($specificPosition) && !in_array($specificPosition, $genericPositions) && strlen($specificPosition) <= 4) {
             return $specificPosition;
         }
-        
+
         $gen = strtoupper(trim($generalPosition ?? ''));
-        return match($gen) {
+        return match ($gen) {
             'G', 'GK', 'POR', 'GOL', 'GOALKEEPER' => 'GK',
             'D', 'DEF', 'DEFENDER' => 'DF',
             'M', 'MID', 'MIDFIELDER' => 'MF',
@@ -662,7 +763,7 @@ class GameController extends Controller
     {
         $dbSpecific = strtoupper(trim($player->player?->specific_position ?? ''));
         $genericPositions = ['G', 'D', 'M', 'F', 'GK', 'DEF', 'MID', 'FW', 'ATT', 'SUB', 'UNKNOWN'];
-        
+
         if (!empty($dbSpecific) && !in_array($dbSpecific, $genericPositions)) {
             return $dbSpecific;
         }
@@ -723,7 +824,7 @@ class GameController extends Controller
         }
 
         // Chuẩn hóa position về G/D/M/F để phân loại
-        $normalize = function($pos) {
+        $normalize = function ($pos) {
             if (!$pos) return 'M'; // fallback cho null
             $pos = strtoupper(trim($pos));
             if (in_array($pos, ['G', 'GK', 'POR', 'GOL'])) return 'G';
@@ -780,7 +881,7 @@ class GameController extends Controller
                     $p = $outfieldPlayers[$playerIdx];
                     $cat = $normalize($p->position);
                     $specificPos = $this->getSpecificPlayingPosition($p, $cat, $colIdx, $countInRow);
-                    
+
                     $result->push([
                         'player_id' => $p->player_id,
                         'name' => $p->player?->name,
@@ -816,28 +917,28 @@ class GameController extends Controller
 
     private function shimEvents($match)
     {
-        $incidents = $match->incidents->sortBy(function($e) {
+        $incidents = $match->incidents->sortBy(function ($e) {
             $extra = $e->payload['added_time'] ?? ($e->payload['extra'] ?? 0);
             return $e->minute * 1000 + (int)$extra;
         });
         if ($incidents->isEmpty()) return [];
-        
-        return array_values($incidents->filter(function($e) {
+
+        return array_values($incidents->filter(function ($e) {
             // Loại bỏ các sự kiện không phải hành động của cầu thủ (thường gây Unknown Player)
             return !in_array(strtolower($e->type), ['period', 'injurytime']);
-        })->map(function($e) use ($match) {
+        })->map(function ($e) use ($match) {
             $player = $e->player;
             $playerIn = $e->playerIn;
             $playerOut = $e->playerOut;
 
             return [
                 'time' => [
-                    'elapsed' => $e->minute ?? 0, 
+                    'elapsed' => $e->minute ?? 0,
                     'extra' => $e->payload['added_time'] ?? ($e->payload['extra'] ?? null)
                 ],
                 'team' => ['id' => $e->is_home ? $match->home_team_id : $match->away_team_id],
                 'player' => [
-                    'id' => $e->player_id, 
+                    'id' => $e->player_id,
                     'name' => $player->name ?? ($e->payload['player'] ?? null)
                 ],
                 'assist' => [
@@ -848,7 +949,7 @@ class GameController extends Controller
                     'playerIn' => ['id' => $e->player_in_id, 'name' => $playerIn->name ?? ($e->payload['player_in'] ?? 'In')],
                     'playerOut' => ['id' => $e->player_out_id, 'name' => $playerOut->name ?? ($e->payload['player_out'] ?? 'Out')],
                 ] : null,
-                'type' => $e->type === 'substitution' ? 'subst' : $e->type, 
+                'type' => $e->type === 'substitution' ? 'subst' : $e->type,
                 'detail' => $e->card_type ?? ($e->payload['detail'] ?? ''),
                 'comments' => $e->payload['comments'] ?? null,
             ];
@@ -862,7 +963,7 @@ class GameController extends Controller
         // Load unavailable players with their team info (via player's current team)
         $unavailable = $match->lineup->unavailablePlayers()->with('player')->get();
 
-        return $unavailable->map(function($up) {
+        return $unavailable->map(function ($up) {
             return [
                 'player' => [
                     'id' => $up->player_id,
@@ -921,7 +1022,7 @@ class GameController extends Controller
         }
 
         $cacheKey = "match_{$matchId}_ai_insights_vi";
-        
+
         // If we already have it in cache, return it
         if (Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
@@ -969,4 +1070,3 @@ class GameController extends Controller
         return $originalText;
     }
 }
-     

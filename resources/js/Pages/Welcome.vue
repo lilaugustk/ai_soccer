@@ -42,7 +42,7 @@
             <!-- Row 2: League Filter Slider (Reusable Component) -->
             <TabSlider 
                 v-if="availableLeagues.length > 0"
-                v-model="filters.league_id"
+                :model-value="props.filters.league_id"
                 :items="availableLeagues"
                 show-all
                 all-label="TẤT CẢ"
@@ -270,7 +270,7 @@ const changeDate = (date) => {
     router.get('/', {
         ...props.filters,
         date: date,
-    }, { preserveState: true });
+    });
 };
 
 const changeLeague = (leagueId) => {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FootballMatch;
 use App\Models\FootballLeague;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use App\Services\BsdSportsApiService;
 use Illuminate\Support\Facades\Log;

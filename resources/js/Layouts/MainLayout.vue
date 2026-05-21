@@ -211,7 +211,7 @@
     <footer class="border-t mt-12 py-8 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 text-center">
         <p class="text-sm text-gray-400 dark:text-gray-500">
-          &copy; 2026 Dự đoán Bóng đá AI.
+          &copy; 2026.
         </p>
       </div>
     </footer>

@@ -1,5 +1,5 @@
 <template>
-  <Head :title="`${league.name} - Kết quả, Lịch thi đấu, Bảng xếp hạng | AI Soccer`" />
+  <Head :title="`${league.name} - Kết quả, Lịch thi đấu, Bảng xếp hạng`" />
   
   <MainLayout>
     <div class="pt-2 pb-8 relative min-h-screen">
@@ -127,7 +127,6 @@
           </div>
         </main>
 
-        <!-- RIGHT SIDEBAR (Matching Homepage) -->
         <LeagueSidebar />
 
       </div>

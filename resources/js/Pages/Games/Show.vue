@@ -401,6 +401,22 @@
                         </div>
                     </div>
 
+                    <!-- Predicted Lineup Banner -->
+                    <div v-if="homeLineupData?.lineup_status === 'predicted' || awayLineupData?.lineup_status === 'predicted'"
+                         class="flex items-start gap-3 px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[11px] font-bold uppercase tracking-wider">Đội hình dự đoán</p>
+                            <p class="text-[11px] font-medium mt-0.5 leading-relaxed">
+                                Trận đấu chưa diễn ra. Đây là đội hình <strong>dự đoán bởi hệ thống AI</strong> dựa trên lịch sử thi đấu, không phải đội hình chính thức đã được xác nhận bởi ban huấn luyện.
+                                <template v-if="homeLineupData?.confidence">
+                                    Độ tin cậy: <strong>{{ (homeLineupData.confidence * 100).toFixed(0) }}%</strong> (chủ nhà) —
+                                    <strong>{{ (awayLineupData?.confidence * 100).toFixed(0) }}%</strong> (khách).
+                                </template>
+                            </p>
+                        </div>
+                    </div>
+
+
                     <!-- Pitch Fullscreen Modal -->
                     <Teleport to="body">
                         <Transition name="modal-fade">
@@ -2601,6 +2617,19 @@ const formatSeason = (s, country = null) => {
 .modal-fade-leave-to {
     opacity: 0;
     transform: scale(0.97);
+}
+
+/* Toast slide-up transition */
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.toast-slide-enter-from,
+.toast-slide-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
+}
+</style>
 }
 
 /* Toast slide-up transition */
